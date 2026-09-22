@@ -4,7 +4,7 @@ This file helps AI agents work efficiently in this repo. Read it before making c
 
 ## Project Overview
 
-A Spotify-like desktop/mobile player for Islamic nasheeds (no "songs" branding — the user insists on **nasheed** terminology). It searches YouTube via `yt-dlp`, streams audio through a local proxy, and supports downloads, a persistent library, favorites, and playlists.
+A Spotify-like desktop/mobile player for Islamic nasheeds (no "songs" branding — the user insists on **nasheed** terminology). It searches YouTube via `yt-dlp`, streams audio through a local proxy, and manages a persistent library, favorites, and playlists. NOTE: downloads were removed by user request ("what the point of it") — do not re-add them without asking.
 
 Two app versions exist in this repo:
 - **`web/`** — active Flask + vanilla JS/CSS web app (the one being developed)
@@ -42,14 +42,14 @@ The web app is intended to be wrapped in Tauri (desktop) and Android SDK (APK) l
 
 ## File Map (web app — the important one)
 
-- `web/app.py` — Flask backend. All `/api/*` routes: search, stream, proxy (audio), library (add/fav/remove), playlists (create/add/remove), download. Persists to `~/.local/share/nasheed-app/library.json`. Downloads save to `~/Music/Nasheeds`.
+- `web/app.py` — Flask backend. All `/api/*` routes: search, stream, proxy (audio), library (add/fav/remove), playlists (create/add/remove). Persists to `~/.local/share/nasheed-app/library.json`.
 - `web/templates/index.html` — single-page layout: sidebar (nav + playlists), main (search/view/library views), bottom player bar.
 - `web/static/style.css` — all styling (no Tailwind). Flat Spotify-dark theme: `#121212` bg, `#181818`/`#282828` layers, white text, green accent `#1db954`. Only Font Awesome icons + one Google Font (Inter).
 - `web/static/app.js` — all frontend logic: navigation, search, rendering, playback, keyboard shortcuts, toasts.
 
 ## Frontend Conventions
 
-- **Class names**: sidebar = `sidebar`, `nav-item`, `pl-item`; track rows = `track-row`, `track-thumb`, `track-name`, `track-channel`, `track-dur`, `track-actions`, `track-act` (with `play-act`/`dl-act`/`fav-act`/`pl-act` variants); player = `player-*`, controls `ctrl` / `play-pause`; toasts = `.toast`.
+- **Class names**: sidebar = `sidebar`, `nav-item`, `pl-item`; track rows = `track-row`, `track-thumb`, `track-name`, `track-channel`, `track-dur`, `track-actions`, `track-act` (with `play-act`/`fav-act`/`pl-act` variants); player = `player-*`, controls `ctrl` / `play-pause`; toasts = `.toast`.
 - **Rendering**: rows are created by `makeRow(song, idx, ctx)` in `app.js`. Click handlers: single-click on row-actions buttons, `dblclick` on row to play.
 - **State**: `queue` / `queueIdx` / `loopMode` / `currentSong` / `currentList` are module-level `let`s. `currentList` must be set whenever a list renders (so loop/next/prev have a queue from any view — search, library, favorites, playlist).
 - **Toasts**: use the `toast(msg)` helper for user feedback (like, download, loop, playlist actions).
@@ -62,7 +62,7 @@ The web app is intended to be wrapped in Tauri (desktop) and Android SDK (APK) l
 - Python 3.11+, Flask + `flask_cors`. Installed with pip via `--break-system-packages` (Arch).
 - `yt-dlp` binary is at `/home/admin/.local/bin/yt-dlp` (on PATH).
 - Subprocess calls to yt-dlp must include `--no-warnings --no-playlist` and a timeout.
-- Library is JSON at `~/.local/share/nasheed-app/library.json` with shape `{"songs":[...], "playlists":[{"name","songs":[]}]}`. Songs have `id`, `title`, `channel`, `thumbnail`, `duration`, `duration_string`, `url`, `favorite` (bool), `downloaded` (bool), `filepath`.
+- Library is JSON at `~/.local/share/nasheed-app/library.json` with shape `{"songs":[...], "playlists":[{"name","songs":[]}]}`. Songs have `id`, `title`, `channel`, `thumbnail`, `duration`, `duration_string`, `url`, `favorite` (bool), `filepath`.
 
 ## Legacy GTK4 App (do not touch unless asked)
 

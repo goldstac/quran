@@ -5,12 +5,10 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 
-SAVE_DIR = os.path.expanduser("~/Music/Nasheeds")
 DATA_DIR = os.path.expanduser("~/.local/share/nasheed-app")
 LIB_FILE = os.path.join(DATA_DIR, "library.json")
 UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36"
 
-os.makedirs(SAVE_DIR, exist_ok=True)
 os.makedirs(DATA_DIR, exist_ok=True)
 
 def load_lib():
@@ -82,7 +80,6 @@ def api_add():
     lib = load_lib()
     if not any(s["id"] == song["id"] for s in lib["songs"]):
         song.setdefault("favorite", False)
-        song.setdefault("downloaded", False)
         lib["songs"].append(song)
         save_lib(lib)
     return jsonify({"ok": True})
@@ -105,36 +102,6 @@ def api_remove(sid):
         pl["songs"] = [s for s in pl["songs"] if s["id"] != sid]
     save_lib(lib)
     return jsonify({"ok": True})
-
-@app.route("/api/download/<sid>", methods=["POST"])
-def api_download(sid):
-    lib = load_lib()
-    song = next((s for s in lib["songs"] if s["id"] == sid), None)
-    cmd = ["yt-dlp", "-f", "bestaudio[ext=m4a]/bestaudio/best",
-           "--extract-audio", "--audio-format", "mp3", "--audio-quality", "192K",
-           "-o", os.path.join(SAVE_DIR, "%(title)s.%(ext)s"),
-           "--no-playlist", "--no-warnings", "--user-agent", UA,
-           f"https://www.youtube.com/watch?v={sid}"]
-    try:
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
-        fp = None
-        m = re.search(r"\[ExtractAudio\] Destination: (.+)", r.stdout)
-        if m:
-            fp = m.group(1)
-        else:
-            m = re.search(r"\[download\] (.+\.mp3)", r.stdout)
-            if m:
-                fp = m.group(1)
-        if fp:
-            for s in lib["songs"]:
-                if s["id"] == sid:
-                    s["downloaded"] = True
-                    s["filepath"] = fp
-            save_lib(lib)
-            return jsonify({"ok": True})
-        return jsonify({"error": "failed"}), 500
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
 @app.route("/api/playlists")
 def api_playlists():

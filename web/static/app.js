@@ -93,14 +93,12 @@ function makeRow(song, idx, ctx) {
     ${song.duration_string ? `<span class="track-dur">${song.duration_string}</span>` : ''}
     <div class="track-actions">
       <button class="track-act play-act" title="Play"><i class="fa-solid fa-play"></i></button>
-      <button class="track-act dl-act" title="Download"><i class="fa-solid fa-arrow-down"></i></button>
       <button class="track-act fav-act" title="Like"><i class="fa-regular fa-heart"></i></button>
       <button class="track-act pl-act" title="Add to playlist"><i class="fa-solid fa-plus"></i></button>
     </div>`;
 
   r.addEventListener('dblclick', () => playSong(song, idx, ctx));
   r.querySelector('.play-act').addEventListener('click', e => { e.stopPropagation(); playSong(song, idx, ctx); });
-  r.querySelector('.dl-act').addEventListener('click', e => { e.stopPropagation(); download(song); });
   r.querySelector('.fav-act').addEventListener('click', e => { e.stopPropagation(); toggleFav(song); });
   r.querySelector('.pl-act').addEventListener('click', e => { e.stopPropagation(); addToPl(song); });
   return r;
@@ -285,7 +283,6 @@ async function loadLib(mode) {
   let songs = [], title = 'Your Library';
   if (mode === 'all' || mode === 'library') { songs = lib.songs || []; title = 'Your Library'; }
   else if (mode === 'favorites') { songs = (lib.songs || []).filter(s => s.favorite); title = 'Liked Nasheeds'; }
-  else if (mode === 'downloads') { songs = (lib.songs || []).filter(s => s.downloaded); title = 'Downloads'; }
   else if (mode.startsWith('playlist:')) {
     const n = mode.split(':')[1];
     const pl = (lib.playlists || []).find(p => p.name === n);
@@ -309,13 +306,6 @@ async function toggleFav(song) {
     i.className = d.favorite ? 'fa-solid fa-heart fav-on' : 'fa-regular fa-heart';
   });
   toast(d.favorite ? 'Added to Liked Nasheeds' : 'Removed from Liked Nasheeds');
-}
-
-async function download(song) {
-  await fetch(`${API}/api/library/add`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(song) });
-  toast('Downloading: ' + song.title);
-  await fetch(`${API}/api/download/${song.id}`, { method: 'POST' });
-  toast('Downloaded: ' + song.title);
 }
 
 async function addToPl(song) {
