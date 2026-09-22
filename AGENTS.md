@@ -1,0 +1,69 @@
+# AGENTS.md
+
+This file helps AI agents work efficiently in this repo. Read it before making changes.
+
+## Project Overview
+
+A Spotify-like desktop/mobile player for Islamic nasheeds (no "songs" branding — the user insists on **nasheed** terminology). It searches YouTube via `yt-dlp`, streams audio through a local proxy, and supports downloads, a persistent library, favorites, and playlists.
+
+Two app versions exist in this repo:
+- **`web/`** — active Flask + vanilla JS/CSS web app (the one being developed)
+- **`core/`**, **`ui/`**, `main.py` — legacy GTK4 desktop app (still present, considered "old")
+
+The web app is intended to be wrapped in Tauri (desktop) and Android SDK (APK) later. There is a `tauri-app/` stub for the desktop wrapper.
+
+## Commands
+
+- Run the web app: `./run-web.sh` (starts Flask on `http://localhost:5000`)
+- Run the legacy GTK4 app: `./run.sh`
+- No test suite, no linter configured. Verify Python loads cleanly before finishing: `python3 -c "from app import app"` (run from `web/`)
+
+## Git & Conventional Commits
+
+- Remote: `origin` at `git@github.com:goldstac/nasheed-app.git`, default branch `main`.
+- ALWAYS use Conventional Commits. Format: `<type>(<scope>): <description>`
+- Types: `feat` (new feature), `fix` (bug fix), `refactor`, `docs` (docs/AGENTS), `style` (CSS-only, no logic), `perf`, `chore` (gitignore, tooling), `build`.
+- Scope examples: `web`, `api`, `player`, `ui`, `loop`, `tauri`. Use lowercase.
+- Examples:
+  - `fix(loop): replay current nasheed on ended instead of refetching`
+  - `feat(api): add range-aware audio proxy for seeking`
+  - `style(ui): restyle player bar to spotify-dark theme`
+- Only commit when the user explicitly asks. Stage only intended files (`git add <file>`), never secrets. Inspect `git status` / `git diff` before committing. Do not update git config or force-push.
+
+## Critical Gotchas
+
+1. **Port 5000 usage**: `./run-web.sh` will fail with "Address already in use" if anything else holds port 5000. Free it with `fuser -k 5000/tcp` before running. Do NOT start a background test server that holds port 5000 — the user runs the app themselves and gets blocked.
+2. **`app.py` run block position**: The `if __name__ == "__main__": app.run(...)` block MUST remain at the BOTTOM of the file. If you append routes after it, they never register when run directly (only when imported). This caused a hard-to-find 404 on `/api/proxy` once.
+3. **YouTube direct playback is blocked**: Browsers cannot play raw YouTube stream URLs. All playback MUST go through `/api/proxy/<video_id>`, which resolves a fresh URL via `yt-dlp -g`, caches it per video_id (`_stream_cache`), forwards `Range` headers (needed for seeking), and returns `206 Partial Content`. Clears cache entry on upstream error (expired URL).
+4. **Loop feature (user's top priority)**: it kept "not working". Current behavior — loop button toggles only `off` ↔ `one` (repeats current track by doing `audio.currentTime = 0; audio.play()`). There is NO "loop all" anymore by design; the user explicitly wanted single-click = repeat current nasheed. Do not bring back the 3-state cycle without asking.
+5. **Loop "one" must NOT re-fetch the stream URL** on the `ended` event — just replay `audio.currentTime = 0`. Re-fetching was the original bug (stale/expired URLs + autoplay blocking).
+6. **`play()` rejections must be caught** and surfaced (toast `'Click play to start'`); a silent `.catch(()=>{})` hides autoplay-policy failures.
+7. **Players served through proxy only**: `/api/stream` returns JSON metadata, but the `<audio>` element must use `/api/proxy/<id>` for its `src`.
+
+## File Map (web app — the important one)
+
+- `web/app.py` — Flask backend. All `/api/*` routes: search, stream, proxy (audio), library (add/fav/remove), playlists (create/add/remove), download. Persists to `~/.local/share/nasheed-app/library.json`. Downloads save to `~/Music/Nasheeds`.
+- `web/templates/index.html` — single-page layout: sidebar (nav + playlists), main (search/view/library views), bottom player bar.
+- `web/static/style.css` — all styling (no Tailwind). Flat Spotify-dark theme: `#121212` bg, `#181818`/`#282828` layers, white text, green accent `#1db954`. Only Font Awesome icons + one Google Font (Inter).
+- `web/static/app.js` — all frontend logic: navigation, search, rendering, playback, keyboard shortcuts, toasts.
+
+## Frontend Conventions
+
+- **Class names**: sidebar = `sidebar`, `nav-item`, `pl-item`; track rows = `track-row`, `track-thumb`, `track-name`, `track-channel`, `track-dur`, `track-actions`, `track-act` (with `play-act`/`dl-act`/`fav-act`/`pl-act` variants); player = `player-*`, controls `ctrl` / `play-pause`; toasts = `.toast`.
+- **Rendering**: rows are created by `makeRow(song, idx, ctx)` in `app.js`. Click handlers: single-click on row-actions buttons, `dblclick` on row to play.
+- **State**: `queue` / `queueIdx` / `loopMode` / `currentSong` / `currentList` are module-level `let`s. `currentList` must be set whenever a list renders (so loop/next/prev have a queue from any view — search, library, favorites, playlist).
+- **Toasts**: use the `toast(msg)` helper for user feedback (like, download, loop, playlist actions).
+- **Keyboard shortcuts**: Space = play/pause, ←/→ = seek, Shift+←/→ = prev/next, ↑/↓ = volume, L = loop, M = mute, / or S = focus search.
+- **User-facing language**: use "nasheeds", never "songs" in UI text (e.g. "Liked Nasheeds").
+- **Do NOT add code comments** unless asked.
+
+## Backend Conventions
+
+- Python 3.11+, Flask + `flask_cors`. Installed with pip via `--break-system-packages` (Arch).
+- `yt-dlp` binary is at `/home/admin/.local/bin/yt-dlp` (on PATH).
+- Subprocess calls to yt-dlp must include `--no-warnings --no-playlist` and a timeout.
+- Library is JSON at `~/.local/share/nasheed-app/library.json` with shape `{"songs":[...], "playlists":[{"name","songs":[]}]}`. Songs have `id`, `title`, `channel`, `thumbnail`, `duration`, `duration_string`, `url`, `favorite` (bool), `downloaded` (bool), `filepath`.
+
+## Legacy GTK4 App (do not touch unless asked)
+
+The original desktop app lives in `core/` (`ytdl.py`, `player.py` via GStreamer, `library.py`), `ui/` (`window.py`, `player_bar.py`, `search_view.py`, `library_view.py`, `style.py`), and `main.py`. It has the same loop bug the user complained about. Treat as deprecated — new work goes in `web/`.
