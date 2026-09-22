@@ -15,6 +15,7 @@ The web app is intended to be wrapped in Tauri (desktop) and Android SDK (APK) l
 ## Commands
 
 - Run the web app: `./run-web.sh` (starts Flask on `http://localhost:5000`)
+- Build frontend TS → JS: `npm run build` (from repo root; compiles `web/ts/app.ts` → `web/static/app.js`). Use `npm run watch` during dev.
 - Run the legacy GTK4 app: `./run.sh`
 - No test suite, no linter configured. Verify Python loads cleanly before finishing: `python3 -c "from app import app"` (run from `web/`)
 
@@ -42,19 +43,33 @@ The web app is intended to be wrapped in Tauri (desktop) and Android SDK (APK) l
 
 ## File Map (web app — the important one)
 
-- `web/app.py` — Flask backend. All `/api/*` routes: search, stream, proxy (audio), library (add/fav/remove), playlists (create/add/remove). Persists to `~/.local/share/nasheed-app/library.json`.
-- `web/templates/index.html` — single-page layout: sidebar (nav + playlists), main (search/view/library views), bottom player bar.
-- `web/static/style.css` — all styling (no Tailwind). Flat Spotify-dark theme: `#121212` bg, `#181818`/`#282828` layers, white text, green accent `#1db954`. Only Font Awesome icons + one Google Font (Inter).
-- `web/static/app.js` — all frontend logic: navigation, search, rendering, playback, keyboard shortcuts, toasts.
+- `web/app.py` — Flask backend. All `/api/*` routes: search, stream, proxy (audio), library (add/fav/remove), playlists (create/add/remove/delete/rename — delete/rename take POST body `{name}` / `{old,new}`). Persists to `~/.local/share/nasheed-app/library.json`.
+- `web/templates/index.html` — single-page layout: sidebar (nav + playlists), main (search/view/library views), bottom player bar. Sliders are empty `<div id="progress-bar"|volume-bar>` containers — NOT `<input type=range>`. They are turned into the custom `Slider` widget by TS.
+- `web/static/style.css` — all styling (no Tailwind). Flat Spotify-dark theme: `#121212` bg, `#181818`/`#282828` layers, white text, green accent `#1db954`. Only Font Awesome icons + one Google Font (Inter). Slider visuals use `.slider`/`.slider-env` (grey track) `.slider-fill` (green, white for volume) `.slider-thumb` classes.
+- `web/ts/app.ts` — ALL frontend logic in TypeScript (navigation, search, rendering, playback, keyboard shortcuts, toasts). Contains the `Slider` class (pointer-event driven, `onInput`/`onChange` callbacks; thumb shows on hover/focus/drag) and typed `Song`/`Playlist`/`Library` interfaces. Compiled output goes to `web/static/app.js` — never edit that file directly, edit `web/ts/app.ts` and run `npm run build`.
+- `package.json` / `tsconfig.json` — TS tooling (rootDir `web/ts`, outDir `web/static`).
 
 ## Frontend Conventions
 
-- **Class names**: sidebar = `sidebar`, `nav-item`, `pl-item`; track rows = `track-row`, `track-thumb`, `track-name`, `track-channel`, `track-dur`, `track-actions`, `track-act` (with `play-act`/`fav-act`/`pl-act` variants); player = `player-*`, controls `ctrl` / `play-pause`; toasts = `.toast`.
+- **Source of truth is TypeScript**: all JS logic lives in `web/ts/app.ts` and compiles to `web/static/app.js`. After editing TS, run `npm run build` so changes take effect. Never hand-edit the compiled JS.
+- **Sliders are a custom component, not browser inputs**: `<input type="range">` is banned. Use an empty container div with `role="slider"` and an `id`, then build it in TS with `new Slider($('#...'))`. The `Slider` class exposes `setValue(v)` and `onInput`/`onChange` callbacks. Progress reads at 250ms interval into `seek.setValue(p)`; volume reads `vol.getValue()`. Keyboard support built in (←/→, PageUp/Down, Home/End).
+- **Class names**: sidebar = `sidebar`, `nav-item`, `pl-item`; track rows = `track-row`, `track-thumb`, `track-name`, `track-channel`, `track-dur`, `track-actions`, `track-act` (with `play-act`/`fav-act`/`pl-act` variants); player = `player-*`, controls `ctrl` / `play-pause`; sliders = `.slider`, `.slider-env`, `.slider-fill`, `.slider-thumb`; toasts = `.toast`.
 - **Rendering**: rows are created by `makeRow(song, idx, ctx)` in `app.js`. Click handlers: single-click on row-actions buttons, `dblclick` on row to play.
 - **State**: `queue` / `queueIdx` / `loopMode` / `currentSong` / `currentList` are module-level `let`s. `currentList` must be set whenever a list renders (so loop/next/prev have a queue from any view — search, library, favorites, playlist).
 - **Toasts**: use the `toast(msg)` helper for user feedback (like, download, loop, playlist actions).
 - **Keyboard shortcuts**: Space = play/pause, ←/→ = seek, Shift+←/→ = prev/next, ↑/↓ = volume, L = loop, M = mute, / or S = focus search.
+- **Spotify QoL behaviors** (keep these intact when editing):
+  - **Shuffle**: player-bar `#shuffle-btn` toggles `shuffleOn` via `setShuffle(on)`; when on, starting a track builds `queue = [current, ...shuffled rest]`; toggling off restores `preShuffleQueue`. Header `#shuffle-play-btn` = play list shuffled. Persisted (`ns_shuffle`).
+  - **Auto-advance**: track `ended` plays the next queue item (unless loop one); stops (`resetPlayer`) at queue end. `nextTrack` likewise stops at end (no wrap). `playSong(..., keepQueue=true)` is used for queue-internal moves so the queue is NOT rebuilt.
+  - **Loop** is off↔one only, persisted (`ns_loop`).
+  - **Recently Played** nav view reads localStorage `ns_recent` (cap 50, recorded in `playSong` via `recordRecent`). **Recent search chips** (`#recent-q`) read `ns_recentq` (cap 8, saved in `doSearch`); chips show only while the search input is empty.
+  - **Library**: header has green Play (`#pl-play`) + shuffle-play, sort dropdown (`#lib-sort`, modes added/title/channel, persisted `ns_sort`), rename (pencil, playlists only). `loadLib` sets `currentLibMode`/`currentLibSource` (library/favorites are reversed to newest-first). Rows in library contexts get a trash (`rem-act`) → `removeFromList` (playlist context removes from that playlist, otherwise from library) — search-result rows have no trash.
+  - **Media Session API** metadata + play/pause/prev/next handlers (guarded by `'mediaSession' in navigator`).
+  - **Seek tooltip** (`#progress-bar .seek-tip`) shows timestamp on hover.
+  - **Volume** persisted (`ns_vol`), restored on load.
+  - All persisted keys live in localStorage with the `ns_` prefix; use the `store(key,val)` / `load<T>(key,fallback)` helpers.
 - **User-facing language**: use "nasheeds", never "songs" in UI text (e.g. "Liked Nasheeds").
+- **No browser dialogs**: `prompt()`, `confirm()`, and `alert()` are banned — build custom modals instead. Use `Modal` (wireframe: `modal-backdrop`/`modal`/`modal-title`/`modal-body`), `promptText(title, placeholder, okLabel, value?)` for text input (returns `Promise<string | null>`, `value` prefills — used for rename), `confirmDialog(title, message)` for yes/no (returns `Promise<boolean>`), and `showPlaylistPicker()` (lists playlists, "New playlist" flow creates then returns the name) for adding nasheeds to playlists.
 - **Do NOT add code comments** unless asked.
 
 ## Backend Conventions

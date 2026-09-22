@@ -140,6 +140,37 @@ def api_pl_remove(name, sid):
             return jsonify({"ok": True})
     return jsonify({"error": "not found"}), 404
 
+@app.route("/api/playlists/delete", methods=["POST"])
+def api_pl_delete():
+    name = request.json.get("name", "").strip()
+    if not name:
+        return jsonify({"error": "name required"}), 400
+    lib = load_lib()
+    before = len(lib["playlists"])
+    lib["playlists"] = [p for p in lib["playlists"] if p["name"] != name]
+    if len(lib["playlists"]) == before:
+        return jsonify({"error": "not found"}), 404
+    save_lib(lib)
+    return jsonify({"ok": True})
+
+@app.route("/api/playlists/rename", methods=["POST"])
+def api_pl_rename():
+    old = request.json.get("old", "").strip()
+    new = request.json.get("new", "").strip()
+    if not old or not new:
+        return jsonify({"error": "name required"}), 400
+    lib = load_lib()
+    pl = next((p for p in lib["playlists"] if p["name"] == old), None)
+    if pl is None:
+        return jsonify({"error": "not found"}), 404
+    if old == new:
+        return jsonify({"ok": True})
+    if any(p["name"] == new for p in lib["playlists"]):
+        return jsonify({"error": "exists"}), 409
+    pl["name"] = new
+    save_lib(lib)
+    return jsonify({"ok": True})
+
 import urllib.request as _urllib
 from flask import request
 

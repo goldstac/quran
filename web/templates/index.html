@@ -27,6 +27,9 @@
       <button class="nav-item" data-view="library">
         <i class="fa-solid fa-book-open"></i><span>Your Library</span>
       </button>
+      <button class="nav-item" data-view="recent">
+        <i class="fa-solid fa-clock-rotate-left"></i><span>Recently Played</span>
+      </button>
       <button class="nav-item" data-view="favorites">
         <i class="fa-solid fa-heart"></i><span>Liked Nasheeds</span>
       </button>
@@ -49,10 +52,12 @@
         <div class="search-bar">
           <i class="fa-solid fa-magnifying-glass"></i>
           <input type="text" id="search-input" placeholder="What do you want to listen to?">
+          <button id="search-clear" class="search-clear hidden" title="Clear search"><i class="fa-solid fa-xmark"></i></button>
         </div>
         <div id="search-status" class="search-status"></div>
       </div>
       <div class="search-body">
+        <div id="recent-q" class="recent-q hidden"></div>
         <div id="search-empty" class="empty">
           <div class="empty-icon"><i class="fa-solid fa-music"></i></div>
           <p class="empty-title">Search for nasheeds</p>
@@ -68,8 +73,28 @@
 
     <div id="library-view" class="view">
       <div class="lib-sticky">
-        <h1 id="lib-title" class="lib-title">Your Library</h1>
+        <div class="lib-heading">
+          <h1 id="lib-title" class="lib-title">Your Library</h1>
+          <button id="lib-rename" class="lib-rename hidden" title="Rename playlist"><i class="fa-solid fa-pen"></i></button>
+          <button id="lib-del" class="lib-del hidden" title="Delete playlist"><i class="fa-solid fa-trash"></i></button>
+          <div class="lib-sort" id="lib-sort">
+            <button id="lib-sort-btn" class="lib-sort-btn" title="Sort">
+              <i class="fa-solid fa-arrow-down-wide-short"></i>
+              <span id="lib-sort-label">Recently added</span>
+              <i class="fa-solid fa-chevron-down"></i>
+            </button>
+            <div id="lib-sort-menu" class="lib-sort-menu hidden">
+              <button class="lib-sort-opt active" data-sort="added">Recently added</button>
+              <button class="lib-sort-opt" data-sort="title">Title A–Z</button>
+              <button class="lib-sort-opt" data-sort="channel">Channel</button>
+            </div>
+          </div>
+        </div>
         <p id="lib-subtitle" class="lib-subtitle"></p>
+        <div id="lib-actions" class="lib-actions hidden">
+          <button id="pl-play" class="lib-play" title="Play"><i class="fa-solid fa-play"></i></button>
+          <button id="shuffle-play-btn" class="lib-shuffle" title="Shuffle play"><i class="fa-solid fa-shuffle"></i></button>
+        </div>
       </div>
       <div class="lib-body">
         <div id="lib-empty" class="empty" style="display:none">
@@ -101,6 +126,7 @@
 
   <div class="player-center">
     <div class="player-controls">
+      <button id="shuffle-btn" class="ctrl" title="Shuffle"><i class="fa-solid fa-shuffle"></i></button>
       <button id="loop-btn" class="ctrl" title="Loop"><i class="fa-solid fa-repeat"></i></button>
       <button id="prev-btn" class="ctrl" title="Previous"><i class="fa-solid fa-backward-step"></i></button>
       <button id="play-btn" class="play-pause">
@@ -110,17 +136,17 @@
       <button id="next-btn" class="ctrl" title="Next"><i class="fa-solid fa-forward-step"></i></button>
       <button id="stop-btn" class="ctrl" title="Stop"><i class="fa-solid fa-stop"></i></button>
     </div>
-    <div class="player-seek">
-      <span id="time-pos" class="time">0:00</span>
-      <div class="seek-track"><input type="range" id="progress-bar" min="0" max="100" value="0" step="0.1"></div>
-      <span id="time-dur" class="time">0:00</span>
-    </div>
+<div class="player-seek">
+        <span id="time-pos" class="time">0:00</span>
+        <div class="seek-track" id="progress-bar" role="slider" aria-label="Seek" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+        <span id="time-dur" class="time">0:00</span>
+      </div>
   </div>
 
-  <div class="player-right">
-    <button id="vol-btn" class="ctrl" title="Volume"><i class="fa-solid fa-volume-high"></i></button>
-    <div class="vol-track"><input type="range" id="volume-bar" min="0" max="100" value="70"></div>
-  </div>
+<div class="player-right">
+      <button id="vol-btn" class="ctrl" title="Volume"><i class="fa-solid fa-volume-high"></i></button>
+      <div class="vol-track" id="volume-bar" role="slider" aria-label="Volume" aria-valuemin="0" aria-valuemax="100" aria-valuenow="70"></div>
+    </div>
 </div>
 
 <script src="/static/app.js"></script>
