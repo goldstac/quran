@@ -2,6 +2,8 @@
 
 A Spotify-style desktop/mobile player for Islamic **nasheeds**. Search YouTube, play audio through a snappy local player, and keep your own library, likes, and playlists — all stored on your device.
 
+Cross-platform: **Linux, macOS, and Windows** — anywhere Python runs plus a browser. (macOS and Windows just need the same Python + `yt-dlp` setup below; all commands work the same.)
+
 > Web app is the active version (`web/`). A Tauri desktop wrapper is stubbed out, Android is planned, and the old GTK4 app in `core/`/`ui/` is legacy.
 
 ## Features
@@ -32,7 +34,7 @@ A Spotify-style desktop/mobile player for Islamic **nasheeds**. Search YouTube, 
 
 Then open **http://localhost:5000**.
 
-If the port is busy (say, from an old run): `fuser -k 5000/tcp`
+If the port is busy: `fuser -k 5000/tcp` (Linux) or `lsof -ti:5000 | xargs kill` (macOS)
 
 > Prebuilt desktop/mobile builds will be published on the [Releases page](https://github.com/goldstac/nasheed-app/releases) once they're ready — nothing is up there yet, so for now it's clone-and-run.
 
@@ -58,28 +60,6 @@ The server already binds **all interfaces on port 5000**, so other devices on yo
 
 ```python
 app.run(host="127.0.0.1", port=8080, debug=False)
-```
-
-**Run it as a background service (systemd):**
-
-```ini
-# /etc/systemd/system/nasheed-player.service
-[Unit]
-Description=Nasheed Player
-After=network.target
-
-[Service]
-User=YOUR_USER
-WorkingDirectory=/opt/nasheed-app/web
-ExecStart=/usr/bin/python3 app.py
-Restart=on-failure
-
-[Install]
-WantedBy=multi-user.target
-```
-
-```bash
-sudo systemctl enable --now nasheed-player
 ```
 
 **HTTPS / public URL** — put any reverse proxy (Caddy does auto-HTTPS in two lines; nginx works too) in front of the app. First bind the app to `127.0.0.1` as above, then point the proxy at `127.0.0.1:5000`. nginx sketch:
