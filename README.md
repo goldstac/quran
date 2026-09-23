@@ -34,6 +34,78 @@ Then open **http://localhost:5000**.
 
 If the port is busy (say, from an old run): `fuser -k 5000/tcp`
 
+> Prebuilt desktop/mobile builds will be published on the [Releases page](https://github.com/goldstac/nasheed-app/releases) once they're ready — nothing is up there yet, so for now it's clone-and-run.
+
+## Self-hosting
+
+Run it on your own machine (home server, NAS, always-on PC) and open it from any browser — no cloud, no accounts, your server is the whole backend.
+
+**What the server needs:**
+- Python 3.11+ with `flask` + `flask-cors`
+- `yt-dlp` on the **server's** PATH (all searching/streaming happens there)
+- No Node required — the compiled `web/static/app.js` is committed
+
+```bash
+git clone git@github.com:goldstac/nasheed-app.git
+cd nasheed-app
+pip install flask flask-cors        # Arch: add --break-system-packages
+python3 web/app.py
+```
+
+The server already binds **all interfaces on port 5000**, so other devices on your network reach it at `http://YOUR_SERVER_IP:5000`.
+
+**Change the port or bind address** — last line of `web/app.py`:
+
+```python
+app.run(host="127.0.0.1", port=8080, debug=False)
+```
+
+**Run it as a background service (systemd):**
+
+```ini
+# /etc/systemd/system/nasheed-player.service
+[Unit]
+Description=Nasheed Player
+After=network.target
+
+[Service]
+User=YOUR_USER
+WorkingDirectory=/opt/nasheed-app/web
+ExecStart=/usr/bin/python3 app.py
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+```
+
+```bash
+sudo systemctl enable --now nasheed-player
+```
+
+**HTTPS / public URL** — put any reverse proxy (Caddy does auto-HTTPS in two lines; nginx works too) in front of the app. First bind the app to `127.0.0.1` as above, then point the proxy at `127.0.0.1:5000`. nginx sketch:
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name nasheed.example.com;
+
+    location / {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_buffering off;   # keep audio streaming snappy
+    }
+}
+```
+
+**Before you open it up — please read:**
+- There is **no login**. Anyone who can reach your instance can play, like, create, rename, and delete playlists, and read your library.
+- `library.json` (songs + playlists) lives on the **server** and is shared by everyone who connects; volume/recents/search history live in **each visitor's own browser**.
+- Every search and stream goes out through your server's IP to YouTube.
+- Safe options: stay on LAN, use Tailscale/WireGuard, or put real auth in front (proxy basic-auth, Authelia, etc.). Don't expose it raw to the internet.
+
 ## Developing the frontend
 
 The frontend source is **TypeScript** in `web/ts/app.ts`; it compiles to `web/static/app.js` (which Flask serves). Never hand-edit the compiled file.
