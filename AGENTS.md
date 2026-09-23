@@ -43,6 +43,7 @@ The web app is intended to be wrapped in Tauri (desktop) and Android SDK (APK) l
 
 ## File Map (web app — the important one)
 
+- `README.md` / `CONTRIBUTING.md` — project overview & contributor guide. Keep them in sync with real commands/conventions (AGENTS.md remains the detailed source of truth).
 - `PRIVACY.md` / `TERMS.md` — privacy policy and terms of service (plain-language, jurisdiction-neutral). Must stay truthful to what the app actually does (local-only storage, no developer servers, third-party requests to YouTube/Google Fonts/cdnjs). Keep the tone casual — the user dislikes heavy legal/rule language (minimal mention of laws/rights). Update both if data/network behavior changes.
 
 - `web/app.py` — Flask backend. All `/api/*` routes: search, stream, proxy (audio), library (add/fav/remove), playlists (create/add/remove/delete/rename — delete/rename take POST body `{name}` / `{old,new}`). Persists to `~/.local/share/nasheed-app/library.json`.
