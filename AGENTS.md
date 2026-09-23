@@ -7,16 +7,15 @@ This file helps AI agents work efficiently in this repo. Read it before making c
 A Spotify-like desktop/mobile player for Islamic nasheeds (no "songs" branding — the user insists on **nasheed** terminology). It searches YouTube via `yt-dlp`, streams audio through a local proxy, and manages a persistent library, favorites, and playlists. NOTE: downloads were removed by user request ("what the point of it") — do not re-add them without asking.
 
 Two app versions exist in this repo:
-- **`web/`** — active Flask + vanilla JS/CSS web app (the one being developed)
-- **`core/`**, **`ui/`**, `main.py` — legacy GTK4 desktop app (still present, considered "old")
+- **`web/`** — active Flask + TypeScript/CSS web app (the one being developed)
+- **`tauri-app/`** — stub for the future desktop wrapper (Tauri)
 
-The web app is intended to be wrapped in Tauri (desktop) and Android SDK (APK) later. There is a `tauri-app/` stub for the desktop wrapper.
+The web app is intended to be wrapped in Tauri (desktop) and Android SDK (APK) later.
 
 ## Commands
 
 - Run the web app: `./run-web.sh` (starts Flask on `http://localhost:5000`)
 - Build frontend TS → JS: `npm run build` (from repo root; compiles `web/ts/app.ts` → `web/static/app.js`). Use `npm run watch` during dev.
-- Run the legacy GTK4 app: `./run.sh`
 - No test suite, no linter configured. Verify Python loads cleanly before finishing: `python3 -c "from app import app"` (run from `web/`)
 
 ## Git & Conventional Commits
@@ -81,7 +80,3 @@ The web app is intended to be wrapped in Tauri (desktop) and Android SDK (APK) l
 - `yt-dlp` binary is at `/home/admin/.local/bin/yt-dlp` (on PATH).
 - Subprocess calls to yt-dlp must include `--no-warnings --no-playlist` and a timeout.
 - Library is JSON at `~/.local/share/nasheed-app/library.json` with shape `{"songs":[...], "playlists":[{"name","songs":[]}]}`. Songs have `id`, `title`, `channel`, `thumbnail`, `duration`, `duration_string`, `url`, `favorite` (bool), `filepath`.
-
-## Legacy GTK4 App (do not touch unless asked)
-
-The original desktop app lives in `core/` (`ytdl.py`, `player.py` via GStreamer, `library.py`), `ui/` (`window.py`, `player_bar.py`, `search_view.py`, `library_view.py`, `style.py`), and `main.py`. It has the same loop bug the user complained about. Treat as deprecated — new work goes in `web/`.

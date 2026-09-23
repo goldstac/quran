@@ -60,7 +60,6 @@ Tip: free the port first if an old instance is hanging around — `fuser -k 5000
 
 ## Please don't (unless you've asked first)
 
-- Touch the legacy GTK4 app (`core/`, `ui/`, `main.py`) — it's deprecated.
 - Re-add the Downloads feature — it was removed on purpose.
 - Change loop back to a 3-state cycle — off↔one is deliberate.
 - Rename/restructure things "for cleanliness" without checking AGENTS.md first.

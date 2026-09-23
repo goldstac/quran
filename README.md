@@ -4,7 +4,7 @@ A Spotify-style desktop/mobile player for Islamic **nasheeds**. Search YouTube, 
 
 Cross-platform: **Linux, macOS, and Windows** — anywhere Python runs plus a browser. (macOS and Windows just need the same Python + `yt-dlp` setup below; all commands work the same.)
 
-> Web app is the active version (`web/`). A Tauri desktop wrapper is stubbed out, Android is planned, and the old GTK4 app in `core/`/`ui/` is legacy.
+> Web app is the active version (`web/`). A Tauri desktop wrapper is stubbed out, Android is planned.
 
 ## Features
 
@@ -126,8 +126,6 @@ web/            the active Flask + TypeScript/CSS app
   static/style.css  Spotify-dark theme
   templates/        single-page layout
 tauri-app/      desktop wrapper stub (Tauri)
-core/, ui/,     legacy GTK4 desktop app — deprecated,
-main.py           new work goes in web/
 AGENTS.md       repo conventions — read before making changes
 PRIVACY.md      what the app does (and doesn't) do with your data
 TERMS.md        terms of service

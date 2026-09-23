@@ -1,9 +1,0 @@
-[Desktop Entry]
-Name=Nasheed Player
-Comment=Islamic Audio Player - Stream and download nasheeds
-Exec=/home/admin/Documents/GitHub/nasheed-app/run.sh
-Icon=multimedia-audio-player
-Terminal=false
-Type=Application
-Categories=Audio;Music;Player;
-Keywords=nasheed;islamic;music;player;
