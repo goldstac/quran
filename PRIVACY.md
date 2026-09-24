@@ -1,7 +1,7 @@
 # Privacy Policy
 
 **Effective date:** 23 September 2026
-**Applies to:** the Nasheed Player app in this repository (web version, and any desktop/mobile builds made from it)
+**Applies to:** the Quran & Nasheeds app in this repository (web version, and any desktop/mobile builds made from it)
 **Maintainer:** [github.com/goldstac](https://github.com/goldstac)
 
 This policy just describes what the app actually does. No filler.

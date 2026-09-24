@@ -1,5 +1,5 @@
 {
-  "productName": "Nasheed Player",
+  "productName": "Quran & Nasheeds",
   "version": "1.0.0",
   "identifier": "com.nasheed.app",
   "build": {
@@ -10,7 +10,7 @@
   "app": {
     "windows": [
       {
-        "title": "Nasheed Player",
+        "title": "Quran & Nasheeds",
         "width": 1200,
         "height": 800,
         "minWidth": 800,

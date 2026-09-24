@@ -9,7 +9,7 @@ Use the app = you're good with these terms. Not good with them? Simply don't use
 
 ## 2. What the app is
 
-A free, local app that searches YouTube for Islamic nasheeds and plays them through a player you run on your own device, with a personal library, likes, and playlists. No accounts, no subscriptions, no payments, no backend we operate.
+A free, local app for the **Quran** and Islamic **nasheeds** — browse surahs, search YouTube for nasheeds, and play them through a player you run on your own device, with a personal library, likes, and playlists. No accounts, no subscriptions, no payments, no backend we operate.
 
 ## 3. Your licence
 

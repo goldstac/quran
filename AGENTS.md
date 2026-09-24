@@ -4,7 +4,7 @@ This file helps AI agents work efficiently in this repo. Read it before making c
 
 ## Project Overview
 
-A Spotify-like desktop/mobile player for Islamic nasheeds (no "songs" branding — the user insists on **nasheed** terminology). It searches YouTube via `yt-dlp`, streams audio through a local proxy, and manages a persistent library, favorites, and playlists. NOTE: downloads were removed by user request ("what the point of it") — do not re-add them without asking.
+A Spotify-like desktop/mobile player for the **Quran** and Islamic nasheeds — display name is **Quran & Nasheeds** (no "songs" branding — the user insists on **nasheed** terminology). It searches YouTube via `yt-dlp`, streams audio through a local proxy, manages a persistent library, favorites, and playlists, and plays Quran audio direct from CDN with reciter selection. NOTE: downloads were removed by user request ("what the point of it") — do not re-add them without asking.
 
 Two app versions exist in this repo:
 - **`web/`** — active Flask + TypeScript/CSS web app (the one being developed)

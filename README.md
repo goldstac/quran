@@ -1,6 +1,6 @@
-# Nasheed Player
+# Quran & Nasheeds
 
-A Spotify-style desktop/mobile player for Islamic **nasheeds**. Search YouTube, play audio through a snappy local player, and keep your own library, likes, and playlists — all stored on your device.
+A Spotify-style desktop/mobile player for the **Quran** and Islamic **nasheeds**. Browse surahs with reciter choice, search YouTube for nasheeds, and keep your own library, likes, and playlists — all stored on your device.
 
 Cross-platform: **Linux, macOS, and Windows** — anywhere Python runs plus a browser. (macOS and Windows just need the same Python + `yt-dlp` setup below; all commands work the same.)
 
@@ -8,6 +8,7 @@ Cross-platform: **Linux, macOS, and Windows** — anywhere Python runs plus a br
 
 ## Features
 
+- **Quran** — all 114 surahs, pick from 170+ reciters, Arabic + English names, play/shuffle
 - **Search YouTube** for nasheeds (via `yt-dlp`), with debounced live results
 - **Smooth playback** through a local proxy — seeking/scrubbing works (Range-aware streaming)
 - **Custom UI components** — hand-built seek/volume sliders and modals, no stock browser widgets, flat Spotify-dark theme
