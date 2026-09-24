@@ -63,24 +63,6 @@ The server already binds **all interfaces on port 5000**, so other devices on yo
 app.run(host="127.0.0.1", port=8080, debug=False)
 ```
 
-**HTTPS / public URL** — put any reverse proxy (Caddy does auto-HTTPS in two lines; nginx works too) in front of the app. First bind the app to `127.0.0.1` as above, then point the proxy at `127.0.0.1:5000`. nginx sketch:
-
-```nginx
-server {
-    listen 443 ssl;
-    server_name quran-nasheeds.example.com;
-
-    location / {
-        proxy_pass http://127.0.0.1:5000;
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_buffering off;   # keep audio streaming snappy
-    }
-}
-```
-
 **Before you open it up — please read:**
 - There is **no login**. Anyone who can reach your instance can play, like, create, rename, and delete playlists, and read your library.
 - `library.json` (songs + playlists) lives on the **server** and is shared by everyone who connects; volume/recents/search history live in **each visitor's own browser**.
