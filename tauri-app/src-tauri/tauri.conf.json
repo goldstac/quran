@@ -4,7 +4,6 @@
   "identifier": "com.nasheed.app",
   "build": {
     "beforeDevCommand": "",
-    "devUrl": "http://localhost:5000",
     "beforeBuildCommand": "",
     "frontendDist": "../src"
   },
@@ -20,7 +19,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:* https://*; media-src https://*; img-src https://* data:;"
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:* http://127.0.0.1:* https://*; media-src http://localhost:* http://127.0.0.1:* https://*; img-src https://* data: http://localhost:* http://127.0.0.1:*;"
     }
   },
   "bundle": {

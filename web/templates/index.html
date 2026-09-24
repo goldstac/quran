@@ -33,6 +33,9 @@
       <button class="nav-item" data-view="favorites">
         <i class="fa-solid fa-heart"></i><span>Liked Nasheeds</span>
       </button>
+      <button class="nav-item" data-view="quran">
+        <i class="fa-solid fa-book-quran"></i><span>Quran</span>
+      </button>
     </nav>
 
     <div class="sidebar-sep"></div>
@@ -106,6 +109,55 @@
       </div>
     </div>
 
+    <div id="quran-view" class="view">
+      <div class="lib-sticky">
+        <div class="lib-heading">
+          <h1 class="lib-title">Quran</h1>
+        </div>
+        <p id="quran-subtitle" class="lib-subtitle">Listen to the Quran</p>
+        <div id="quran-actions" class="lib-actions hidden">
+          <button id="quran-play" class="lib-play" title="Play all surahs"><i class="fa-solid fa-play"></i></button>
+          <button id="quran-shuffle" class="lib-shuffle" title="Shuffle play"><i class="fa-solid fa-shuffle"></i></button>
+        </div>
+        <div class="quran-reciter-block">
+          <div class="quran-reciter-head">
+            <span class="quran-reciter-label">Reciter</span>
+            <div class="quran-reciter-meta">
+              <span id="quran-reciter-pos" class="quran-reciter-pos"></span>
+              <button id="quran-reciter-prev" class="quran-reciter-nav" title="Previous reciter" type="button">
+                <i class="fa-solid fa-chevron-left"></i>
+              </button>
+              <button id="quran-reciter-next" class="quran-reciter-nav" title="Next reciter" type="button">
+                <i class="fa-solid fa-chevron-right"></i>
+              </button>
+            </div>
+          </div>
+          <div class="quran-reciter-rail">
+            <button id="quran-reciter-scroll-l" class="quran-reciter-edge" type="button" tabindex="-1" aria-hidden="true">
+              <i class="fa-solid fa-chevron-left"></i>
+            </button>
+            <div id="quran-reciter-scroller" class="quran-reciter-scroller" role="listbox" aria-label="Choose reciter" tabindex="0"></div>
+            <button id="quran-reciter-scroll-r" class="quran-reciter-edge" type="button" tabindex="-1" aria-hidden="true">
+              <i class="fa-solid fa-chevron-right"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="lib-body">
+        <div id="quran-empty" class="empty" style="display:none">
+          <div class="empty-icon"><i class="fa-solid fa-book-quran"></i></div>
+          <p class="empty-title">Quran unavailable</p>
+          <p class="empty-sub">Could not load surahs</p>
+          <button id="quran-retry" class="empty-retry" type="button">Try again</button>
+        </div>
+        <div id="quran-loading" class="empty">
+          <div class="spinner"></div>
+          <p class="empty-sub">Loading Quran...</p>
+        </div>
+        <div id="quran-list" class="track-list" style="display:none"></div>
+      </div>
+    </div>
+
   </main>
 </div>
 
@@ -132,6 +184,7 @@
       <button id="play-btn" class="play-pause">
         <i id="play-icon" class="fa-solid fa-play"></i>
         <i id="pause-icon" class="fa-solid fa-pause hidden"></i>
+        <i id="buf-icon" class="fa-solid fa-circle-notch fa-spin hidden"></i>
       </button>
       <button id="next-btn" class="ctrl" title="Next"><i class="fa-solid fa-forward-step"></i></button>
       <button id="stop-btn" class="ctrl" title="Stop"><i class="fa-solid fa-stop"></i></button>

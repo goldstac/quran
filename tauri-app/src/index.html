@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Nasheed Player</title>
+<style>
+  body{margin:0;height:100vh;display:flex;align-items:center;justify-content:center;background:#121212;color:#fff;font-family:system-ui,sans-serif}
+  .box{text-align:center}
+  .spin{width:32px;height:32px;border:3px solid #535353;border-top-color:#1db954;border-radius:50%;animation:s .6s linear infinite;margin:0 auto 16px}
+  @keyframes s{to{transform:rotate(360deg)}}
+  #msg{color:#a7a7a7;font-size:13px}
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="spin"></div>
+  <p id="msg">Starting Nasheed Player…</p>
+</div>
+<script>
+  var tries = 0;
+  (function poll() {
+    fetch('http://127.0.0.1:5000/', { mode: 'no-cors' })
+      .then(function () { location.replace('http://127.0.0.1:5000/'); })
+      .catch(function () {
+        if (++tries < 120) {
+          setTimeout(poll, 250);
+        } else {
+          document.getElementById('msg').textContent =
+            'Could not reach the local server — is Python, flask, and yt-dlp installed?';
+        }
+      });
+  })();
+</script>
+</body>
+</html>

@@ -4,6 +4,7 @@ from flask_cors import CORS
 
 app = Flask(__name__)
 CORS(app)
+app.config["TEMPLATES_AUTO_RELOAD"] = True
 
 DATA_DIR = os.path.expanduser("~/.local/share/nasheed-app")
 LIB_FILE = os.path.join(DATA_DIR, "library.json")
@@ -176,22 +177,34 @@ from flask import request
 
 _stream_cache = {}
 
+def resolve_stream(video_id):
+    if video_id in _stream_cache:
+        return _stream_cache[video_id]
+    cmd = ["yt-dlp", "-f", "bestaudio[ext=m4a]/bestaudio/best", "-g",
+           "--no-warnings", "--no-playlist", "--user-agent", UA,
+           f"https://www.youtube.com/watch?v={video_id}"]
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+    url = r.stdout.strip().split("\n")[0]
+    if not url.startswith("http"):
+        raise ValueError("No stream")
+    _stream_cache[video_id] = url
+    return url
+
+@app.route("/api/warm/<video_id>")
+def api_warm(video_id):
+    try:
+        resolve_stream(video_id)
+        return "", 204
+    except Exception as e:
+        return str(e), 500
+
 @app.route("/api/proxy/<video_id>")
 def api_proxy(video_id):
-    if video_id not in _stream_cache:
-        cmd = ["yt-dlp", "-f", "bestaudio[ext=m4a]/bestaudio/best", "-g",
-               "--no-warnings", "--no-playlist", "--user-agent", UA,
-               f"https://www.youtube.com/watch?v={video_id}"]
-        try:
-            r = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-            url = r.stdout.strip().split("\n")[0]
-            if not url.startswith("http"):
-                return "No stream", 404
-            _stream_cache[video_id] = url
-        except Exception as e:
-            return str(e), 500
+    try:
+        url = resolve_stream(video_id)
+    except Exception as e:
+        return str(e), 500
 
-    url = _stream_cache[video_id]
     range_header = request.headers.get("Range")
 
     try:
@@ -213,9 +226,7 @@ def api_proxy(video_id):
         if cr:
             resp_headers["Content-Range"] = cr
 
-        status = 206 if range_header else 200
-        if resp.status == 206:
-            status = 206
+        status = resp.status if resp.status in (200, 206) else 200
 
         def generate():
             while True:
@@ -228,6 +239,98 @@ def api_proxy(video_id):
     except Exception as e:
         _stream_cache.pop(video_id, None)
         return str(e), 500
+
+_quran_cache = {}
+
+def _quran_get(url, key, timeout=20):
+    if key in _quran_cache:
+        return _quran_cache[key]
+    req = _urllib.Request(url, headers={"User-Agent": UA})
+    with _urllib.urlopen(req, timeout=timeout) as resp:
+        data = json.loads(resp.read().decode("utf-8"))
+    _quran_cache[key] = data
+    return data
+
+def _quran_style_score(name):
+    n = (name or "").lower()
+    if "hafs" in n and "murattal" in n:
+        return 0
+    if "hafs" in n:
+        return 1
+    if "murattal" in n:
+        return 2
+    if "mojawwad" in n or "mujawwad" in n:
+        return 4
+    return 3
+
+@app.route("/api/quran/chapters")
+def api_quran_chapters():
+    try:
+        return jsonify(_quran_get("https://api.quran.com/api/v4/chapters?language=en", "chapters"))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/quran/reciters")
+def api_quran_reciters():
+    try:
+        data = _quran_get("https://mp3quran.net/api/v3/reciters?language=en", "mp3quran")
+        raw = data.get("reciters") or []
+        out = []
+        seen = set()
+        for rec in raw:
+            full = []
+            for m in rec.get("moshaf") or []:
+                parts = {p.strip() for p in (m.get("surah_list") or "").split(",") if p.strip()}
+                if m.get("surah_total") == 114 and len(parts) >= 114 and m.get("server"):
+                    full.append(m)
+            if not full:
+                continue
+            full.sort(key=lambda m: _quran_style_score(m.get("name")))
+            m = full[0]
+            name = rec.get("name") or "Reciter"
+            label = name
+            style = m.get("name") or ""
+            if style and "Hafs A'n Assem" not in style and "Murattal" not in style:
+                label = f"{name} — {style}"
+            if label in seen:
+                continue
+            seen.add(label)
+            out.append({
+                "id": int(m.get("id") or rec.get("id")),
+                "reciter_name": name,
+                "style": style or None,
+                "label": label,
+                "server": m["server"],
+            })
+        out.sort(key=lambda r: r["reciter_name"].lower())
+        return jsonify({"recitations": out, "source": "mp3quran"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/quran/chapter_audio/<int:moshaf_id>/<int:chapter_id>")
+def api_quran_chapter_audio(moshaf_id, chapter_id):
+    key = f"audio:{moshaf_id}:{chapter_id}"
+    if key in _quran_cache:
+        return jsonify(_quran_cache[key])
+    try:
+        data = _quran_get("https://mp3quran.net/api/v3/reciters?language=en", "mp3quran")
+        server = None
+        for rec in data.get("reciters") or []:
+            for m in rec.get("moshaf") or []:
+                if int(m.get("id") or -1) == moshaf_id:
+                    server = m.get("server")
+                    break
+            if server:
+                break
+        if not server:
+            return jsonify({"error": "reciter not found"}), 404
+        url = f"{server}{chapter_id:03d}.mp3"
+        payload = {"url": url, "format": "mp3"}
+        _quran_cache[key] = payload
+        return jsonify(payload)
+    except Exception as e:
+        _quran_cache.pop(key, None)
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000, debug=False)

@@ -8,14 +8,13 @@ A Spotify-like desktop/mobile player for Islamic nasheeds (no "songs" branding �
 
 Two app versions exist in this repo:
 - **`web/`** — active Flask + TypeScript/CSS web app (the one being developed)
-- **`tauri-app/`** — stub for the future desktop wrapper (Tauri)
-
-The web app is intended to be wrapped in Tauri (desktop) and Android SDK (APK) later.
+- **`tauri-app/`** — desktop app for testing (Tauri v2): Rust spawns `python3 web/app.py` on startup and kills it on exit; the window loads `http://127.0.0.1:5000` via a loading page. Android (APK) is planned later.
 
 ## Commands
 
 - Run the web app: `./run-web.sh` (starts Flask on `http://localhost:5000`)
 - Build frontend TS → JS: `npm run build` (from repo root; compiles `web/ts/app.ts` → `web/static/app.js`). Use `npm run watch` during dev.
+- Build the desktop binary: `cargo build --release` (in `tauri-app/src-tauri/`) → `target/release/nasheed-player` (gitignored). Run it directly; it spawns the Flask backend itself. If the backend lives elsewhere, set `NASHEED_WEB_DIR`. If port 5000 is already held (e.g. `run-web.sh` running), it just connects to the existing server.
 - No test suite, no linter configured. Verify Python loads cleanly before finishing: `python3 -c "from app import app"` (run from `web/`)
 
 ## Git & Conventional Commits
@@ -50,6 +49,14 @@ The web app is intended to be wrapped in Tauri (desktop) and Android SDK (APK) l
 - `web/static/style.css` — all styling (no Tailwind). Flat Spotify-dark theme: `#121212` bg, `#181818`/`#282828` layers, white text, green accent `#1db954`. Only Font Awesome icons + one Google Font (Inter). Slider visuals use `.slider`/`.slider-env` (grey track) `.slider-fill` (green, white for volume) `.slider-thumb` classes.
 - `web/ts/app.ts` — ALL frontend logic in TypeScript (navigation, search, rendering, playback, keyboard shortcuts, toasts). Contains the `Slider` class (pointer-event driven, `onInput`/`onChange` callbacks; thumb shows on hover/focus/drag) and typed `Song`/`Playlist`/`Library` interfaces. Compiled output goes to `web/static/app.js` — never edit that file directly, edit `web/ts/app.ts` and run `npm run build`.
 - `package.json` / `tsconfig.json` — TS tooling (rootDir `web/ts`, outDir `web/static`).
+
+## File Map (tauri-app — desktop test wrapper)
+
+- `tauri-app/src-tauri/src/main.rs` — spawns `python3 app.py` (finds `web/` via `NASHEED_WEB_DIR`, manifest-relative path, or `./web`), stores the child, kills it on `RunEvent::Exit`.
+- `tauri-app/src-tauri/tauri.conf.json` — window config + CSP (allows `connect-src`/`media-src`/`img-src` to localhost); no `devUrl` so both dev and build serve the loading page.
+- `tauri-app/src/index.html` — loading page: polls `http://127.0.0.1:5000/` (no-cors fetch) and redirects when up; shows an error after 30s.
+- `tauri-app/src-tauri/icons/` — generated placeholder icons (green disc on dark). Regenerate with ImageMagick if needed.
+- Binary + `Cargo.lock`: binary is gitignored (`target/`, `nasheed-player`); commit `Cargo.lock` (it's an app, not a lib).
 
 ## Frontend Conventions
 

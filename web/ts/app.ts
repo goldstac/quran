@@ -9,6 +9,12 @@ interface Song {
   duration_string?: string;
   url?: string;
   favorite?: boolean;
+  kind?: 'quran';
+  stream_url?: string;
+  arabic?: string;
+  reciter_id?: number;
+  chapter_id?: number;
+  verses_count?: number;
 }
 
 interface Playlist {
@@ -37,6 +43,8 @@ let preShuffleQueue: Song[] = [];
 let currentLibMode: string | undefined;
 let currentLibSource: Song[] = [];
 let sortMode: SortMode = 'added';
+let startingId: string | null = null;
+let buffering = false;
 
 const SORT_LABELS: Record<SortMode, string> = {
   added: 'Recently added',
@@ -380,12 +388,309 @@ $$<HTMLElement>('.nav-item').forEach((btn) =>
     $$<HTMLElement>('.view').forEach((el) => el.classList.remove('active'));
     if (v === 'search') {
       $('#search-view').classList.add('active');
+    } else if (v === 'quran') {
+      $('#quran-view').classList.add('active');
+      loadQuran();
     } else {
       $('#library-view').classList.add('active');
       loadLib(v);
     }
   })
 );
+
+// --- QURAN ---
+interface QuranChapter {
+  id: number;
+  name_simple: string;
+  name_arabic: string;
+  verses_count: number;
+  translated_name?: { name: string };
+}
+
+interface QuranReciter {
+  id: number;
+  reciter_name: string;
+  style?: string | null;
+  label?: string;
+  server?: string;
+}
+
+const QURAN_DEFAULT_RECITER = '123';
+
+let quranChapters: QuranChapter[] = [];
+let quranLoaded = false;
+let quranReciters: QuranReciter[] = [];
+let quranReciterId = Number(QURAN_DEFAULT_RECITER);
+
+function quranReciterName(id: number): string {
+  const r = quranReciters.find((x) => x.id === id);
+  return r ? r.label || r.reciter_name : 'Quran';
+}
+
+function currentQuranReciterId(): number {
+  return quranReciterId;
+}
+
+function quranReciterIndex(): number {
+  return quranReciters.findIndex((r) => r.id === quranReciterId);
+}
+
+function buildQuranSong(ch: QuranChapter, reciterId: number): Song {
+  const reciter = quranReciterName(reciterId);
+  return {
+    id: `quran:${reciterId}:${ch.id}`,
+    title: `${ch.id}. ${ch.name_simple}`,
+    channel: reciter,
+    arabic: ch.name_arabic,
+    kind: 'quran',
+    reciter_id: reciterId,
+    chapter_id: ch.id,
+    verses_count: ch.verses_count,
+  };
+}
+
+function quranSongs(): Song[] {
+  const reciterId = currentQuranReciterId();
+  return quranChapters.map((ch) => buildQuranSong(ch, reciterId));
+}
+
+function renderQuranList() {
+  const songs = quranSongs();
+  if (!songs.length) {
+    $('#quran-list').style.display = 'none';
+    $('#quran-empty').style.display = '';
+    $('#quran-actions').classList.add('hidden');
+    $('#quran-subtitle').textContent = 'Listen to the Quran';
+    return;
+  }
+  $('#quran-empty').style.display = 'none';
+  $('#quran-list').style.display = '';
+  $('#quran-actions').classList.remove('hidden');
+  $('#quran-subtitle').textContent = `${songs.length} surahs · ${quranReciterName(quranReciterId)}`;
+  renderList('quran-list', songs, 'quran');
+}
+
+function syncQuranReciterUI(scrollIntoView = false) {
+  const scroller = $('#quran-reciter-scroller');
+  const chips = Array.from(scroller.querySelectorAll<HTMLElement>('.quran-reciter-chip'));
+  chips.forEach((chip) => {
+    const on = Number(chip.dataset.id) === quranReciterId;
+    chip.classList.toggle('active', on);
+    chip.setAttribute('aria-selected', on ? 'true' : 'false');
+  });
+  const idx = quranReciterIndex();
+  const pos = $('#quran-reciter-pos');
+  if (quranReciters.length) {
+    pos.textContent = `${idx >= 0 ? idx + 1 : 1} / ${quranReciters.length}`;
+  } else {
+    pos.textContent = '';
+  }
+  $('#quran-reciter-prev').toggleAttribute('disabled', idx <= 0);
+  $('#quran-reciter-next').toggleAttribute('disabled', idx < 0 || idx >= quranReciters.length - 1);
+  updateReciterEdgeBtns();
+  if (scrollIntoView && idx >= 0 && chips[idx]) {
+    chips[idx].scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+  }
+}
+
+function updateReciterEdgeBtns() {
+  const scroller = $('#quran-reciter-scroller');
+  const max = scroller.scrollWidth - scroller.clientWidth;
+  $('#quran-reciter-scroll-l').classList.toggle('show', scroller.scrollLeft > 4);
+  $('#quran-reciter-scroll-r').classList.toggle('show', scroller.scrollLeft < max - 4 && max > 4);
+}
+
+function applyQuranReciter(id: number, scroll = true) {
+  if (!quranReciters.some((r) => r.id === id)) return;
+  const changed = quranReciterId !== id;
+  quranReciterId = id;
+  store('ns_qreciter', String(id));
+  if (changed) {
+    queue.forEach((s) => {
+      if (s.kind === 'quran') {
+        s.reciter_id = id;
+        s.stream_url = undefined;
+        s.id = `quran:${id}:${s.chapter_id}`;
+      }
+    });
+    preShuffleQueue.forEach((s) => {
+      if (s.kind === 'quran') {
+        s.reciter_id = id;
+        s.stream_url = undefined;
+        s.id = `quran:${id}:${s.chapter_id}`;
+      }
+    });
+    if (currentSong?.kind === 'quran') {
+      currentSong.reciter_id = id;
+      currentSong.stream_url = undefined;
+      currentSong.id = `quran:${id}:${currentSong.chapter_id}`;
+      updatePlayer();
+    }
+    renderQuranList();
+  }
+  syncQuranReciterUI(scroll);
+}
+
+function stepQuranReciter(delta: number) {
+  if (!quranReciters.length) return;
+  let i = quranReciterIndex();
+  if (i < 0) i = 0;
+  const next = Math.max(0, Math.min(quranReciters.length - 1, i + delta));
+  applyQuranReciter(quranReciters[next].id, true);
+}
+
+function renderQuranReciterChips() {
+  const scroller = $('#quran-reciter-scroller');
+  scroller.innerHTML = '';
+  quranReciters.forEach((r) => {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'quran-reciter-chip';
+    chip.dataset.id = String(r.id);
+    chip.setAttribute('role', 'option');
+    chip.setAttribute('aria-selected', 'false');
+    chip.innerHTML = `<i class="fa-solid fa-microphone-lines"></i><span>${esc(r.label || r.reciter_name)}</span>`;
+    chip.addEventListener('click', () => applyQuranReciter(r.id, true));
+    scroller.appendChild(chip);
+  });
+}
+
+let quranRecitersPromise: Promise<void> | null = null;
+
+async function loadQuranReciters() {
+  if (quranReciters.length) {
+    syncQuranReciterUI(false);
+    return;
+  }
+  if (quranRecitersPromise) {
+    await quranRecitersPromise;
+    return;
+  }
+  quranRecitersPromise = (async () => {
+    try {
+      const r = await fetch(`${API}/api/quran/reciters`);
+      if (!r.ok) throw new Error('reciters');
+      const data = (await r.json()) as { recitations?: QuranReciter[] };
+      quranReciters = data.recitations || [];
+    } catch {
+      quranReciters = [
+        { id: Number(QURAN_DEFAULT_RECITER), reciter_name: 'Mishary Alafasi', label: 'Mishary Alafasi' },
+      ];
+    }
+    const saved = Number(load<string>('ns_qreciter', QURAN_DEFAULT_RECITER));
+    if (quranReciters.some((r) => r.id === saved)) {
+      quranReciterId = saved;
+    } else {
+      const preferred =
+        quranReciters.find((r) => r.id === Number(QURAN_DEFAULT_RECITER)) ||
+        quranReciters.find((r) => /alafasi|alafasy|afasy|mishary/i.test(r.reciter_name)) ||
+        quranReciters[0];
+      quranReciterId = preferred ? preferred.id : Number(QURAN_DEFAULT_RECITER);
+      store('ns_qreciter', String(quranReciterId));
+    }
+    renderQuranReciterChips();
+    syncQuranReciterUI(true);
+  })();
+  try {
+    await quranRecitersPromise;
+  } finally {
+    quranRecitersPromise = null;
+  }
+}
+
+let quranLoadPromise: Promise<void> | null = null;
+
+async function loadQuran() {
+  if (quranLoadPromise) {
+    await quranLoadPromise;
+    return;
+  }
+  $('#quran-loading').style.display = '';
+  $('#quran-list').style.display = 'none';
+  $('#quran-empty').style.display = 'none';
+  quranLoadPromise = (async () => {
+    await loadQuranReciters();
+    if (quranLoaded && quranChapters.length) {
+      $('#quran-loading').style.display = 'none';
+      renderQuranList();
+      return;
+    }
+    try {
+      const r = await fetch(`${API}/api/quran/chapters`);
+      if (!r.ok) throw new Error('chapters');
+      const data = (await r.json()) as { chapters?: QuranChapter[] };
+      quranChapters = data.chapters || [];
+      quranLoaded = true;
+      $('#quran-loading').style.display = 'none';
+      renderQuranList();
+    } catch {
+      $('#quran-loading').style.display = 'none';
+      $('#quran-list').style.display = 'none';
+      $('#quran-empty').style.display = '';
+      $('#quran-actions').classList.add('hidden');
+    }
+  })();
+  try {
+    await quranLoadPromise;
+  } finally {
+    quranLoadPromise = null;
+  }
+}
+
+$('#quran-reciter-prev').addEventListener('click', () => stepQuranReciter(-1));
+$('#quran-reciter-next').addEventListener('click', () => stepQuranReciter(1));
+$('#quran-reciter-scroll-l').addEventListener('click', () => {
+  $('#quran-reciter-scroller').scrollBy({ left: -240, behavior: 'smooth' });
+});
+$('#quran-reciter-scroll-r').addEventListener('click', () => {
+  $('#quran-reciter-scroller').scrollBy({ left: 240, behavior: 'smooth' });
+});
+$('#quran-reciter-scroller').addEventListener('scroll', updateReciterEdgeBtns, { passive: true });
+window.addEventListener('resize', updateReciterEdgeBtns);
+$('#quran-reciter-scroller').addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowRight') {
+    e.preventDefault();
+    stepQuranReciter(1);
+  } else if (e.key === 'ArrowLeft') {
+    e.preventDefault();
+    stepQuranReciter(-1);
+  } else if (e.key === 'Home') {
+    e.preventDefault();
+    if (quranReciters[0]) applyQuranReciter(quranReciters[0].id, true);
+  } else if (e.key === 'End') {
+    e.preventDefault();
+    const last = quranReciters[quranReciters.length - 1];
+    if (last) applyQuranReciter(last.id, true);
+  }
+});
+$('#quran-reciter-scroller').addEventListener(
+  'wheel',
+  (e) => {
+    const el = e.currentTarget as HTMLElement | null;
+    if (!el) return;
+    if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+      el.scrollLeft += e.deltaY;
+      e.preventDefault();
+    }
+  },
+  { passive: false }
+);
+
+$('#quran-retry').addEventListener('click', () => void loadQuran());
+$('#quran-play').addEventListener('click', () => {
+  const songs = quranSongs();
+  if (!songs.length) return;
+  const idx = shuffleOn ? Math.floor(Math.random() * songs.length) : 0;
+  playSong(songs[idx], idx, 'quran');
+});
+
+$('#quran-shuffle').addEventListener('click', () => {
+  const songs = quranSongs();
+  if (!songs.length) return;
+  if (!shuffleOn) setShuffle(true);
+  const idx = Math.floor(Math.random() * songs.length);
+  playSong(songs[idx], idx, 'quran');
+});
 
 // --- SEARCH ---
 let searchTimer: number | undefined;
@@ -507,27 +812,44 @@ function makeRow(song: Song, idx: number, ctx: string): HTMLElement {
   r.className = 'track-row';
   r.dataset.id = song.id;
   if (currentSong && currentSong.id === song.id) r.classList.add('playing');
-  const canRemove = ctx !== 'search';
+  const isQuran = ctx === 'quran' || song.kind === 'quran';
+  const canRemove = ctx !== 'search' && !isQuran;
   const heart = song.favorite ? 'fa-solid fa-heart fav-on' : 'fa-regular fa-heart';
+  const sub = isQuran
+    ? `<span class="track-ar">${esc(song.arabic || '')}</span><span class="track-ayahs">${song.verses_count ? `${song.verses_count} ayahs` : ''}</span>`
+    : esc(song.channel);
+
+  if (isQuran) r.classList.add('quran-row');
 
   r.innerHTML = `
-    <img class="track-thumb" src="${song.thumbnail || ''}" onerror="this.style.display='none'" loading="lazy" alt="">
+    ${isQuran
+      ? `<div class="track-num">${(song.chapter_id ?? idx + 1)}</div>`
+      : `<img class="track-thumb" src="${song.thumbnail || ''}" onerror="this.style.display='none'" loading="lazy" alt="">`}
     <div class="track-info">
       <div class="track-name">${esc(song.title)}</div>
-      <div class="track-channel">${esc(song.channel)}</div>
+      <div class="track-channel">${sub}</div>
     </div>
     ${song.duration_string ? `<span class="track-dur">${song.duration_string}</span>` : ''}
     <div class="track-actions">
       <button class="track-act play-act" title="Play"><i class="fa-solid fa-play"></i></button>
       ${canRemove ? '<button class="track-act rem-act" title="Remove"><i class="fa-solid fa-trash"></i></button>' : ''}
-      <button class="track-act fav-act" title="Like"><i class="${heart}"></i></button>
-      <button class="track-act pl-act" title="Add to playlist"><i class="fa-solid fa-plus"></i></button>
+      ${isQuran ? '' : `<button class="track-act fav-act" title="Like"><i class="${heart}"></i></button>
+      <button class="track-act pl-act" title="Add to playlist"><i class="fa-solid fa-plus"></i></button>`}
     </div>`;
 
   r.addEventListener('dblclick', () => playSong(song, idx, ctx));
+  let warmTimer: number | undefined;
+  if (!isQuran) {
+    r.addEventListener('mouseenter', () => {
+      warmTimer = window.setTimeout(() => warm(song.id), 150);
+    });
+    r.addEventListener('mouseleave', () => clearTimeout(warmTimer));
+  }
   r.querySelector('.play-act')!.addEventListener('click', (e) => { e.stopPropagation(); playSong(song, idx, ctx); });
-  r.querySelector('.fav-act')!.addEventListener('click', (e) => { e.stopPropagation(); toggleFav(song); });
-  r.querySelector('.pl-act')!.addEventListener('click', (e) => { e.stopPropagation(); addToPl(song); });
+  if (!isQuran) {
+    r.querySelector('.fav-act')!.addEventListener('click', (e) => { e.stopPropagation(); toggleFav(song); });
+    r.querySelector('.pl-act')!.addEventListener('click', (e) => { e.stopPropagation(); addToPl(song); });
+  }
   if (canRemove) {
     r.querySelector('.rem-act')!.addEventListener('click', (e) => { e.stopPropagation(); removeFromList(song); });
   }
@@ -535,7 +857,65 @@ function makeRow(song: Song, idx: number, ctx: string): HTMLElement {
 }
 
 // --- PLAYBACK ---
+const warmed = new Set<string>();
+
+function warm(id: string) {
+  if (warmed.has(id)) return;
+  warmed.add(id);
+  fetch(`${API}/api/warm/${id}`).then((r) => {
+    if (!r.ok) warmed.delete(id);
+  }).catch(() => warmed.delete(id));
+}
+
+function syncIcons() {
+  const paused = audio.paused;
+  $('#buf-icon').classList.toggle('hidden', !buffering);
+  $('#play-icon').classList.toggle('hidden', !paused || buffering);
+  $('#pause-icon').classList.toggle('hidden', paused || buffering);
+}
+
+function setBuffering(on: boolean) {
+  buffering = on;
+  syncIcons();
+}
+
+function playError(e: unknown) {
+  const name = (e as DOMException)?.name;
+  if (name === 'AbortError') return;
+  setBuffering(false);
+  if (name === 'NotAllowedError') toast('Click play to start');
+}
+
+function songSrc(song: Song): string {
+  if (song.kind === 'quran') {
+    if (song.stream_url) return song.stream_url;
+    const reciter = song.reciter_id ?? currentQuranReciterId();
+    const chapter = song.chapter_id ?? 1;
+    return `${API}/api/quran/chapter_audio/${reciter}/${chapter}`;
+  }
+  return `${API}/api/proxy/${song.id}`;
+}
+
+async function ensureQuranSrc(song: Song): Promise<string> {
+  if (song.kind !== 'quran') return songSrc(song);
+  if (song.stream_url) return song.stream_url;
+  const reciter = song.reciter_id ?? currentQuranReciterId();
+  const chapter = song.chapter_id ?? 1;
+  const r = await fetch(`${API}/api/quran/chapter_audio/${reciter}/${chapter}`);
+  if (!r.ok) throw new Error('quran audio');
+  const data = (await r.json()) as { url?: string };
+  if (!data.url) throw new Error('quran audio');
+  const nowReciter = song.reciter_id ?? currentQuranReciterId();
+  if (nowReciter !== reciter) throw new Error('quran audio');
+  song.stream_url = data.url;
+  return data.url;
+}
+
 async function playSong(song: Song, idx: number, _ctx: string, keepQueue = false) {
+  if (startingId === song.id && !audio.error) {
+    audio.play().catch(playError);
+    return;
+  }
   currentSong = song;
   if (keepQueue) {
     queueIdx = idx;
@@ -550,46 +930,76 @@ async function playSong(song: Song, idx: number, _ctx: string, keepQueue = false
       queueIdx = idx;
     }
   }
-  recordRecent(song);
+  if (song.kind !== 'quran') recordRecent(song);
   updatePlayer();
   $$('.track-row').forEach((r) => r.classList.toggle('playing', r.dataset.id === song.id));
-  audio.src = `${API}/api/proxy/${song.id}`;
-  audio.load();
-  audio.play().catch(() => {
-    toast('Click play to start');
-  });
-  getJSON<{ ok: boolean }>(`${API}/api/library/add`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(song),
-  });
+  startingId = song.id;
+  setBuffering(true);
+  try {
+    if (song.kind === 'quran') {
+      const src = await ensureQuranSrc(song);
+      if (currentSong?.id !== song.id) return;
+      audio.src = src;
+    } else {
+      audio.src = songSrc(song);
+    }
+    audio.load();
+    audio.play().catch(playError);
+  } catch {
+    startingId = null;
+    setBuffering(false);
+    toast('Could not load Quran audio');
+    return;
+  }
+  if (song.kind !== 'quran') {
+    getJSON<{ ok: boolean }>(`${API}/api/library/add`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(song),
+    });
+  }
 }
 
 function updatePlayer() {
   if (!currentSong) return;
   $('#player-title').textContent = currentSong.title;
   $('#player-artist').textContent = currentSong.channel;
+  const th = $('#player-thumb') as HTMLImageElement;
+  const ph = $('#player-thumb-ph');
   if (currentSong.thumbnail) {
-    const th = $('#player-thumb') as HTMLImageElement;
     th.src = currentSong.thumbnail;
     th.style.display = 'block';
-    $('#player-thumb-ph').style.display = 'none';
+    ph.style.display = 'none';
+  } else {
+    th.removeAttribute('src');
+    th.style.display = 'none';
+    ph.style.display = '';
+    const icon = ph.querySelector('i');
+    if (icon) icon.className = currentSong.kind === 'quran' ? 'fa-solid fa-book-quran' : 'fa-solid fa-music';
   }
   $('#fav-btn i').className = currentSong.favorite ? 'fa-solid fa-heart fav-on' : 'fa-regular fa-heart';
   if ('mediaSession' in navigator) {
     navigator.mediaSession.metadata = new MediaMetadata({
       title: currentSong.title,
       artist: currentSong.channel,
-      album: 'Nasheed Player',
+      album: currentSong.kind === 'quran' ? 'Quran' : 'Nasheed Player',
       artwork: currentSong.thumbnail ? [{ src: currentSong.thumbnail, sizes: '512x512', type: 'image/jpeg' }] : [],
     });
   }
 }
 
 // --- CONTROLS ---
+$('#fav-btn').addEventListener('click', () => {
+  if (!currentSong) return;
+  if (currentSong.kind === 'quran') {
+    toast('Quran cannot be liked');
+    return;
+  }
+  void toggleFav(currentSong);
+});
 $('#play-btn').addEventListener('click', () => {
   if (audio.paused && audio.src) {
-    audio.play().catch(() => {});
+    audio.play().catch(playError);
   } else if (!audio.paused) {
     audio.pause();
   }
@@ -664,18 +1074,27 @@ audio.addEventListener('ended', () => {
   }
 });
 
-audio.addEventListener('play', () => {
-  $('#play-icon').classList.add('hidden');
-  $('#pause-icon').classList.remove('hidden');
-});
+audio.addEventListener('play', () => syncIcons());
 audio.addEventListener('pause', () => {
-  $('#play-icon').classList.remove('hidden');
-  $('#pause-icon').classList.add('hidden');
+  startingId = null;
+  setBuffering(false);
+});
+audio.addEventListener('playing', () => {
+  startingId = null;
+  setBuffering(false);
+});
+audio.addEventListener('waiting', () => setBuffering(true));
+audio.addEventListener('error', () => {
+  startingId = null;
+  setBuffering(false);
+  if (audio.src) toast(currentSong?.kind === 'quran' ? 'Could not load Quran audio' : 'Could not load nasheed');
 });
 
 function resetPlayer() {
   currentSong = null;
   queueIdx = -1;
+  startingId = null;
+  setBuffering(false);
   $('#player-title').textContent = 'No track playing';
   $('#player-artist').textContent = '';
   $('#player-thumb').style.display = 'none';
@@ -691,6 +1110,7 @@ function resetPlayer() {
 
 // --- KEYBOARD SHORTCUTS ---
 document.addEventListener('keydown', (e) => {
+  if (e.defaultPrevented) return;
   if (e.target instanceof HTMLElement && e.target.tagName === 'INPUT') return;
   if (e.code === 'Space') {
     e.preventDefault();
@@ -864,6 +1284,10 @@ async function removeFromList(song: Song) {
 }
 
 async function toggleFav(song: Song) {
+  if (song.kind === 'quran') {
+    toast('Quran cannot be liked');
+    return;
+  }
   await getJSON<{ ok: boolean }>(`${API}/api/library/add`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -1035,7 +1459,7 @@ $('#add-pl-btn').addEventListener('click', async () => {
 try {
   if ('mediaSession' in navigator) {
     navigator.mediaSession.setActionHandler('play', () => {
-      audio.play().catch(() => {});
+      audio.play().catch(playError);
     });
     navigator.mediaSession.setActionHandler('pause', () => {
       audio.pause();
@@ -1057,3 +1481,4 @@ updateVolIcon();
 renderRecentQ();
 syncSearchUI();
 loadPlaylists();
+void loadQuranReciters();

@@ -9,6 +9,14 @@ venv/
 # Tauri / Rust
 target/
 tauri-app/src-tauri/target/
+tauri-app/src-tauri/gen/
+tauri-app/src-tauri/bundles/
+nasheed-player
+*.AppImage
+*.deb
+*.rpm
+*.msi
+*.dmg
 node_modules/
 
 # OS / editor
