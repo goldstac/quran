@@ -19,7 +19,7 @@ Two app versions exist in this repo:
 
 ## Git & Conventional Commits
 
-- Remote: `origin` at `git@github.com:goldstac/nasheed-app.git`, default branch `main`.
+- Remote: `origin` at `git@github.com:goldstac/quran-nasheeds.git`, default branch `main`.
 - ALWAYS use Conventional Commits. Format: `<type>(<scope>): <description>`
 - Types: `feat` (new feature), `fix` (bug fix), `refactor`, `docs` (docs/AGENTS), `style` (CSS-only, no logic), `perf`, `chore` (gitignore, tooling), `build`.
 - Scope examples: `web`, `api`, `player`, `ui`, `loop`, `tauri`. Use lowercase.

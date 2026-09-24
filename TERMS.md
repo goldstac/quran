@@ -9,7 +9,7 @@ Use the app = you're good with these terms. Not good with them? Simply don't use
 
 ## 2. What the app is
 
-A free, local app for the **Quran** and Islamic **nasheeds** — browse surahs, search YouTube for nasheeds, and play them through a player you run on your own device, with a personal library, likes, and playlists. No accounts, no subscriptions, no payments, no backend we operate.
+A free, local app for the **Quran** and Islamic **nasheeds** — browse all 114 surahs with reciter choice, search YouTube for nasheeds, and play them through a player you run on your own device, with a personal library, likes, and playlists. No accounts, no subscriptions, no payments, no backend we operate.
 
 ## 3. Your licence
 
@@ -18,8 +18,9 @@ You get a personal, non-exclusive, non-transferable licence to install and use t
 ## 4. The content isn't ours
 
 - The nasheeds themselves are hosted by **YouTube/Google** and belong to their writers, performers, labels, and rightsholders. The app is only an organiser and player for them — we claim no rights over the music.
+- Quran audio and reciter listings come from third parties (**Quran.com** / **MP3Quran** and similar CDNs). Those recordings belong to their reciters and rightsholders — again, we claim no rights; we're just pointing the player at them.
 - The app leans on the third-party open-source tool **yt-dlp** and on YouTube continuing to offer its public interfaces. Neither is ours; YouTube's own terms (https://www.youtube.com/t/terms) apply alongside these when you play things.
-- We're **not affiliated with, endorsed by, or sponsored by** YouTube, Google, Cloudflare, or Spotify. "Spotify-like" only ever meant the visual style.
+- We're **not affiliated with, endorsed by, or sponsored by** YouTube, Google, Cloudflare, Spotify, Quran.com, or MP3Quran. "Spotify-like" only ever meant the visual style.
 
 ## 5. Playing nice
 
@@ -44,7 +45,7 @@ The app is handed over **as-is, with no guarantees** of any kind — if it misbe
 
 ## 9. Ownership
 
-The code, interface, and docs belong to the project maintainer. This licence lets you use them — not own them. No ownership claims are made over the nasheeds or over anything belonging to YouTube.
+The code, interface, and docs belong to the project maintainer. This licence lets you use them — not own them. No ownership claims are made over the nasheeds, Quran recordings, or anything belonging to YouTube or the Quran CDNs.
 
 ## 10. Walking away
 

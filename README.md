@@ -1,6 +1,6 @@
 # Quran & Nasheeds
 
-A Spotify-style desktop/mobile player for the **Quran** and Islamic **nasheeds**. Browse surahs with reciter choice, search YouTube for nasheeds, and keep your own library, likes, and playlists — all stored on your device.
+A local player for the **Quran** and Islamic **nasheeds**. Browse all 114 surahs with 170+ reciters, search YouTube for nasheeds, and keep your own library, likes, and playlists — everything stays on your device.
 
 Cross-platform: **Linux, macOS, and Windows** — anywhere Python runs plus a browser. (macOS and Windows just need the same Python + `yt-dlp` setup below; all commands work the same.)
 
@@ -37,7 +37,7 @@ Then open **http://localhost:5000**.
 
 If the port is busy: `fuser -k 5000/tcp` (Linux) or `lsof -ti:5000 | xargs kill` (macOS)
 
-> Prebuilt desktop/mobile builds will be published on the [Releases page](https://github.com/goldstac/nasheed-app/releases) once they're ready — nothing is up there yet, so for now it's clone-and-run.
+> Prebuilt desktop/mobile builds will be published on the [Releases page](https://github.com/goldstac/quran-nasheeds/releases) once they're ready — nothing is up there yet, so for now it's clone-and-run.
 
 ## Self-hosting
 
@@ -49,8 +49,8 @@ Run it on your own machine (home server, NAS, always-on PC) and open it from any
 - No Node required — the compiled `web/static/app.js` is committed
 
 ```bash
-git clone git@github.com:goldstac/nasheed-app.git
-cd nasheed-app
+git clone git@github.com:goldstac/quran-nasheeds.git
+cd quran-nasheeds
 pip install flask flask-cors        # Arch: add --break-system-packages
 python3 web/app.py
 ```
@@ -68,7 +68,7 @@ app.run(host="127.0.0.1", port=8080, debug=False)
 ```nginx
 server {
     listen 443 ssl;
-    server_name nasheed.example.com;
+    server_name quran-nasheeds.example.com;
 
     location / {
         proxy_pass http://127.0.0.1:5000;
@@ -134,7 +134,7 @@ TERMS.md        terms of service
 
 ## Privacy
 
-The app runs entirely on your device — no accounts, no servers of ours, no analytics. Your library never leaves your machine; YouTube and two CDNs (fonts/icons) see normal traffic. Full details: [PRIVACY.md](PRIVACY.md). Terms: [TERMS.md](TERMS.md).
+The app runs entirely on your device — no accounts, no servers of ours, no analytics. Your library never leaves your machine. It talks to YouTube (nasheeds), Quran.com + MP3Quran (surahs/reciters/audio), and two CDNs (fonts/icons) for normal traffic only. Full details: [PRIVACY.md](PRIVACY.md). Terms: [TERMS.md](TERMS.md).
 
 ## Contributing
 
@@ -142,4 +142,4 @@ PRs and issues welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Ownership
 
-Code, interface, and docs belong to the project maintainer; nasheeds belong to their creators. See [TERMS.md](TERMS.md).
+Code, interface, and docs belong to the project maintainer; nasheeds belong to their creators, and Quran recordings belong to their reciters/rightsholders. See [TERMS.md](TERMS.md).

@@ -42,6 +42,7 @@ Tip: free the port first if an old instance is hanging around — `fuser -k 5000
 ## Style & conventions
 
 - Say **"nasheeds"**, never "songs", in anything user-facing.
+- Display name is **Quran & Nasheeds** (repo slug is `quran-nasheeds`).
 - No code comments unless you're asked for them.
 - No browser `prompt()` / `confirm()` / `alert()` — use the existing custom modal helpers (`promptText`, `confirmDialog`, `showPlaylistPicker`).
 - No stock `<input type="range">` — use the custom `Slider` component.

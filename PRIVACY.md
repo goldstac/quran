@@ -1,7 +1,7 @@
 # Privacy Policy
 
 **Effective date:** 23 September 2026
-**Applies to:** the Quran & Nasheeds app in this repository (web version, and any desktop/mobile builds made from it)
+**Applies to:** the Quran & Nasheeds app in this repository (web version, and any desktop/mobile builds made from it). Repo: [github.com/goldstac/quran-nasheeds](https://github.com/goldstac/quran-nasheeds).
 **Maintainer:** [github.com/goldstac](https://github.com/goldstac)
 
 This policy just describes what the app actually does. No filler.
@@ -12,7 +12,7 @@ This policy just describes what the app actually does. No filler.
 - **We never see your data.** The app makes no requests to anything we control, because we don't run anything.
 - There is **no analytics, no tracking, no advertising, no crash reporting** built into the app.
 - Your library, playlists, and settings live **only on your device**.
-- The app does talk to **YouTube/Google** (searches, audio, thumbnails) and to **two CDNs** that serve the interface's fonts/icons. Those parties see your connection like any other website traffic — under their own privacy policies, not ours.
+- The app does talk to **YouTube/Google** (nasheed search, audio, thumbnails), to **Quran.com** and **MP3Quran** (surah lists, reciters, and Quran audio URLs), and to **two CDNs** that serve the interface's fonts/icons. Those parties see your connection like any other website traffic — under their own privacy policies, not ours.
 
 ## What we collect
 
@@ -40,15 +40,19 @@ All of this is written to your own machine and stays there:
 
 The app sends nothing to us. From your device it does make these outbound requests:
 
-1. **Searches** — your query goes to **YouTube**, via the `yt-dlp` tool running locally. YouTube/Google sees your query, IP address, and the tool's user-agent.
-2. **Audio** — streamed from Google's YouTube media servers (googlevideo.com), which see your IP and the media requests, same as any YouTube playback.
+1. **Nasheed searches** — your query goes to **YouTube**, via the `yt-dlp` tool running locally. YouTube/Google sees your query, IP address, and the tool's user-agent.
+2. **Nasheed audio** — streamed from Google's YouTube media servers (googlevideo.com), which see your IP and the media requests, same as any YouTube playback.
 3. **Thumbnails** — loaded straight from YouTube's image servers (e.g. i.ytimg.com) by your browser.
-4. **Interface assets** — two third-party hosts:
+4. **Quran metadata** — chapter names from **api.quran.com**, reciter lists from **mp3quran.net**. Those hosts see your IP and the API requests.
+5. **Quran audio** — played directly from **MP3Quran CDN** servers (`server*.mp3quran.net`), which see your IP and media requests (including seek/Range).
+6. **Interface assets** — two third-party hosts:
    - **Google Fonts** (`fonts.googleapis.com` / `fonts.gstatic.com`) — Google sees your IP and request.
    - **Font Awesome via cdnjs** (`cdnjs.cloudflare.com`) — Cloudflare sees your IP and request.
 
 We don't control any of them. Their own policies apply:
 - Google/YouTube: https://policies.google.com/privacy
+- Quran.com: https://quran.com/privacy
+- MP3Quran: https://mp3quran.net
 - Cloudflare (cdnjs): https://www.cloudflare.com/privacy-policy
 
 ## Cookies and tracking
@@ -77,7 +81,7 @@ Removing `library.json` and clearing site data wipes all of it. There's nothing 
 
 ## About third-party data
 
-If you want to see, change, or remove what **YouTube/Google or Cloudflare** hold from the requests above, use their own privacy settings and policies (linked in section 4) — we have no access to any of it.
+If you want to see, change, or remove what **YouTube/Google, Quran.com, MP3Quran, or Cloudflare** hold from the requests above, use their own privacy settings and policies (linked in section 4) — we have no access to any of it.
 
 ## Changes
 
