@@ -37,7 +37,7 @@ Then open **http://localhost:5000**.
 
 If the port is busy: `fuser -k 5000/tcp` (Linux) or `lsof -ti:5000 | xargs kill` (macOS)
 
-> Prebuilt desktop/mobile builds will be published on the [Releases page](https://github.com/goldstac/quran-nasheeds/releases) once they're ready — nothing is up there yet, so for now it's clone-and-run.
+> Prebuilt desktop builds: grab a zip/tarball from the [Releases page](https://github.com/goldstac/quran-nasheeds/releases) (Linux, macOS, Windows) — unzip and run the binary (needs Python + `yt-dlp`, see `START.txt`).
 
 ## Self-hosting
 

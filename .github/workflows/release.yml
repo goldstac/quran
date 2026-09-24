@@ -19,8 +19,6 @@ jobs:
             asset: quran-nasheeds-linux-x86_64.tar.gz
           - os: macos-latest
             asset: quran-nasheeds-macos-aarch64.tar.gz
-          - os: macos-13
-            asset: quran-nasheeds-macos-x86_64.tar.gz
           - os: windows-latest
             asset: quran-nasheeds-windows-x86_64.zip
     runs-on: ${{ matrix.os }}
@@ -131,7 +129,6 @@ jobs:
             |---|---|
             | Linux (x86_64) | `quran-nasheeds-linux-x86_64.tar.gz` |
             | macOS (Apple Silicon) | `quran-nasheeds-macos-aarch64.tar.gz` |
-            | macOS (Intel) | `quran-nasheeds-macos-x86_64.tar.gz` |
             | Windows (x86_64) | `quran-nasheeds-windows-x86_64.zip` |
 
             Unzip, keep `web/` next to the binary, then run it. See `START.txt`.
