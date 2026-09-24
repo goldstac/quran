@@ -14,8 +14,12 @@ struct Backend(Mutex<Option<Child>>);
 
 #[cfg(not(target_os = "android"))]
 fn find_web_dir() -> Option<PathBuf> {
+    let exe_web = std::env::current_exe()
+        .ok()
+        .and_then(|p| p.parent().map(|d| d.join("web")));
     let candidates = [
         std::env::var("NASHEED_WEB_DIR").ok().map(PathBuf::from),
+        exe_web,
         Some(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../web")),
         std::env::current_dir().ok().map(|d| d.join("web")),
     ];

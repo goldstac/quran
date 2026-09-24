@@ -1,0 +1,149 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            asset: quran-nasheeds-linux-x86_64.tar.gz
+          - os: macos-latest
+            asset: quran-nasheeds-macos-aarch64.tar.gz
+          - os: macos-13
+            asset: quran-nasheeds-macos-x86_64.tar.gz
+          - os: windows-latest
+            asset: quran-nasheeds-windows-x86_64.zip
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read version
+        id: ver
+        shell: bash
+        run: echo "version=$(jq -r .version package.json)" >> "$GITHUB_OUTPUT"
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: tauri-app/src-tauri
+
+      - name: Install Linux deps
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev \
+            libayatana-appindicator3-dev librsvg2-dev patchelf
+
+      - name: Build release binary
+        working-directory: tauri-app/src-tauri
+        shell: bash
+        run: cargo build --release
+
+      - name: Package (unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          stage="quran-nasheeds-${{ steps.ver.outputs.version }}"
+          mkdir -p "$stage/web"
+          cp tauri-app/src-tauri/target/release/nasheed-player "$stage/"
+          if [ -d web/__pycache__ ]; then rm -rf web/__pycache__; fi
+          cp -R web/. "$stage/web/"
+          rm -rf "$stage/web/ts" "$stage/web/node_modules"
+          cp README.md PRIVACY.md TERMS.md "$stage/"
+          printf '%s\n' \
+            "Quran & Nasheeds ${{ steps.ver.outputs.version }}" \
+            "" \
+            "Requirements: Python 3.11+ with flask and flask-cors, yt-dlp on PATH." \
+            "" \
+            "Linux/macOS:   ./nasheed-player" \
+            "Windows:       nasheed-player.exe" \
+            "" \
+            "Keep the web/ folder next to the binary (or set NASHEED_WEB_DIR)." \
+            > "$stage/START.txt"
+          tar -czf "${{ matrix.asset }}" "$stage"
+
+      - name: Package (windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          stage="quran-nasheeds-${{ steps.ver.outputs.version }}"
+          mkdir -p "$stage/web"
+          cp tauri-app/src-tauri/target/release/nasheed-player.exe "$stage/"
+          cp -R web/. "$stage/web/"
+          rm -rf "$stage/web/ts" "$stage/web/node_modules" "$stage/web/__pycache__"
+          cp README.md PRIVACY.md TERMS.md "$stage/"
+          printf '%s\n' \
+            "Quran & Nasheeds ${{ steps.ver.outputs.version }}" \
+            "" \
+            "Requirements: Python 3.11+ with flask and flask-cors, yt-dlp on PATH." \
+            "" \
+            "Windows: nasheed-player.exe" \
+            "Keep the web/ folder next to the exe (or set NASHEED_WEB_DIR)." \
+            > "$stage/START.txt"
+          7z a "${{ matrix.asset }}" "$stage"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}
+          path: ${{ matrix.asset }}
+          if-no-files-found: error
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Quran & Nasheeds 1.0.0
+          tag_name: ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          fail_on_unmatched_files: true
+          files: |
+            dist/*.tar.gz
+            dist/*.zip
+          body: |
+            ## Quran & Nasheeds 1.0.0
+
+            Local player for the **Quran** and Islamic **nasheeds** — no accounts, no tracking.
+
+            ### Downloads
+            | Platform | File |
+            |---|---|
+            | Linux (x86_64) | `quran-nasheeds-linux-x86_64.tar.gz` |
+            | macOS (Apple Silicon) | `quran-nasheeds-macos-aarch64.tar.gz` |
+            | macOS (Intel) | `quran-nasheeds-macos-x86_64.tar.gz` |
+            | Windows (x86_64) | `quran-nasheeds-windows-x86_64.zip` |
+
+            Unzip, keep `web/` next to the binary, then run it. See `START.txt`.
+
+            **Needs on your machine:** Python 3.11+ (`flask`, `flask-cors`) and [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) on `PATH`.
+
+            ### Highlights
+            - **Quran** — all 114 surahs, 170+ reciters, Arabic + English names, play/shuffle
+            - **Nasheed search** on YouTube with local library, likes, playlists
+            - Range-aware audio proxy (seeking works), shuffle, loop-one, keyboard shortcuts
+            - Everything stored locally on your device
+
+            ### Notes
+            - Builds are **unsigned** — macOS may need *Right-click → Open* (or `xattr -d com.apple.quarantine`), Windows SmartScreen may warn (More info → Run anyway).
+            - Still happy from source? `./run-web.sh` works as before.
