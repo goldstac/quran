@@ -364,6 +364,43 @@ html,body{
 @keyframes pop{from{opacity:0;transform:scale(.95)}to{opacity:1;transform:scale(1)}}
 
 /* ===== QURAN ===== */
+.quran-trans{
+  margin:0 0 18px;background:#181818;border:1px solid #282828;
+  border-radius:10px;overflow:hidden;
+}
+.quran-trans-head{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:10px 14px;border-bottom:1px solid #282828;
+}
+.quran-trans-label{
+  font-size:11px;font-weight:700;color:#a7a7a7;letter-spacing:1px;text-transform:uppercase;
+}
+.quran-trans-langs{display:flex;gap:3px;background:#121212;border-radius:20px;padding:3px}
+.quran-trans-lang{
+  border:none;background:none;color:#a7a7a7;font-size:12px;font-weight:600;
+  padding:6px 13px;border-radius:16px;cursor:pointer;transition:background .15s,color .15s;
+}
+.quran-trans-lang:hover{color:#fff}
+.quran-trans-lang.active{background:#1db954;color:#000}
+.quran-trans-body{max-height:min(40vh,360px);overflow-y:auto;padding:8px}
+.quran-trans-hint{
+  display:flex;align-items:center;justify-content:center;
+  padding:26px 12px;font-size:13px;color:#a7a7a7;
+}
+.quran-ayah{
+  display:flex;gap:12px;align-items:flex-start;padding:8px 10px;
+  border-radius:8px;transition:background .15s;
+}
+.quran-ayah.active{background:rgba(29,185,84,.14)}
+.quran-ayah-num{
+  flex-shrink:0;width:26px;height:26px;border-radius:50%;background:#282828;
+  color:#a7a7a7;font-size:11px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;
+  font-variant-numeric:tabular-nums;margin-top:1px;
+}
+.quran-ayah.active .quran-ayah-num{background:#1db954;color:#000}
+.quran-ayah-text{font-size:14px;line-height:1.7;color:#e0e0e0}
+.quran-ayah.active .quran-ayah-text{color:#fff}
 .quran-reciter-block{margin-top:14px;user-select:none}
 .quran-reciter-head{
   display:flex;align-items:center;justify-content:space-between;gap:12px;
@@ -456,15 +493,57 @@ html,body{
 .reciter-opt.active .reciter-opt-style{color:#6fd994}
 
 /* ===== MOBILE ===== */
+.menu-btn,.menu-close,.sidebar-backdrop{display:none}
+.app{height:calc(100vh - 80px);height:calc(100dvh - 80px)}
 @media(max-width:768px){
-  .sidebar{display:none}
-  .player{grid-template-columns:1fr auto;height:68px;padding:0 12px}
-  .player-center{display:none}
+  .menu-btn{
+    display:flex;position:fixed;left:8px;top:10px;z-index:60;
+    width:40px;height:40px;border:none;border-radius:50%;
+    background:#181818;color:#fff;align-items:center;justify-content:center;
+    font-size:15px;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.4);
+  }
+  .menu-close{
+    display:flex;margin-left:auto;width:34px;height:34px;border:none;border-radius:50%;
+    background:transparent;color:#b3b3b3;align-items:center;justify-content:center;
+    font-size:15px;cursor:pointer;
+  }
+  .sidebar{
+    position:fixed;left:0;top:0;bottom:0;width:280px;min-width:280px;
+    z-index:80;transform:translateX(-100%);transition:transform .22s ease;
+    padding-bottom:88px;
+  }
+  .sidebar.open{transform:translateX(0)}
+  .sidebar-backdrop{
+    display:block;position:fixed;inset:0;background:rgba(0,0,0,.55);
+    z-index:70;opacity:0;pointer-events:none;transition:opacity .2s;
+  }
+  .sidebar-backdrop.show{opacity:1;pointer-events:auto}
+  .search-sticky,.lib-sticky{padding:16px 16px 12px 58px}
+  .search-body,.lib-body{padding:0 16px 24px}
+  .lib-title{font-size:24px}
+  .player{
+    grid-template-columns:1fr auto;
+    grid-template-areas:"left ctr" "seek seek";
+    height:80px;padding:8px 12px;row-gap:2px;
+  }
+  .player-left{grid-area:left}
+  .player-center{display:contents}
+  .player-controls{grid-area:ctr;justify-self:end;gap:10px}
+  .player-seek{grid-area:seek;max-width:100%}
   .player-right{display:none}
+  .player-center #shuffle-btn,.player-center #stop-btn{display:none}
   .player-art{width:44px;height:44px}
-  .track-row{grid-template-columns:36px 1fr auto;gap:10px;padding:6px 4px}
+  .player-title,.player-artist{max-width:42vw}
+  .track-row{grid-template-columns:36px 1fr auto auto;gap:10px;padding:7px 4px}
   .track-thumb{width:36px;height:36px}
+  .track-actions{opacity:1}
+  .track-act{width:34px;height:34px;font-size:13px}
   .quran-reciter-chip{padding:8px 12px;font-size:12px}
   .quran-reciter-edge{display:none!important}
   .quran-row .track-num{width:36px;height:36px}
+  .quran-trans-body{max-height:min(34vh,300px)}
+  .quran-trans-lang{padding:6px 10px;font-size:11px}
+  .modal-backdrop{align-items:flex-end}
+  .modal{width:100%;max-width:480px;border-radius:14px 14px 0 0;padding:20px 16px calc(20px + env(safe-area-inset-bottom))}
+  .toast{bottom:96px;max-width:88vw;white-space:normal;text-align:center}
 }

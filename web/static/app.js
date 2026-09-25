@@ -406,7 +406,16 @@ const seek = new Slider($seekOrigin);
 const $volOrigin = $('#volume-bar');
 const vol = new Slider($volOrigin);
 // --- NAVIGATION ---
+function setSidebarOpen(open) {
+    $('#sidebar').classList.toggle('open', open);
+    $('#sidebar-backdrop').classList.toggle('show', open);
+}
+$('#menu-btn').addEventListener('click', () => setSidebarOpen(true));
+$('#menu-close').addEventListener('click', () => setSidebarOpen(false));
+$('#sidebar-backdrop').addEventListener('click', () => setSidebarOpen(false));
+$('#playlist-nav').addEventListener('click', () => setSidebarOpen(false));
 $$('.nav-item').forEach((btn) => btn.addEventListener('click', () => {
+    setSidebarOpen(false);
     $$('.nav-item').forEach((b) => b.classList.remove('active'));
     btn.classList.add('active');
     const v = btn.dataset.view;
@@ -539,6 +548,97 @@ function stepQuranReciter(delta) {
     const next = Math.max(0, Math.min(quranReciters.length - 1, i + delta));
     applyQuranReciter(quranReciters[next].id, true);
 }
+// --- QURAN TRANSLATION ---
+let transLang = load('ns_qtrans', 'en');
+const transCache = new Map();
+let transLoadedKey = '';
+let transAyahIdx = -1;
+function transHint(text) {
+    $('#quran-trans-body').innerHTML = `<div class="quran-trans-hint">${esc(text)}</div>`;
+}
+function highlightTransAyah(scroll) {
+    if (!currentSong || currentSong.kind !== 'quran' || transLang === 'off')
+        return;
+    const rows = $$('.quran-trans-body .quran-ayah');
+    if (!rows.length)
+        return;
+    const dur = audio.duration || currentSong.duration || 0;
+    if (!dur)
+        return;
+    let idx = Math.floor((audio.currentTime / dur) * rows.length);
+    if (idx < 0)
+        idx = 0;
+    if (idx >= rows.length)
+        idx = rows.length - 1;
+    if (idx === transAyahIdx)
+        return;
+    transAyahIdx = idx;
+    rows.forEach((r, i) => r.classList.toggle('active', i === idx));
+    if (scroll)
+        rows[idx].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+function syncQuranTranslation() {
+    $$('.quran-trans-lang').forEach((b) => b.classList.toggle('active', b.dataset.lang === transLang));
+    const ch = currentSong && currentSong.kind === 'quran' ? currentSong.chapter_id ?? 0 : 0;
+    if (!ch || transLang === 'off') {
+        transLoadedKey = '';
+        transAyahIdx = -1;
+        transHint(!ch ? 'Play a surah to see its translation' : 'Translation is off');
+        return;
+    }
+    const key = `${ch}:${transLang}`;
+    if (key === transLoadedKey)
+        return;
+    transLoadedKey = key;
+    transAyahIdx = -1;
+    $('#quran-trans-body').innerHTML = '<div class="quran-trans-hint">Loading translation...</div>';
+    const render = (verses) => {
+        if (transLoadedKey !== key)
+            return;
+        if (!verses.length) {
+            transLoadedKey = '';
+            transHint('Translation unavailable');
+            return;
+        }
+        const body = $('#quran-trans-body');
+        body.innerHTML = '';
+        verses.forEach((v) => {
+            const row = document.createElement('div');
+            row.className = 'quran-ayah';
+            row.innerHTML = `<span class="quran-ayah-num">${v.num}</span><span class="quran-ayah-text">${esc(v.text)}</span>`;
+            body.appendChild(row);
+        });
+        highlightTransAyah(true);
+    };
+    const cached = transCache.get(key);
+    if (cached) {
+        render(cached);
+        return;
+    }
+    void (async () => {
+        try {
+            const r = await fetch(`${API}/api/quran/translation/${ch}?lang=${transLang}`);
+            if (!r.ok)
+                throw new Error('trans');
+            const d = (await r.json());
+            const verses = d.verses || [];
+            transCache.set(key, verses);
+            render(verses);
+        }
+        catch {
+            if (transLoadedKey === key) {
+                transLoadedKey = '';
+                transHint('Could not load translation');
+            }
+        }
+    })();
+}
+$$('.quran-trans-lang').forEach((b) => b.addEventListener('click', () => {
+    transLang = b.dataset.lang || 'en';
+    store('ns_qtrans', transLang);
+    transLoadedKey = '';
+    syncQuranTranslation();
+}));
 function renderQuranReciterChips() {
     const scroller = $('#quran-reciter-scroller');
     scroller.innerHTML = '';
@@ -989,6 +1089,7 @@ function updatePlayer() {
             icon.className = currentSong.kind === 'quran' ? 'fa-solid fa-book-quran' : 'fa-solid fa-music';
     }
     $('#fav-btn i').className = currentSong.favorite ? 'fa-solid fa-heart fav-on' : 'fa-regular fa-heart';
+    syncQuranTranslation();
     if ('mediaSession' in navigator) {
         navigator.mediaSession.metadata = new MediaMetadata({
             title: currentSong.title,
@@ -1120,6 +1221,7 @@ function resetPlayer() {
     $('#time-dur').textContent = '0:00';
     $$('.track-row').forEach((r) => r.classList.remove('playing'));
     audio.removeAttribute('src');
+    syncQuranTranslation();
     if ('mediaSession' in navigator)
         navigator.mediaSession.metadata = null;
 }
@@ -1211,6 +1313,7 @@ setInterval(() => {
     seek.setValue(p);
     $('#time-pos').textContent = fmt(audio.currentTime);
     $('#time-dur').textContent = fmt(audio.duration);
+    highlightTransAyah(true);
 }, 250);
 // --- VOLUME ---
 const savedVol = load('ns_vol', 70);

@@ -291,7 +291,7 @@ def api_quran_reciters():
             label = name
             style = m.get("name") or ""
             if style and "Hafs A'n Assem" not in style and "Murattal" not in style:
-                label = f"{name} — {style}"
+                label = f"{name} · {style}"
             if label in seen:
                 continue
             seen.add(label)
@@ -330,6 +330,39 @@ def api_quran_chapter_audio(moshaf_id, chapter_id):
         return jsonify(payload)
     except Exception as e:
         _quran_cache.pop(key, None)
+        return jsonify({"error": str(e)}), 500
+
+_QURAN_TRANS_IDS = {"en": 20, "ta": 133}
+_QURAN_TRANS_NAMES = {"en": "Saheeh International", "ta": "Abdul Hameed Baqavi"}
+
+def _strip_verse_html(text):
+    text = re.sub(r"<sup[^>]*>.*?</sup>", "", text, flags=re.S)
+    text = re.sub(r"<[^>]+>", "", text)
+    return text.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">").replace("&#39;", "'").replace("&quot;", '"').strip()
+
+@app.route("/api/quran/translation/<int:chapter_id>")
+def api_quran_translation(chapter_id):
+    if not 1 <= chapter_id <= 114:
+        return jsonify({"error": "bad chapter"}), 400
+    lang = (request.args.get("lang") or "en").lower()
+    if lang not in _QURAN_TRANS_IDS:
+        lang = "en"
+    rid = _QURAN_TRANS_IDS[lang]
+    try:
+        data = _quran_get(
+            f"https://api.quran.com/api/v4/quran/translations/{rid}?chapter_number={chapter_id}",
+            f"trans:{rid}:{chapter_id}",
+        )
+        raw = data.get("translations") or []
+        verses = [{"num": i, "text": _strip_verse_html(v.get("text") or "")}
+                  for i, v in enumerate(raw, 1)]
+        meta = data.get("meta") or {}
+        return jsonify({
+            "lang": lang,
+            "name": meta.get("translation_name") or _QURAN_TRANS_NAMES[lang],
+            "verses": verses,
+        })
+    except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
