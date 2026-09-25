@@ -11,6 +11,8 @@ Use the app = you're good with these terms. Not good with them? Simply don't use
 
 A free, local app for the **Quran** and Islamic **nasheeds** — browse all 114 surahs with reciter choice, search YouTube for nasheeds, and play them through a player you run on your own device, with a personal library, likes, and playlists. No accounts, no subscriptions, no payments, no backend we operate.
 
+It's made for the Quran and nasheeds — the YouTube search will match whatever you type, but using it for general music isn't what it's intended for.
+
 ## 3. Your licence
 
 You get a personal, non-exclusive, non-transferable licence to install and use the app for your own private, non-commercial purposes. We keep ownership of the code — this doesn't hand it over to you. You can end it anytime by just stopping using and uninstalling the app.

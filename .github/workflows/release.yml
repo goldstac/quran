@@ -63,6 +63,8 @@ jobs:
           printf '%s\n' \
             "Quran & Nasheeds ${{ steps.ver.outputs.version }}" \
             "" \
+            "Made for the Quran & nasheeds - not general music." \
+            "" \
             "Requirements: Python 3.11+ with flask and flask-cors, yt-dlp on PATH." \
             "" \
             "Linux/macOS:   ./nasheed-player" \
@@ -85,6 +87,8 @@ jobs:
           cp README.md PRIVACY.md TERMS.md "$stage/"
           printf '%s\n' \
             "Quran & Nasheeds ${{ steps.ver.outputs.version }}" \
+            "" \
+            "Made for the Quran & nasheeds - not general music." \
             "" \
             "Requirements: Python 3.11+ with flask and flask-cors, yt-dlp on PATH." \
             "" \

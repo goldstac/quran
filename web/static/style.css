@@ -56,6 +56,9 @@ html,body{
 }
 .sidebar-add:hover{color:#fff;background:rgba(255,255,255,.1)}
 .sidebar-playlists{display:flex;flex-direction:column;gap:1px;flex:1;overflow-y:auto}
+.sidebar-intent{
+  margin:8px 12px 14px;font-size:11px;line-height:1.45;color:#6a6a6a;
+}
 .pl-item{
   display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:6px;
   color:#b3b3b3;font-size:13px;font-weight:500;cursor:pointer;border:none;background:none;
