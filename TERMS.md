@@ -9,7 +9,7 @@ Use the app = you're good with these terms. Not good with them? Simply don't use
 
 ## 2. What the app is
 
-A free, local app for the **Quran** and Islamic **nasheeds** — browse all 114 surahs with reciter choice, search YouTube for nasheeds, and play them through a player you run on your own device, with a personal library, likes, and playlists. No accounts, no subscriptions, no payments, no backend we operate.
+A free, local app for the **Quran** and Islamic **nasheeds** — browse all 114 surahs with reciter choice, search YouTube for nasheeds, and play them through a player you run on your own device, with a personal library, likes, and playlists. No accounts, no subscriptions, no payments, no backend we operate. This is a hobby project, maintained in spare time, with no promise of updates or support.
 
 It's made for the Quran and nasheeds. The YouTube search will match whatever you type, but using it for general music isn't what it's intended for.
 
@@ -55,8 +55,8 @@ Quit anytime. We can pull the repo or stop the project whenever; when you uninst
 
 ## 11. Disagreements
 
-We don't designate any particular country's rules for this. If something ever goes wrong, message the maintainer first (section 12) — we'd rather sort it out directly than through paperwork. Whatever you're already entitled to where you live stays untouched.
+We don't designate any particular country's rules for this. Whatever you're already entitled to where you live stays untouched.
 
-## 12. Changes and getting in touch
+## 12. Changes
 
-We can update these terms by committing a new version to the repository with a fresh effective date; using the app after that means you're on board with it. Questions? [github.com/goldstac](https://github.com/goldstac).
+If the terms change, the updated file lands in the repo with a new date at the top; the old version is in the git history.

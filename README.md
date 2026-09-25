@@ -124,7 +124,7 @@ The app runs entirely on your device — no accounts, no servers of ours, no ana
 
 ## Contributing
 
-PRs and issues welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
+PRs and issues welcome, see [CONTRIBUTING.md](CONTRIBUTING.md). Want to ask something or just chat? Use [Discussions](https://github.com/goldstac/quran-nasheeds/discussions).
 
 ## Ownership
 
