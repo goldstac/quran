@@ -438,6 +438,20 @@ html,body{
 .track-ar{font-size:14px;color:#e0e0e0;overflow:hidden;text-overflow:ellipsis}
 .track-ayahs{font-size:12px;color:#a7a7a7;flex-shrink:0}
 
+.modal-reciter{width:min(460px,92vw)}
+.reciter-picker-count{padding:0 4px;margin-top:-6px}
+.reciter-picker-list{max-height:min(50vh,360px);gap:2px}
+.reciter-opt{
+  display:flex;align-items:center;gap:10px;width:100%;
+}
+.reciter-opt i{width:16px;text-align:center;color:#b3b3b3;flex-shrink:0}
+.reciter-opt-text{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+.reciter-opt-name{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.reciter-opt-style{font-size:11px;color:#a7a7a7;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.reciter-opt.active{background:rgba(29,185,84,.15);color:#1db954}
+.reciter-opt.active i{color:#1db954}
+.reciter-opt.active .reciter-opt-style{color:#6fd994}
+
 /* ===== MOBILE ===== */
 @media(max-width:768px){
   .sidebar{display:none}

@@ -78,11 +78,11 @@ function recordRecent(song) {
     store('ns_recent', list.slice(0, 50));
 }
 class Modal {
-    constructor(title, content, onClose) {
+    constructor(title, content, onClose, className) {
         this.backdrop = document.createElement('div');
         this.backdrop.className = 'modal-backdrop';
         this.panel = document.createElement('div');
-        this.panel.className = 'modal';
+        this.panel.className = 'modal' + (className ? ` ${className}` : '');
         const h = document.createElement('div');
         h.className = 'modal-title';
         h.textContent = title;
@@ -241,6 +241,78 @@ async function showPlaylistPicker() {
         content.append(list, sep, newRow);
         const m = new Modal('Add to playlist', content, () => finish(null));
     });
+}
+function showReciterPicker() {
+    if (!quranReciters.length)
+        return;
+    let done = false;
+    const finish = () => {
+        if (done)
+            return;
+        done = true;
+        m.close();
+    };
+    const content = document.createElement('div');
+    content.className = 'modal-body reciter-picker';
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'modal-input';
+    input.placeholder = 'Search reciters…';
+    input.spellcheck = false;
+    const count = document.createElement('div');
+    count.className = 'modal-hint reciter-picker-count';
+    const list = document.createElement('div');
+    list.className = 'modal-list reciter-picker-list';
+    const render = (q) => {
+        const term = q.trim().toLowerCase();
+        const items = quranReciters.filter((r) => !term ||
+            (r.label || '').toLowerCase().includes(term) ||
+            r.reciter_name.toLowerCase().includes(term) ||
+            (r.style || '').toLowerCase().includes(term));
+        list.innerHTML = '';
+        if (!items.length) {
+            const h = document.createElement('div');
+            h.className = 'modal-hint';
+            h.innerHTML = '<i class="fa-solid fa-magnifying-glass" style="margin-right:8px"></i>No reciters found';
+            list.appendChild(h);
+        }
+        else {
+            items.forEach((r) => {
+                const on = r.id === quranReciterId;
+                const opt = document.createElement('button');
+                opt.type = 'button';
+                opt.className = 'modal-opt reciter-opt' + (on ? ' active' : '');
+                opt.innerHTML = `
+          <i class="fa-solid ${on ? 'fa-check' : 'fa-microphone-lines'}"></i>
+          <span class="reciter-opt-text">
+            <span class="reciter-opt-name">${esc(r.label || r.reciter_name)}</span>
+            ${r.style ? `<span class="reciter-opt-style">${esc(r.style)}</span>` : ''}
+          </span>`;
+                opt.addEventListener('click', () => {
+                    applyQuranReciter(r.id, true);
+                    finish();
+                });
+                list.appendChild(opt);
+            });
+        }
+        count.textContent = term
+            ? `${items.length} of ${quranReciters.length} reciters`
+            : `${quranReciters.length} reciters`;
+    };
+    input.addEventListener('input', () => render(input.value));
+    input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            const first = list.querySelector('.reciter-opt');
+            if (first) {
+                e.preventDefault();
+                first.click();
+            }
+        }
+    });
+    content.append(input, count, list);
+    const m = new Modal('Choose reciter', content, () => finish(), 'modal-reciter');
+    render('');
+    window.setTimeout(() => input.focus(), 30);
 }
 class Slider {
     constructor(container) {
@@ -568,6 +640,7 @@ async function loadQuran() {
 }
 $('#quran-reciter-prev').addEventListener('click', () => stepQuranReciter(-1));
 $('#quran-reciter-next').addEventListener('click', () => stepQuranReciter(1));
+$('#quran-reciter-browse').addEventListener('click', () => showReciterPicker());
 $('#quran-reciter-scroll-l').addEventListener('click', () => {
     $('#quran-reciter-scroller').scrollBy({ left: -240, behavior: 'smooth' });
 });
