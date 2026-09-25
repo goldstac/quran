@@ -8,7 +8,7 @@ Cross-platform: **Linux, macOS, and Windows** — anywhere Python runs plus a br
 
 ## A note on intent
 
-This app is made for the **Quran** and Islamic **nasheeds**. The YouTube search will match whatever you type — if you use it for general music, that's on you; it's not what it was built for.
+This app is made for the **Quran** and Islamic **nasheeds**. The YouTube search will match whatever you type, but if you use it for general music, that's on you; it's not what it was built for.
 
 ## Features
 

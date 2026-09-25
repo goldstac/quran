@@ -78,6 +78,7 @@ Two app versions exist in this repo:
   - **Volume** persisted (`ns_vol`), restored on load.
   - All persisted keys live in localStorage with the `ns_` prefix; use the `store(key,val)` / `load<T>(key,fallback)` helpers.
 - **User-facing language**: use "nasheeds", never "songs" in UI text (e.g. "Liked Nasheeds").
+- **No em dashes** in any user-facing text (UI, docs, release notes, README/TERMS/PRIVACY). Use commas, periods, semicolons, or " - " instead.
 - **No browser dialogs**: `prompt()`, `confirm()`, and `alert()` are banned — build custom modals instead. Use `Modal` (wireframe: `modal-backdrop`/`modal`/`modal-title`/`modal-body`), `promptText(title, placeholder, okLabel, value?)` for text input (returns `Promise<string | null>`, `value` prefills — used for rename), `confirmDialog(title, message)` for yes/no (returns `Promise<boolean>`), and `showPlaylistPicker()` (lists playlists, "New playlist" flow creates then returns the name) for adding nasheeds to playlists.
 - **Do NOT add code comments** unless asked.
 

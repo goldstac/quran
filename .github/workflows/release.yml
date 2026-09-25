@@ -126,7 +126,7 @@ jobs:
           body: |
             ## Quran & Nasheeds 1.0.0
 
-            Local player for the **Quran** and Islamic **nasheeds** — no accounts, no tracking.
+            Local player for the **Quran** and Islamic **nasheeds**. No accounts, no tracking.
 
             ### Downloads
             | Platform | File |
@@ -140,11 +140,11 @@ jobs:
             **Needs on your machine:** Python 3.11+ (`flask`, `flask-cors`) and [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) on `PATH`.
 
             ### Highlights
-            - **Quran** — all 114 surahs, 170+ reciters, Arabic + English names, play/shuffle
+            - **Quran**: all 114 surahs, 170+ reciters, Arabic + English names, play/shuffle
             - **Nasheed search** on YouTube with local library, likes, playlists
             - Range-aware audio proxy (seeking works), shuffle, loop-one, keyboard shortcuts
             - Everything stored locally on your device
 
             ### Notes
-            - Builds are **unsigned** — macOS may need *Right-click → Open* (or `xattr -d com.apple.quarantine`), Windows SmartScreen may warn (More info → Run anyway).
+            - Builds are **unsigned**. macOS may need *Right-click → Open* (or `xattr -d com.apple.quarantine`), Windows SmartScreen may warn (More info → Run anyway).
             - Still happy from source? `./run-web.sh` works as before.
