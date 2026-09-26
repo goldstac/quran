@@ -622,18 +622,33 @@ function stepQuranReciter(delta: number) {
   applyQuranReciter(quranReciters[next].id, true);
 }
 
-// --- QURAN TRANSLATION ---
+// --- QURAN AYAH READER ---
 let transLang = load<string>('ns_qtrans', 'en');
-const transCache = new Map<string, { num: number; text: string }[]>();
+let transDataLang = transLang === 'off' ? 'en' : transLang;
+const transCache = new Map<string, { name: string; verses: { num: number; arabic: string; text: string }[] }>();
 let transLoadedKey = '';
 let transAyahIdx = -1;
 
 function transHint(text: string) {
   $('#quran-trans-body').innerHTML = `<div class="quran-trans-hint">${esc(text)}</div>`;
+  $('#quran-trans-body').classList.remove('hide-tr');
+  $('#quran-trans-src').textContent = '';
+  $('#quran-ayah-pos').textContent = '';
+  $('#ayah-prev').toggleAttribute('disabled', true);
+  $('#ayah-next').toggleAttribute('disabled', true);
+}
+
+function seekToAyah(num: number) {
+  const rows = $$('.quran-trans-body .quran-ayah');
+  const n = rows.length;
+  if (!n || !audio.duration || currentSong?.kind !== 'quran') return;
+  const target = Math.max(0, Math.min(num - 1, n - 1));
+  audio.currentTime = ((target + 0.01) / n) * audio.duration;
+  audio.play().catch(playError);
 }
 
 function highlightTransAyah(scroll: boolean) {
-  if (!currentSong || currentSong.kind !== 'quran' || transLang === 'off') return;
+  if (!currentSong || currentSong.kind !== 'quran') return;
   const rows = $$('.quran-trans-body .quran-ayah');
   if (!rows.length) return;
   const dur = audio.duration || currentSong.duration || 0;
@@ -644,36 +659,50 @@ function highlightTransAyah(scroll: boolean) {
   if (idx === transAyahIdx) return;
   transAyahIdx = idx;
   rows.forEach((r, i) => r.classList.toggle('active', i === idx));
+  $('#quran-ayah-pos').textContent = `${idx + 1} / ${rows.length}`;
+  $('#ayah-prev').toggleAttribute('disabled', idx <= 0);
+  $('#ayah-next').toggleAttribute('disabled', idx >= rows.length - 1);
   if (scroll) rows[idx].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
 }
 
 function syncQuranTranslation() {
   $$('.quran-trans-lang').forEach((b) => b.classList.toggle('active', b.dataset.lang === transLang));
+  const body = $('#quran-trans-body');
   const ch = currentSong && currentSong.kind === 'quran' ? currentSong.chapter_id ?? 0 : 0;
-  if (!ch || transLang === 'off') {
+  if (!ch) {
     transLoadedKey = '';
     transAyahIdx = -1;
-    transHint(!ch ? 'Play a surah to see its translation' : 'Translation is off');
+    transHint('Play a surah to read along');
     return;
   }
-  const key = `${ch}:${transLang}`;
+  const dataLang = transLang === 'off' ? transDataLang : transLang;
+  body.classList.toggle('hide-tr', transLang === 'off');
+  const key = `${ch}:${dataLang}`;
   if (key === transLoadedKey) return;
   transLoadedKey = key;
   transAyahIdx = -1;
-  $('#quran-trans-body').innerHTML = '<div class="quran-trans-hint">Loading translation...</div>';
-  const render = (verses: { num: number; text: string }[]) => {
+  $('#quran-trans-src').textContent = '';
+  $('#quran-ayah-pos').textContent = '';
+  $('#ayah-prev').toggleAttribute('disabled', true);
+  $('#ayah-next').toggleAttribute('disabled', true);
+  body.innerHTML = '<div class="quran-trans-hint">Loading ayahs...</div>';
+  const render = (data: { name: string; verses: { num: number; arabic: string; text: string }[] }) => {
     if (transLoadedKey !== key) return;
-    if (!verses.length) {
+    if (!data.verses.length) {
       transLoadedKey = '';
-      transHint('Translation unavailable');
+      transHint('Could not load ayahs');
       return;
     }
-    const body = $('#quran-trans-body');
+    $('#quran-trans-src').textContent = transLang === 'off' ? 'Arabic only' : data.name;
+    body.classList.toggle('hide-tr', transLang === 'off');
     body.innerHTML = '';
-    verses.forEach((v) => {
+    data.verses.forEach((v) => {
       const row = document.createElement('div');
       row.className = 'quran-ayah';
-      row.innerHTML = `<span class="quran-ayah-num">${v.num}</span><span class="quran-ayah-text">${esc(v.text)}</span>`;
+      row.innerHTML = `
+        <div class="quran-ayah-ar" dir="rtl">${esc(v.arabic)}<span class="quran-ayah-badge">${v.num}</span></div>
+        <div class="quran-ayah-text">${esc(v.text)}</div>`;
+      row.addEventListener('click', () => seekToAyah(v.num));
       body.appendChild(row);
     });
     highlightTransAyah(true);
@@ -685,16 +714,16 @@ function syncQuranTranslation() {
   }
   void (async () => {
     try {
-      const r = await fetch(`${API}/api/quran/translation/${ch}?lang=${transLang}`);
+      const r = await fetch(`${API}/api/quran/translation/${ch}?lang=${dataLang}`);
       if (!r.ok) throw new Error('trans');
-      const d = (await r.json()) as { verses?: { num: number; text: string }[] };
-      const verses = d.verses || [];
-      transCache.set(key, verses);
-      render(verses);
+      const d = (await r.json()) as { name?: string; verses?: { num: number; arabic: string; text: string }[] };
+      const data = { name: d.name || '', verses: d.verses || [] };
+      transCache.set(key, data);
+      render(data);
     } catch {
       if (transLoadedKey === key) {
         transLoadedKey = '';
-        transHint('Could not load translation');
+        transHint('Could not load ayahs');
       }
     }
   })();
@@ -703,11 +732,20 @@ function syncQuranTranslation() {
 $$<HTMLElement>('.quran-trans-lang').forEach((b) =>
   b.addEventListener('click', () => {
     transLang = b.dataset.lang || 'en';
+    if (transLang !== 'off') transDataLang = transLang;
     store('ns_qtrans', transLang);
     transLoadedKey = '';
     syncQuranTranslation();
   })
 );
+
+$('#ayah-prev').addEventListener('click', () => {
+  if (transAyahIdx > 0) seekToAyah(transAyahIdx);
+});
+$('#ayah-next').addEventListener('click', () => {
+  const n = $$('.quran-trans-body .quran-ayah').length;
+  if (transAyahIdx >= 0 && transAyahIdx < n - 1) seekToAyah(transAyahIdx + 2);
+});
 
 function renderQuranReciterChips() {
   const scroller = $('#quran-reciter-scroller');

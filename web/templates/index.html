@@ -156,15 +156,25 @@
       <div class="lib-body">
         <div id="quran-trans" class="quran-trans">
           <div class="quran-trans-head">
-            <span class="quran-trans-label">Translation</span>
-            <div class="quran-trans-langs">
-              <button class="quran-trans-lang" data-lang="off" type="button">Off</button>
-              <button class="quran-trans-lang" data-lang="en" type="button">English</button>
-              <button class="quran-trans-lang" data-lang="ta" type="button">தமிழ்</button>
+            <div class="quran-trans-title">
+              <span class="quran-trans-label">Ayah</span>
+              <span id="quran-trans-src" class="quran-trans-src"></span>
+            </div>
+            <div class="quran-trans-tools">
+              <div class="quran-trans-pos">
+                <button id="ayah-prev" class="quran-ayah-nav" type="button" title="Previous ayah" disabled><i class="fa-solid fa-chevron-left"></i></button>
+                <span id="quran-ayah-pos" class="quran-ayah-pos"></span>
+                <button id="ayah-next" class="quran-ayah-nav" type="button" title="Next ayah" disabled><i class="fa-solid fa-chevron-right"></i></button>
+              </div>
+              <div class="quran-trans-langs">
+                <button class="quran-trans-lang" data-lang="off" type="button">Off</button>
+                <button class="quran-trans-lang" data-lang="en" type="button">English</button>
+                <button class="quran-trans-lang" data-lang="ta" type="button">தமிழ்</button>
+              </div>
             </div>
           </div>
           <div id="quran-trans-body" class="quran-trans-body">
-            <div class="quran-trans-hint">Play a surah to see its translation</div>
+            <div class="quran-trans-hint">Play a surah to read along</div>
           </div>
         </div>
         <div id="quran-empty" class="empty" style="display:none">

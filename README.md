@@ -15,7 +15,7 @@ This app is made for the **Quran** and Islamic **nasheeds**. The YouTube search 
 - **Quran** — all 114 surahs, pick from 170+ reciters, Arabic + English names, play/shuffle
 - **Search YouTube** for nasheeds (via `yt-dlp`), with debounced live results
 - **Smooth playback** through a local proxy — seeking/scrubbing works (Range-aware streaming)
-- **Custom UI components** — hand-built seek/volume sliders and modals, no stock browser widgets, flat Spotify-dark theme
+- **Custom UI components** — hand-built seek/volume sliders and modals, no stock browser widgets, calm dark theme with green and gold accents
 - **Your Library** — auto-saves what you play; likes ("Liked Nasheeds"), playlists with create / rename / delete, per-row remove
 - **Shuffle** (restores original order when toggled off) and **loop-one**; queue **auto-advances** when a track ends
 - **Recently Played** view + **recent search chips**
@@ -110,7 +110,7 @@ Your data lives in `~/.local/share/nasheed-app/library.json` plus browser `local
 web/            the active Flask + TypeScript/CSS app
   app.py            backend: search, audio proxy, library & playlist APIs
   ts/app.ts         all frontend logic (compiled -> static/app.js)
-  static/style.css  Spotify-dark theme
+  static/style.css  calm dark theme (green + gold accents)
   templates/        single-page layout
 tauri-app/      desktop app for testing (Tauri — spawns the web backend itself)
 AGENTS.md       repo conventions — read before making changes

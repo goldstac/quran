@@ -350,18 +350,19 @@ def api_quran_translation(chapter_id):
     rid = _QURAN_TRANS_IDS[lang]
     try:
         data = _quran_get(
-            f"https://api.quran.com/api/v4/quran/translations/{rid}?chapter_number={chapter_id}",
-            f"trans:{rid}:{chapter_id}",
+            f"https://api.quran.com/api/v4/verses/by_chapter/{chapter_id}"
+            f"?fields=text_uthmani&translations={rid}&per_page=300",
+            f"ayahs:{rid}:{chapter_id}",
         )
-        raw = data.get("translations") or []
-        verses = [{"num": i, "text": _strip_verse_html(v.get("text") or "")}
-                  for i, v in enumerate(raw, 1)]
-        meta = data.get("meta") or {}
-        return jsonify({
-            "lang": lang,
-            "name": meta.get("translation_name") or _QURAN_TRANS_NAMES[lang],
-            "verses": verses,
-        })
+        verses = []
+        for v in data.get("verses") or []:
+            trs = v.get("translations") or []
+            verses.append({
+                "num": v.get("verse_number") or len(verses) + 1,
+                "arabic": v.get("text_uthmani") or "",
+                "text": _strip_verse_html(trs[0].get("text") if trs else ""),
+            })
+        return jsonify({"lang": lang, "name": _QURAN_TRANS_NAMES[lang], "verses": verses})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
