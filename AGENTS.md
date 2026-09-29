@@ -4,7 +4,7 @@ This file helps AI agents work efficiently in this repo. Read it before making c
 
 ## Project Overview
 
-A Spotify-like desktop/mobile player for the **Quran** and Islamic nasheeds — display name is **Quran & Nasheeds** (no "songs" branding — the user insists on **nasheed** terminology). It searches YouTube via `yt-dlp`, streams audio through a local proxy, manages a persistent library, favorites, and playlists, and plays Quran audio direct from CDN with reciter selection. NOTE: downloads were removed by user request ("what the point of it") — do not re-add them without asking.
+Tawqa Player: an all-in-one open source Islamic app (Quran + nasheeds), desktop/mobile, Spotify-like player. Display name is **Tawqa Player** (no "songs" branding, the user insists on **nasheed** terminology). Internal ids keep `nasheed` (package `nasheed-player`, data dir `nasheed-app`) — do not rename those. It searches YouTube via `yt-dlp`, streams audio through a local proxy, manages a persistent library, favorites, and playlists, and plays Quran audio direct from CDN with reciter selection. NOTE: downloads were removed by user request ("what the point of it") — do not re-add them without asking.
 
 Two app versions exist in this repo:
 - **`web/`** — active Flask + TypeScript/CSS web app (the one being developed)
@@ -19,7 +19,7 @@ Two app versions exist in this repo:
 
 ## Git & Conventional Commits
 
-- Remote: `origin` at `git@github.com:goldstac/quran-nasheeds.git`, default branch `main`.
+- Remote: `origin` at `git@github.com:goldstac/tawqa-player.git`, default branch `main`.
 - ALWAYS use Conventional Commits. Format: `<type>(<scope>): <description>`
 - Types: `feat` (new feature), `fix` (bug fix), `refactor`, `docs` (docs/AGENTS), `style` (CSS-only, no logic), `perf`, `chore` (gitignore, tooling), `build`.
 - Scope examples: `web`, `api`, `player`, `ui`, `loop`, `tauri`. Use lowercase.

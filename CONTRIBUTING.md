@@ -42,7 +42,7 @@ Tip: free the port first if an old instance is hanging around: `fuser -k 5000/tc
 ## Style & conventions
 
 - Say **"nasheeds"**, never "songs", in anything user-facing.
-- Display name is **Quran & Nasheeds** (repo slug is `quran-nasheeds`).
+- Display name is **Tawqa Player** (repo slug is `tawqa-player`). Internal package/repo ids still say `nasheed`, leave them alone.
 - No code comments unless you're asked for them.
 - No browser `prompt()` / `confirm()` / `alert()`, use the existing custom modal helpers (`promptText`, `confirmDialog`, `showPlaylistPicker`).
 - No stock `<input type="range">`, use the custom `Slider` component.
@@ -71,4 +71,4 @@ Open an issue with: what you did, what you expected, what happened instead, plus
 
 ## Discussions
 
-Got a question, idea, or just want to talk about the project? Use [GitHub Discussions](https://github.com/goldstac/quran-nasheeds/discussions) instead of an issue. Issues are for bugs, discussions for everything else.
+Got a question, idea, or just want to talk about the project? Use [GitHub Discussions](https://github.com/goldstac/tawqa-player/discussions) instead of an issue. Issues are for bugs, discussions for everything else.

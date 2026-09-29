@@ -9,7 +9,7 @@ Use the app = you're good with these terms. Not good with them? Simply don't use
 
 ## 2. What the app is
 
-A free, local app for the **Quran** and Islamic **nasheeds** — browse all 114 surahs with reciter choice, search YouTube for nasheeds, and play them through a player you run on your own device, with a personal library, likes, and playlists. No accounts, no subscriptions, no payments, no backend we operate. This is a hobby project, maintained in spare time, with no promise of updates or support.
+**Tawqa Player** is a free, open source app for the **Quran** and Islamic **nasheeds** — browse all 114 surahs with reciter choice, search YouTube for nasheeds, and play them through a player you run on your own device, with a personal library, likes, and playlists. No accounts, no subscriptions, no payments, no backend we operate. This is a hobby project, maintained in spare time, with no promise of updates or support.
 
 It's made for the Quran and nasheeds. The YouTube search will match whatever you type, but using it for general music isn't what it's intended for.
 

@@ -1,6 +1,6 @@
-# Quran & Nasheeds
+# Tawqa Player
 
-A local player for the **Quran** and Islamic **nasheeds**. Browse all 114 surahs with 170+ reciters, search YouTube for nasheeds, and keep your own library, likes, and playlists — everything stays on your device.
+An all-in-one, open source Islamic app. Browse all 114 surahs with 170+ reciters and per-ayah Arabic with English/Tamil translation, search YouTube for nasheeds, and keep your own library, likes, and playlists. Everything stays on your device.
 
 Cross-platform: **Linux, macOS, and Windows** — anywhere Python runs plus a browser. (macOS and Windows just need the same Python + `yt-dlp` setup below; all commands work the same.)
 
@@ -41,7 +41,7 @@ Then open **http://localhost:5000**.
 
 If the port is busy: `fuser -k 5000/tcp` (Linux) or `lsof -ti:5000 | xargs kill` (macOS)
 
-> Prebuilt desktop builds: grab a zip/tarball from the [Releases page](https://github.com/goldstac/quran-nasheeds/releases) (Linux, macOS, Windows) — unzip and run the binary (needs Python + `yt-dlp`, see `START.txt`).
+> Prebuilt desktop builds: grab a zip/tarball from the [Releases page](https://github.com/goldstac/tawqa-player/releases) (Linux, macOS, Windows) — unzip and run the binary (needs Python + `yt-dlp`, see `START.txt`).
 
 ## Self-hosting
 
@@ -53,8 +53,8 @@ Run it on your own machine (home server, NAS, always-on PC) and open it from any
 - No Node required — the compiled `web/static/app.js` is committed
 
 ```bash
-git clone git@github.com:goldstac/quran-nasheeds.git
-cd quran-nasheeds
+git clone git@github.com:goldstac/tawqa-player.git
+cd tawqa-player
 pip install flask flask-cors        # Arch: add --break-system-packages
 python3 web/app.py
 ```
@@ -124,7 +124,7 @@ The app runs entirely on your device — no accounts, no servers of ours, no ana
 
 ## Contributing
 
-PRs and issues welcome, see [CONTRIBUTING.md](CONTRIBUTING.md). Want to ask something or just chat? Use [Discussions](https://github.com/goldstac/quran-nasheeds/discussions).
+PRs and issues welcome, see [CONTRIBUTING.md](CONTRIBUTING.md). Want to ask something or just chat? Use [Discussions](https://github.com/goldstac/tawqa-player/discussions).
 
 ## Ownership
 

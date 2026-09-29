@@ -1134,7 +1134,7 @@ function updatePlayer() {
         navigator.mediaSession.metadata = new MediaMetadata({
             title: currentSong.title,
             artist: currentSong.channel,
-            album: currentSong.kind === 'quran' ? 'Quran' : 'Quran & Nasheeds',
+            album: currentSong.kind === 'quran' ? 'Quran' : 'Tawqa Player',
             artwork: currentSong.thumbnail ? [{ src: currentSong.thumbnail, sizes: '512x512', type: 'image/jpeg' }] : [],
         });
     }

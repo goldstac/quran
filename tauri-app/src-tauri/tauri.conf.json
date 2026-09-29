@@ -1,5 +1,5 @@
 {
-  "productName": "Quran & Nasheeds",
+  "productName": "Tawqa Player",
   "version": "1.0.0",
   "identifier": "com.nasheed.app",
   "build": {
@@ -10,7 +10,7 @@
   "app": {
     "windows": [
       {
-        "title": "Quran & Nasheeds",
+        "title": "Tawqa Player",
         "width": 1200,
         "height": 800,
         "minWidth": 800,
