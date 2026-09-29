@@ -16,11 +16,11 @@ jobs:
       matrix:
         include:
           - os: ubuntu-22.04
-            asset: tawqa-player-linux-x86_64.tar.gz
+            asset: quran-linux-x86_64.tar.gz
           - os: macos-latest
-            asset: tawqa-player-macos-aarch64.tar.gz
+            asset: quran-macos-aarch64.tar.gz
           - os: windows-latest
-            asset: tawqa-player-windows-x86_64.zip
+            asset: quran-windows-x86_64.zip
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -53,7 +53,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          stage="tawqa-player-${{ steps.ver.outputs.version }}"
+          stage="quran-${{ steps.ver.outputs.version }}"
           mkdir -p "$stage/web"
           cp tauri-app/src-tauri/target/release/nasheed-player "$stage/"
           if [ -d web/__pycache__ ]; then rm -rf web/__pycache__; fi
@@ -61,7 +61,7 @@ jobs:
           rm -rf "$stage/web/ts" "$stage/web/node_modules"
           cp README.md PRIVACY.md TERMS.md "$stage/"
           printf '%s\n' \
-            "Tawqa Player ${{ steps.ver.outputs.version }}" \
+            "Quran ${{ steps.ver.outputs.version }}" \
             "" \
             "Made for the Quran & nasheeds - not general music." \
             "" \
@@ -79,14 +79,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          stage="tawqa-player-${{ steps.ver.outputs.version }}"
+          stage="quran-${{ steps.ver.outputs.version }}"
           mkdir -p "$stage/web"
           cp tauri-app/src-tauri/target/release/nasheed-player.exe "$stage/"
           cp -R web/. "$stage/web/"
           rm -rf "$stage/web/ts" "$stage/web/node_modules" "$stage/web/__pycache__"
           cp README.md PRIVACY.md TERMS.md "$stage/"
           printf '%s\n' \
-            "Tawqa Player ${{ steps.ver.outputs.version }}" \
+            "Quran ${{ steps.ver.outputs.version }}" \
             "" \
             "Made for the Quran & nasheeds - not general music." \
             "" \
@@ -115,7 +115,7 @@ jobs:
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          name: Tawqa Player 1.0.0
+          name: Quran 1.0.0
           tag_name: ${{ github.ref_name }}
           draft: false
           prerelease: false
@@ -124,16 +124,16 @@ jobs:
             dist/*.tar.gz
             dist/*.zip
           body: |
-            ## Tawqa Player 1.0.0
+            ## Quran 1.0.0
 
             Local player for the **Quran** and Islamic **nasheeds**. No accounts, no tracking.
 
             ### Downloads
             | Platform | File |
             |---|---|
-            | Linux (x86_64) | `tawqa-player-linux-x86_64.tar.gz` |
-            | macOS (Apple Silicon) | `tawqa-player-macos-aarch64.tar.gz` |
-            | Windows (x86_64) | `tawqa-player-windows-x86_64.zip` |
+            | Linux (x86_64) | `quran-linux-x86_64.tar.gz` |
+            | macOS (Apple Silicon) | `quran-macos-aarch64.tar.gz` |
+            | Windows (x86_64) | `quran-windows-x86_64.zip` |
 
             Unzip, keep `web/` next to the binary, then run it. See `START.txt`.
 

@@ -1,7 +1,7 @@
 # Privacy Policy
 
 **Effective date:** 23 September 2026
-**Applies to:** the Tawqa Player app in this repository (web version, and any desktop/mobile builds made from it). Repo: [github.com/goldstac/tawqa-player](https://github.com/goldstac/tawqa-player).
+**Applies to:** the Quran app in this repository (web version, and any desktop/mobile builds made from it). Repo: [github.com/goldstac/quran](https://github.com/goldstac/quran).
 **Maintainer:** [github.com/goldstac](https://github.com/goldstac)
 
 This policy just describes what the app actually does. No filler.
