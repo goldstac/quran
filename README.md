@@ -1,6 +1,10 @@
 # Quran
 
-An all-in-one, open source Islamic app. Browse all 114 surahs with 170+ reciters and per-ayah Arabic with English/Tamil translation, search YouTube for nasheeds, and keep your own library, likes, and playlists. Everything stays on your device.
+<p align="center"><img src="app_logo.png" alt="Quran logo" width="150"></p>
+
+**Quran** is an all-in-one, open source Islamic app. Browse all 114 surahs with 170+ reciters and per-ayah Arabic with English/Tamil translation, search YouTube for nasheeds, and keep your own library, likes, and playlists. Everything stays on your device.
+
+**More stuff is probably coming soon.**
 
 Cross-platform: **Linux, macOS, and Windows** — anywhere Python runs plus a browser. (macOS and Windows just need the same Python + `yt-dlp` setup below; all commands work the same.)
 

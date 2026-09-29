@@ -38,6 +38,7 @@ body{
   display:flex;align-items:center;justify-content:center;
 }
 .brand-icon i{font-size:15px;color:#fff}
+.brand-icon img{width:100%;height:100%;object-fit:cover;border-radius:10px}
 .brand-text{display:flex;flex-direction:column;line-height:1.15}
 .brand-name{font-size:15px;font-weight:700}
 .brand-sub{font-size:9px;font-weight:600;color:#666;letter-spacing:2px;text-transform:uppercase}

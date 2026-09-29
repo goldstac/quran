@@ -13,8 +13,9 @@
 </head>
 <body>
 <div class="box">
+  <img src="app_logo.png" alt="Quran" style="width:104px;height:104px;border-radius:24px;margin-bottom:18px">
   <div class="spin"></div>
-  <p id="msg">Starting Quran &amp; Nasheeds…</p>
+  <p id="msg">Starting Quran…</p>
 </div>
 <script>
   var tries = 0;
@@ -26,7 +27,7 @@
           setTimeout(poll, 250);
         } else {
           document.getElementById('msg').textContent =
-            'Could not reach the local server — is Python, flask, and yt-dlp installed?';
+            'Could not reach the local server: is Python, flask, and yt-dlp installed?';
         }
       });
   })();
