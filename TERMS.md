@@ -39,7 +39,7 @@ It's provided as-is, with no guarantee of support or availability. Search and pl
 
 ## 7. Privacy
 
-How the app handles data is covered by the separate **Privacy Policy** (`PRIVACY.md`), which is part of these terms. Short version: it runs locally, collects nothing, and sends nothing to us.
+What the app stores and where it connects is described in `PRIVACY.md`. Short version: it runs on your device and sends nothing to us.
 
 ## 8. No guarantees
 
