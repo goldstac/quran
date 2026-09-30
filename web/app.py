@@ -6,7 +6,10 @@ app = Flask(__name__)
 CORS(app)
 app.config["TEMPLATES_AUTO_RELOAD"] = True
 
-DATA_DIR = os.path.expanduser("~/.local/share/nasheed-app")
+DATA_DIR = os.path.expanduser("~/.local/share/quran-app")
+OLD_DATA_DIR = os.path.expanduser("~/.local/share/nasheed-app")
+if not os.path.exists(DATA_DIR) and os.path.exists(OLD_DATA_DIR):
+    os.rename(OLD_DATA_DIR, DATA_DIR)
 LIB_FILE = os.path.join(DATA_DIR, "library.json")
 UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36"
 

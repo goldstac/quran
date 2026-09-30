@@ -26,7 +26,7 @@ pub fn start(data_dir: PathBuf, port: u16) -> std::io::Result<()> {
     let listener = TcpListener::bind(("127.0.0.1", port))?;
     let state = Arc::new(init_state(data_dir));
     thread::Builder::new()
-        .name("nasheed-http".into())
+        .name("quran-http".into())
         .spawn(move || serve_loop(listener, state))?;
     Ok(())
 }

@@ -4,7 +4,7 @@ This file helps AI agents work efficiently in this repo. Read it before making c
 
 ## Project Overview
 
-An all-in-one open source Islamic app (Quran + nasheeds), desktop/mobile, Spotify-like player. Display name is **Quran** (the app is literally named "Quran"; repo slug `quran`) (no "songs" branding, the user insists on **nasheed** terminology). Internal ids keep `nasheed` (package `nasheed-player`, data dir `nasheed-app`) — do not rename those. It searches YouTube via `yt-dlp`, streams audio through a local proxy, manages a persistent library, favorites, and playlists, and plays Quran audio direct from CDN with reciter selection. NOTE: downloads were removed by user request ("what the point of it") — do not re-add them without asking.
+An all-in-one open source Islamic app (Quran + nasheeds), desktop/mobile, Spotify-like player. Display name is **Quran** (the app is literally named "Quran"; repo slug `quran`) (no "songs" branding, the user insists on **nasheed** terminology). Internal ids are all `quran` (package `quran-player`, binary `quran`, identifier `com.goldstac.quran`, data dir `quran-app`); a legacy `nasheed-app` data dir is auto-renamed on first run. The word "nasheeds" (the content) stays everywhere in UI copy. It searches YouTube via `yt-dlp`, streams audio through a local proxy, manages a persistent library, favorites, and playlists, and plays Quran audio direct from CDN with reciter selection. NOTE: downloads were removed by user request ("what the point of it") — do not re-add them without asking.
 
 Two app versions exist in this repo:
 - **`web/`** — active Flask + TypeScript/CSS web app (the one being developed)
@@ -14,7 +14,7 @@ Two app versions exist in this repo:
 
 - Run the web app: `./run-web.sh` (starts Flask on `http://localhost:5000`)
 - Build frontend TS → JS: `npm run build` (from repo root; compiles `web/ts/app.ts` → `web/static/app.js`). Use `npm run watch` during dev.
-- Build the desktop binary: `cargo build --release` (in `tauri-app/src-tauri/`) → `target/release/nasheed-player` (gitignored). Run it directly; it spawns the Flask backend itself. If the backend lives elsewhere, set `NASHEED_WEB_DIR`. If port 5000 is already held (e.g. `run-web.sh` running), it just connects to the existing server.
+- Build the desktop binary: `cargo build --release` (in `tauri-app/src-tauri/`) → `target/release/quran` (gitignored). Run it directly; it spawns the Flask backend itself. If the backend lives elsewhere, set `QURAN_WEB_DIR`. If port 5000 is already held (e.g. `run-web.sh` running), it just connects to the existing server.
 - No test suite, no linter configured. Verify Python loads cleanly before finishing: `python3 -c "from app import app"` (run from `web/`)
 
 ## Git & Conventional Commits
@@ -44,7 +44,7 @@ Two app versions exist in this repo:
 - `README.md` / `CONTRIBUTING.md` — project overview & contributor guide. Keep them in sync with real commands/conventions (AGENTS.md remains the detailed source of truth).
 - `PRIVACY.md` / `TERMS.md` — privacy policy and terms of service (plain-language, jurisdiction-neutral). Must stay truthful to what the app actually does (local-only storage, no developer servers, third-party requests to YouTube/Google Fonts/cdnjs). Keep the tone casual — the user dislikes heavy legal/rule language (minimal mention of laws/rights). Update both if data/network behavior changes.
 
-- `web/app.py` — Flask backend. All `/api/*` routes: search, stream, proxy (audio), library (add/fav/remove), playlists (create/add/remove/delete/rename — delete/rename take POST body `{name}` / `{old,new}`). Persists to `~/.local/share/nasheed-app/library.json`.
+- `web/app.py` — Flask backend. All `/api/*` routes: search, stream, proxy (audio), library (add/fav/remove), playlists (create/add/remove/delete/rename — delete/rename take POST body `{name}` / `{old,new}`). Persists to `~/.local/share/quran-app/library.json` (auto-migrates from the old `nasheed-app` dir).
 - `web/templates/index.html` — single-page layout: sidebar (nav + playlists), main (search/view/library views), bottom player bar. Sliders are empty `<div id="progress-bar"|volume-bar>` containers — NOT `<input type=range>`. They are turned into the custom `Slider` widget by TS.
 - `web/static/style.css` — all styling (no Tailwind). Calm dark theme: `#0f1311` bg with soft green/gold radial glows, translucent blurred sticky headers, gradient sidebar/player. Accents: green `#1db954` (nasheeds, controls) and gold `#c9a86c` (Quran reading: ayah numbers, active ayah, translation label/toggle). Fonts: Inter (UI), Lora (translation text), Noto Naskh Arabic (Arabic names) via one Google Fonts import, plus Font Awesome. Slider visuals use `.slider`/`.slider-env` (grey track) `.slider-fill` (green, white for volume) `.slider-thumb` classes.
 - `web/ts/app.ts` — ALL frontend logic in TypeScript (navigation, search, rendering, playback, keyboard shortcuts, toasts). Contains the `Slider` class (pointer-event driven, `onInput`/`onChange` callbacks; thumb shows on hover/focus/drag) and typed `Song`/`Playlist`/`Library` interfaces. Compiled output goes to `web/static/app.js` — never edit that file directly, edit `web/ts/app.ts` and run `npm run build`.
@@ -52,11 +52,11 @@ Two app versions exist in this repo:
 
 ## File Map (tauri-app — desktop test wrapper)
 
-- `tauri-app/src-tauri/src/main.rs` — spawns `python3 app.py` (finds `web/` via `NASHEED_WEB_DIR`, manifest-relative path, or `./web`), stores the child, kills it on `RunEvent::Exit`.
+- `tauri-app/src-tauri/src/main.rs` — spawns `python3 app.py` (finds `web/` via `QURAN_WEB_DIR`, manifest-relative path, or `./web`), stores the child, kills it on `RunEvent::Exit`.
 - `tauri-app/src-tauri/tauri.conf.json` — window config + CSP (allows `connect-src`/`media-src`/`img-src` to localhost); no `devUrl` so both dev and build serve the loading page.
 - `tauri-app/src/index.html` — loading page: polls `http://127.0.0.1:5000/` (no-cors fetch) and redirects when up; shows an error after 30s.
 - `tauri-app/src-tauri/icons/` — generated placeholder icons (green disc on dark). Regenerate with ImageMagick if needed.
-- Binary + `Cargo.lock`: binary is gitignored (`target/`, `nasheed-player`); commit `Cargo.lock` (it's an app, not a lib).
+- Binary + `Cargo.lock`: binary is gitignored (`target/`, `quran`); commit `Cargo.lock` (it's an app, not a lib).
 
 ## Frontend Conventions
 
@@ -87,4 +87,4 @@ Two app versions exist in this repo:
 - Python 3.11+, Flask + `flask_cors`. Installed with pip via `--break-system-packages` (Arch).
 - `yt-dlp` binary is at `/home/admin/.local/bin/yt-dlp` (on PATH).
 - Subprocess calls to yt-dlp must include `--no-warnings --no-playlist` and a timeout.
-- Library is JSON at `~/.local/share/nasheed-app/library.json` with shape `{"songs":[...], "playlists":[{"name","songs":[]}]}`. Songs have `id`, `title`, `channel`, `thumbnail`, `duration`, `duration_string`, `url`, `favorite` (bool), `filepath`.
+- Library is JSON at `~/.local/share/quran-app/library.json` with shape `{"songs":[...], "playlists":[{"name","songs":[]}]}`. Songs have `id`, `title`, `channel`, `thumbnail`, `duration`, `duration_string`, `url`, `favorite` (bool), `filepath`.

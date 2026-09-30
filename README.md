@@ -93,7 +93,7 @@ Sanity-check the backend before you finish:
 cd web && python3 -c "from app import app"
 ```
 
-Your data lives in `~/.local/share/nasheed-app/library.json` plus browser `localStorage` (keys prefixed `ns_`).
+Your data lives in `~/.local/share/quran-app/library.json` plus browser `localStorage` (keys prefixed `ns_`).
 
 ## Keyboard shortcuts
 

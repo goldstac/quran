@@ -1,7 +1,7 @@
 {
   "productName": "Quran",
   "version": "1.0.0",
-  "identifier": "com.nasheed.app",
+  "identifier": "com.goldstac.quran",
   "build": {
     "beforeDevCommand": "",
     "beforeBuildCommand": "",

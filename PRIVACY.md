@@ -22,7 +22,7 @@ This policy just describes what the app actually does. No filler.
 
 All of this is written to your own machine and stays there:
 
-**Library file** — `~/.local/share/nasheed-app/library.json`:
+**Library file** — `~/.local/share/quran-app/library.json`:
 - titles, channel names, thumbnail URLs, durations, and YouTube video IDs of nasheeds you've played or saved
 - your liked/favourite flags
 - playlist names and the nasheeds in them

@@ -55,7 +55,7 @@ jobs:
           set -euo pipefail
           stage="quran-${{ steps.ver.outputs.version }}"
           mkdir -p "$stage/web"
-          cp tauri-app/src-tauri/target/release/nasheed-player "$stage/"
+          cp tauri-app/src-tauri/target/release/quran "$stage/"
           if [ -d web/__pycache__ ]; then rm -rf web/__pycache__; fi
           cp -R web/. "$stage/web/"
           rm -rf "$stage/web/ts" "$stage/web/node_modules"
@@ -67,10 +67,10 @@ jobs:
             "" \
             "Requirements: Python 3.11+ with flask and flask-cors, yt-dlp on PATH." \
             "" \
-            "Linux/macOS:   ./nasheed-player" \
-            "Windows:       nasheed-player.exe" \
+            "Linux/macOS:   ./quran" \
+            "Windows:       quran.exe" \
             "" \
-            "Keep the web/ folder next to the binary (or set NASHEED_WEB_DIR)." \
+            "Keep the web/ folder next to the binary (or set QURAN_WEB_DIR)." \
             > "$stage/START.txt"
           tar -czf "${{ matrix.asset }}" "$stage"
 
@@ -81,7 +81,7 @@ jobs:
           set -euo pipefail
           stage="quran-${{ steps.ver.outputs.version }}"
           mkdir -p "$stage/web"
-          cp tauri-app/src-tauri/target/release/nasheed-player.exe "$stage/"
+          cp tauri-app/src-tauri/target/release/quran.exe "$stage/"
           cp -R web/. "$stage/web/"
           rm -rf "$stage/web/ts" "$stage/web/node_modules" "$stage/web/__pycache__"
           cp README.md PRIVACY.md TERMS.md "$stage/"
@@ -92,8 +92,8 @@ jobs:
             "" \
             "Requirements: Python 3.11+ with flask and flask-cors, yt-dlp on PATH." \
             "" \
-            "Windows: nasheed-player.exe" \
-            "Keep the web/ folder next to the exe (or set NASHEED_WEB_DIR)." \
+            "Windows: quran.exe" \
+            "Keep the web/ folder next to the exe (or set QURAN_WEB_DIR)." \
             > "$stage/START.txt"
           7z a "${{ matrix.asset }}" "$stage"
 

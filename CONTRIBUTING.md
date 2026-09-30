@@ -42,7 +42,7 @@ Tip: free the port first if an old instance is hanging around: `fuser -k 5000/tc
 ## Style & conventions
 
 - Say **"nasheeds"**, never "songs", in anything user-facing.
-- Display name is **Quran** (repo slug is `quran`). Internal package/repo ids still say `nasheed`, leave them alone.
+- Display name is **Quran** (repo slug is `quran`), internal ids are all `quran-*` (package `quran-player`, binary `quran`, identifier `com.goldstac.quran`, data dir `quran-app`).
 - No code comments unless you're asked for them.
 - No browser `prompt()` / `confirm()` / `alert()`, use the existing custom modal helpers (`promptText`, `confirmDialog`, `showPlaylistPicker`).
 - No stock `<input type="range">`, use the custom `Slider` component.
