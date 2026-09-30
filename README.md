@@ -73,7 +73,7 @@ app.run(host="127.0.0.1", port=8080, debug=False)
 
 **Before you open it up — please read:**
 - There is **no login**. Anyone who can reach your instance can play, like, create, rename, and delete playlists, and read your library.
-- `library.json` (songs + playlists) lives on the **server** and is shared by everyone who connects; volume/recents/search history live in **each visitor's own browser**.
+- `library.json` (nasheeds + playlists) lives on the **server** and is shared by everyone who connects; volume/recents/search history live in **each visitor's own browser**.
 - Every search and stream goes out through your server's IP to YouTube.
 - Safe options: stay on LAN, use Tailscale/WireGuard, or put real auth in front (proxy basic-auth, Authelia, etc.). Don't expose it raw to the internet.
 
