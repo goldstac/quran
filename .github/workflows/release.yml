@@ -11,108 +11,100 @@ permissions:
 
 jobs:
   build:
+    name: Build ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: ubuntu-22.04
-            asset: quran-linux-x86_64.tar.gz
+            name: linux
+            target: x86_64-unknown-linux-gnu
+            tauri-bundles: appimage,deb
           - os: macos-latest
-            asset: quran-macos-aarch64.tar.gz
+            name: macos
+            target: aarch64-apple-darwin
+            tauri-bundles: dmg
           - os: windows-latest
-            asset: quran-windows-x86_64.zip
-    runs-on: ${{ matrix.os }}
+            name: windows
+            target: x86_64-pc-windows-msvc
+            tauri-bundles: nsis
+
     steps:
       - uses: actions/checkout@v4
 
-      - name: Read version
-        id: ver
-        shell: bash
-        run: echo "version=$(jq -r .version package.json)" >> "$GITHUB_OUTPUT"
-
-      - uses: dtolnay/rust-toolchain@stable
-
-      - uses: swatinem/rust-cache@v2
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          workspaces: tauri-app/src-tauri
+          python-version: "3.11"
 
-      - name: Install Linux deps
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install Python build deps
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pyinstaller
+
+      - name: Install Linux build deps
         if: runner.os == 'Linux'
+        shell: bash
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev \
             libayatana-appindicator3-dev librsvg2-dev patchelf
 
-      - name: Build release binary
+      - name: Install JavaScript deps
+        shell: bash
+        run: npm ci
+
+      - name: Build backend sidecar
+        shell: bash
+        run: |
+          python build-backend-sidecar.py
+          python build-ytdlp-sidecar.py
+          echo "Built sidecars"
+          ls -R dist
+
+      - name: Stage sidecars for Tauri
+        shell: bash
+        run: |
+          mkdir -p tauri-app/src-tauri/bin
+          cp dist/quran-backend-${{ matrix.target }} tauri-app/src-tauri/bin/ || true
+          cp dist/quran-backend-${{ matrix.target }}.* tauri-app/src-tauri/bin/ 2>/dev/null || true
+          cp dist/yt-dlp-${{ matrix.target }} tauri-app/src-tauri/bin/ || true
+          cp dist/yt-dlp-${{ matrix.target }}.* tauri-app/src-tauri/bin/ 2>/dev/null || true
+          ls -R tauri-app/src-tauri/bin
+
+      - name: Build desktop installers
         working-directory: tauri-app/src-tauri
         shell: bash
-        run: cargo build --release
-
-      - name: Package (unix)
-        if: runner.os != 'Windows'
-        shell: bash
         run: |
-          set -euo pipefail
-          stage="quran-${{ steps.ver.outputs.version }}"
-          mkdir -p "$stage/web"
-          cp tauri-app/src-tauri/target/release/quran "$stage/"
-          if [ -d web/__pycache__ ]; then rm -rf web/__pycache__; fi
-          cp -R web/. "$stage/web/"
-          rm -rf "$stage/web/ts" "$stage/web/node_modules"
-          cp README.md PRIVACY.md TERMS.md "$stage/"
-          printf '%s\n' \
-            "Quran ${{ steps.ver.outputs.version }}" \
-            "" \
-            "Made for the Quran & nasheeds - not general music." \
-            "" \
-            "Requirements: Python 3.11+ with flask and flask-cors, yt-dlp on PATH." \
-            "" \
-            "Linux/macOS:   ./quran" \
-            "Windows:       quran.exe" \
-            "" \
-            "Keep the web/ folder next to the binary (or set QURAN_WEB_DIR)." \
-            > "$stage/START.txt"
-          tar -czf "${{ matrix.asset }}" "$stage"
+          cargo tauri build --target ${{ matrix.target }} --bundles ${{ matrix.tauri-bundles }}
 
-      - name: Package (windows)
-        if: runner.os == 'Windows'
-        shell: bash
-        run: |
-          set -euo pipefail
-          stage="quran-${{ steps.ver.outputs.version }}"
-          mkdir -p "$stage/web"
-          cp tauri-app/src-tauri/target/release/quran.exe "$stage/"
-          cp -R web/. "$stage/web/"
-          rm -rf "$stage/web/ts" "$stage/web/node_modules" "$stage/web/__pycache__"
-          cp README.md PRIVACY.md TERMS.md "$stage/"
-          printf '%s\n' \
-            "Quran ${{ steps.ver.outputs.version }}" \
-            "" \
-            "Made for the Quran & nasheeds - not general music." \
-            "" \
-            "Requirements: Python 3.11+ with flask and flask-cors, yt-dlp on PATH." \
-            "" \
-            "Windows: quran.exe" \
-            "Keep the web/ folder next to the exe (or set QURAN_WEB_DIR)." \
-            > "$stage/START.txt"
-          7z a "${{ matrix.asset }}" "$stage"
-
-      - uses: actions/upload-artifact@v4
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.asset }}
-          path: ${{ matrix.asset }}
+          name: ${{ matrix.name }}-installers
+          path: |
+            tauri-app/src-tauri/target/release/bundle/**
           if-no-files-found: error
 
   release:
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
-
-      - name: Read version
-        id: ver
-        shell: bash
-        run: echo "version=$(jq -r .version package.json)" >> "$GITHUB_OUTPUT"
 
       - uses: actions/download-artifact@v4
         with:
@@ -122,36 +114,21 @@ jobs:
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          name: Quran ${{ steps.ver.outputs.version }}
-          tag_name: ${{ github.ref_name }}
           draft: false
           prerelease: false
-          fail_on_unmatched_files: true
           files: |
-            dist/*.tar.gz
-            dist/*.zip
+            dist/**/*.AppImage
+            dist/**/*.deb
+            dist/**/*.dmg
+            dist/**/*.msi
+            dist/**/*.exe
           body: |
-            ## Quran ${{ steps.ver.outputs.version }}
+            ## Quran release
 
-            Local player for the **Quran** and Islamic **nasheeds**. No accounts, no tracking.
+            Desktop installers are bundled with the Python backend and yt-dlp sidecars, so you install nothing else.
 
-            ### Downloads
-            | Platform | File |
-            |---|---|
-            | Linux (x86_64) | `quran-linux-x86_64.tar.gz` |
-            | macOS (Apple Silicon) | `quran-macos-aarch64.tar.gz` |
-            | Windows (x86_64) | `quran-windows-x86_64.zip` |
+            - Linux: AppImage and Debian package
+            - macOS: DMG
+            - Windows: MSI / EXE
 
-            Unzip, keep `web/` next to the binary, then run it. See `START.txt`.
-
-            **Needs on your machine:** Python 3.11+ (`flask`, `flask-cors`) and [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) on `PATH`.
-
-            ### Highlights
-            - **Quran**: all 114 surahs, 170+ reciters, ayah reader with big Arabic text + English/Tamil translation, click any ayah to jump
-            - **Nasheed search** on YouTube with local library, likes, playlists
-            - Range-aware audio proxy (seeking works), shuffle, loop-one, keyboard shortcuts, media keys
-            - Everything stored locally on your device
-
-            ### Notes
-            - Builds are **unsigned**. macOS may need *Right-click → Open* (or `xattr -d com.apple.quarantine`), Windows SmartScreen may warn (More info → Run anyway).
-            - Still happy from source? `./run-web.sh` works as before.
+            The Flask self-hosting setup remains available as an optional source install for advanced users.
