@@ -68,11 +68,15 @@ jobs:
 
       - name: Install Tauri CLI
         shell: bash
-        run: cargo install tauri-cli --locked
+        run: |
+          export PATH="$HOME/.cargo/bin:$PATH"
+          cargo install tauri-cli --version 2.11.5 --locked
+          cargo tauri --version
 
       - name: Build backend sidecar
         shell: bash
         run: |
+          export PATH="$HOME/.cargo/bin:$PATH"
           python build-backend-sidecar.py
           python build-ytdlp-sidecar.py
           echo "Built sidecars"
@@ -92,6 +96,7 @@ jobs:
         working-directory: tauri-app/src-tauri
         shell: bash
         run: |
+          export PATH="$HOME/.cargo/bin:$PATH"
           cargo tauri build --target ${{ matrix.target }} --bundles ${{ matrix.tauri-bundles }}
 
       - name: Upload artifacts
