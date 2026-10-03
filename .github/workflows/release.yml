@@ -66,6 +66,10 @@ jobs:
         shell: bash
         run: npm ci
 
+      - name: Install Tauri CLI
+        shell: bash
+        run: cargo install tauri-cli --locked
+
       - name: Build backend sidecar
         shell: bash
         run: |
