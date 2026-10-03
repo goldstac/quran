@@ -48,23 +48,26 @@ def get_ytdlp_download_url() -> str:
     system = platform.system().lower()
     machine = platform.machine().lower()
 
+    candidates: list[str]
     if system.startswith("linux"):
-        name = "yt-dlp"
         if "aarch64" in machine or "arm64" in machine:
-            name = "yt-dlp_linux_aarch64"
+            candidates = ["yt-dlp_linux_aarch64", "yt-dlp_linux_arm64"]
+        else:
+            candidates = ["yt-dlp"]
     elif system.startswith("darwin"):
         if "aarch64" in machine or "arm64" in machine:
-            name = "yt-dlp_macos_aarch64"
+            candidates = ["yt-dlp_macos_arm64", "yt-dlp_macos_aarch64"]
         else:
-            name = "yt-dlp_macos"
+            candidates = ["yt-dlp_macos", "yt-dlp_macos_intel"]
     elif system.startswith("windows"):
-        name = "yt-dlp.exe"
+        candidates = ["yt-dlp.exe"]
     else:
         raise RuntimeError(f"Unsupported platform: {system}")
 
-    for asset in assets:
-        if asset["name"] == name:
-            return asset["browser_download_url"]
+    for name in candidates:
+        for asset in assets:
+            if asset["name"] == name:
+                return asset["browser_download_url"]
 
     raise RuntimeError(f"Could not find yt-dlp binary for {system} {machine} in latest release")
 
