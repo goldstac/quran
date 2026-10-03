@@ -1,4 +1,5 @@
-import os, json, subprocess, re, threading
+import os, json, subprocess, re, threading, sys, socket, argparse
+from pathlib import Path
 from flask import Flask, render_template, jsonify, request
 from flask_cors import CORS
 
@@ -6,14 +7,79 @@ app = Flask(__name__)
 CORS(app)
 app.config["TEMPLATES_AUTO_RELOAD"] = True
 
-DATA_DIR = os.path.expanduser("~/.local/share/quran-app")
+# Determine data directory (cross-platform)
+if sys.platform == "win32":
+    base_data_dir = os.path.expanduser("~/AppData/Local/quran-app")
+else:
+    base_data_dir = os.path.expanduser("~/.local/share/quran-app")
+
+DATA_DIR = base_data_dir
 OLD_DATA_DIR = os.path.expanduser("~/.local/share/nasheed-app")
+
+# Migrate from old location if needed
 if not os.path.exists(DATA_DIR) and os.path.exists(OLD_DATA_DIR):
+    os.makedirs(os.path.dirname(DATA_DIR), exist_ok=True)
     os.rename(OLD_DATA_DIR, DATA_DIR)
+
+os.makedirs(DATA_DIR, exist_ok=True)
 LIB_FILE = os.path.join(DATA_DIR, "library.json")
 UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36"
 
-os.makedirs(DATA_DIR, exist_ok=True)
+# Configure template and static folders for frozen app
+if getattr(sys, "frozen", False):
+    # Running as frozen executable (PyInstaller)
+    base_path = sys._MEIPASS
+    app.template_folder = os.path.join(base_path, "templates")
+    app.static_folder = os.path.join(base_path, "static")
+else:
+    # Running from source
+    base_path = os.path.dirname(os.path.abspath(__file__))
+    app.template_folder = os.path.join(base_path, "templates")
+    app.static_folder = os.path.join(base_path, "static")
+
+
+def find_free_port(start_port=5000, max_port=65535):
+    """Find the first free port starting from start_port."""
+    for port in range(start_port, max_port + 1):
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.bind(("127.0.0.1", port))
+            sock.close()
+            return port
+        except OSError:
+            continue
+    raise RuntimeError(f"No free ports found between {start_port} and {max_port}")
+
+
+def find_ytdlp():
+    """Find yt-dlp binary: YTDLP_PATH env var, sidecar, or PATH."""
+    # Check YTDLP_PATH environment variable
+    if "YTDLP_PATH" in os.environ:
+        path = os.environ["YTDLP_PATH"]
+        if os.path.isfile(path) and os.access(path, os.X_OK):
+            return path
+
+    # Check for sidecar binary next to executable
+    if getattr(sys, "frozen", False):
+        exe_dir = os.path.dirname(sys.executable)
+        sidecar_name = "yt-dlp.exe" if sys.platform == "win32" else "yt-dlp"
+        sidecar_path = os.path.join(exe_dir, sidecar_name)
+        if os.path.isfile(sidecar_path) and os.access(sidecar_path, os.X_OK):
+            return sidecar_path
+
+    # Check PATH
+    if sys.platform == "win32":
+        result = subprocess.run(["where", "yt-dlp"], capture_output=True, text=True)
+    else:
+        result = subprocess.run(["which", "yt-dlp"], capture_output=True, text=True)
+    if result.returncode == 0:
+        return result.stdout.strip()
+
+    return None
+
+
+YTDLP_PATH = find_ytdlp()
+
 
 def load_lib():
     if os.path.exists(LIB_FILE):
@@ -21,20 +87,25 @@ def load_lib():
             return json.load(f)
     return {"songs": [], "playlists": [{"name": "Favorites", "songs": []}]}
 
+
 def save_lib(data):
     with open(LIB_FILE, "w") as f:
         json.dump(data, f, indent=2)
 
+
 @app.route("/")
 def index():
     return render_template("index.html")
+
 
 @app.route("/api/search")
 def api_search():
     q = request.args.get("q", "").strip()
     if not q:
         return jsonify([])
-    cmd = ["yt-dlp", f"ytsearch15:{q}", "--flat-playlist", "--dump-json",
+    if not YTDLP_PATH:
+        return jsonify({"error": "yt-dlp not found"}), 500
+    cmd = [YTDLP_PATH, f"ytsearch15:{q}", "--flat-playlist", "--dump-json",
            "--no-warnings", "--ignore-errors", "--no-playlist"]
     try:
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
@@ -60,9 +131,12 @@ def api_search():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
 @app.route("/api/stream/<video_id>")
 def api_stream(video_id):
-    cmd = ["yt-dlp", "-f", "bestaudio[ext=m4a]/bestaudio/best", "-g",
+    if not YTDLP_PATH:
+        return jsonify({"error": "yt-dlp not found"}), 500
+    cmd = [YTDLP_PATH, "-f", "bestaudio[ext=m4a]/bestaudio/best", "-g",
            "--no-warnings", "--no-playlist", "--user-agent", UA,
            f"https://www.youtube.com/watch?v={video_id}"]
     try:
@@ -74,9 +148,11 @@ def api_stream(video_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
 @app.route("/api/library")
 def api_library():
     return jsonify(load_lib())
+
 
 @app.route("/api/library/add", methods=["POST"])
 def api_add():
@@ -88,6 +164,7 @@ def api_add():
         save_lib(lib)
     return jsonify({"ok": True})
 
+
 @app.route("/api/library/fav/<sid>", methods=["POST"])
 def api_fav(sid):
     lib = load_lib()
@@ -98,6 +175,7 @@ def api_fav(sid):
             return jsonify({"favorite": s["favorite"]})
     return jsonify({"error": "not found"}), 404
 
+
 @app.route("/api/library/remove/<sid>", methods=["POST"])
 def api_remove(sid):
     lib = load_lib()
@@ -107,9 +185,11 @@ def api_remove(sid):
     save_lib(lib)
     return jsonify({"ok": True})
 
+
 @app.route("/api/playlists")
 def api_playlists():
     return jsonify(load_lib().get("playlists", []))
+
 
 @app.route("/api/playlists/create", methods=["POST"])
 def api_pl_create():
@@ -121,6 +201,7 @@ def api_pl_create():
         lib["playlists"].append({"name": name, "songs": []})
         save_lib(lib)
     return jsonify({"ok": True})
+
 
 @app.route("/api/playlists/<name>/add", methods=["POST"])
 def api_pl_add(name):
@@ -134,6 +215,7 @@ def api_pl_add(name):
             return jsonify({"ok": True})
     return jsonify({"error": "not found"}), 404
 
+
 @app.route("/api/playlists/<name>/remove/<sid>", methods=["POST"])
 def api_pl_remove(name, sid):
     lib = load_lib()
@@ -143,6 +225,7 @@ def api_pl_remove(name, sid):
             save_lib(lib)
             return jsonify({"ok": True})
     return jsonify({"error": "not found"}), 404
+
 
 @app.route("/api/playlists/delete", methods=["POST"])
 def api_pl_delete():
@@ -156,6 +239,7 @@ def api_pl_delete():
         return jsonify({"error": "not found"}), 404
     save_lib(lib)
     return jsonify({"ok": True})
+
 
 @app.route("/api/playlists/rename", methods=["POST"])
 def api_pl_rename():
@@ -175,15 +259,19 @@ def api_pl_rename():
     save_lib(lib)
     return jsonify({"ok": True})
 
+
 import urllib.request as _urllib
 from flask import request
 
 _stream_cache = {}
 
+
 def resolve_stream(video_id):
     if video_id in _stream_cache:
         return _stream_cache[video_id]
-    cmd = ["yt-dlp", "-f", "bestaudio[ext=m4a]/bestaudio/best", "-g",
+    if not YTDLP_PATH:
+        raise ValueError("yt-dlp not found")
+    cmd = [YTDLP_PATH, "-f", "bestaudio[ext=m4a]/bestaudio/best", "-g",
            "--no-warnings", "--no-playlist", "--user-agent", UA,
            f"https://www.youtube.com/watch?v={video_id}"]
     r = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
@@ -193,6 +281,7 @@ def resolve_stream(video_id):
     _stream_cache[video_id] = url
     return url
 
+
 @app.route("/api/warm/<video_id>")
 def api_warm(video_id):
     try:
@@ -200,6 +289,7 @@ def api_warm(video_id):
         return "", 204
     except Exception as e:
         return str(e), 500
+
 
 @app.route("/api/proxy/<video_id>")
 def api_proxy(video_id):
@@ -243,7 +333,9 @@ def api_proxy(video_id):
         _stream_cache.pop(video_id, None)
         return str(e), 500
 
+
 _quran_cache = {}
+
 
 def _quran_get(url, key, timeout=20):
     if key in _quran_cache:
@@ -253,6 +345,7 @@ def _quran_get(url, key, timeout=20):
         data = json.loads(resp.read().decode("utf-8"))
     _quran_cache[key] = data
     return data
+
 
 def _quran_style_score(name):
     n = (name or "").lower()
@@ -266,12 +359,14 @@ def _quran_style_score(name):
         return 4
     return 3
 
+
 @app.route("/api/quran/chapters")
 def api_quran_chapters():
     try:
         return jsonify(_quran_get("https://api.quran.com/api/v4/chapters?language=en", "chapters"))
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 @app.route("/api/quran/reciters")
 def api_quran_reciters():
@@ -310,6 +405,7 @@ def api_quran_reciters():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
 @app.route("/api/quran/chapter_audio/<int:moshaf_id>/<int:chapter_id>")
 def api_quran_chapter_audio(moshaf_id, chapter_id):
     key = f"audio:{moshaf_id}:{chapter_id}"
@@ -335,13 +431,16 @@ def api_quran_chapter_audio(moshaf_id, chapter_id):
         _quran_cache.pop(key, None)
         return jsonify({"error": str(e)}), 500
 
+
 _QURAN_TRANS_IDS = {"en": 20, "ta": 133}
 _QURAN_TRANS_NAMES = {"en": "Saheeh International", "ta": "Abdul Hameed Baqavi"}
+
 
 def _strip_verse_html(text):
     text = re.sub(r"<sup[^>]*>.*?</sup>", "", text, flags=re.S)
     text = re.sub(r"<[^>]+>", "", text)
     return text.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">").replace("&#39;", "'").replace("&quot;", '"').strip()
+
 
 @app.route("/api/quran/translation/<int:chapter_id>")
 def api_quran_translation(chapter_id):
@@ -369,5 +468,16 @@ def api_quran_translation(chapter_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--port", type=int, default=None, help="Port to run on. Default: auto-find from 5000")
+    args = parser.parse_args()
+
+    port = args.port if args.port else find_free_port()
+    host = "127.0.0.1" if getattr(sys, "frozen", False) else "0.0.0.0"
+
+    print(f"PORT={port}")
+    sys.stdout.flush()
+
+    app.run(host=host, port=port, debug=False)
