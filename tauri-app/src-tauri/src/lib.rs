@@ -3,7 +3,8 @@ pub mod server;
 #[cfg(not(target_os = "android"))]
 use std::fs;
 #[cfg(not(target_os = "android"))]
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
+use tauri::Manager;
 #[cfg(not(target_os = "android"))]
 use std::process::{Child, Command, Stdio};
 #[cfg(not(target_os = "android"))]
@@ -93,7 +94,6 @@ pub fn run() {
         .setup(|app| {
             #[cfg(target_os = "android")]
             {
-                use tauri::Manager;
                 let dir = app
                     .path()
                     .app_local_data_dir()
