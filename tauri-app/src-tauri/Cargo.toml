@@ -2,6 +2,7 @@
 name = "quran-player"
 version = "1.1.0"
 edition = "2021"
+default-run = "quran"
 
 [lib]
 name = "quran_player_lib"

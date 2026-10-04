@@ -56,7 +56,7 @@ def get_ytdlp_download_url() -> str:
             candidates = ["yt-dlp"]
     elif system.startswith("darwin"):
         if "aarch64" in machine or "arm64" in machine:
-            candidates = ["yt-dlp_macos_arm64", "yt-dlp_macos_aarch64"]
+            candidates = ["yt-dlp_macos_arm64", "yt-dlp_macos_aarch64", "yt-dlp_macos"]
         else:
             candidates = ["yt-dlp_macos", "yt-dlp_macos_intel"]
     elif system.startswith("windows"):
