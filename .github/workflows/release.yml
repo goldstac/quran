@@ -52,7 +52,7 @@ jobs:
         shell: bash
         run: |
           python -m pip install --upgrade pip
-          python -m pip install pyinstaller
+          python -m pip install -r web/requirements.txt pyinstaller
 
       - name: Install Linux build deps
         if: runner.os == 'Linux'
@@ -76,21 +76,104 @@ jobs:
       - name: Build backend sidecar
         shell: bash
         run: |
-          export PATH="$HOME/.cargo/bin:$PATH"
           python build-backend-sidecar.py
           python build-ytdlp-sidecar.py
           echo "Built sidecars"
           ls -R dist
 
+      - name: Smoke test backend sidecar
+        shell: bash
+        run: |
+          set -uo pipefail
+          TARGET="${{ matrix.target }}"
+          BACKEND="dist/quran-backend-${TARGET}"
+
+          if [ -d "$BACKEND" ]; then
+            echo "::error::${BACKEND} is a directory. Tauri externalBin needs one executable, so build with --onefile."
+            exit 1
+          fi
+          if [ -f "${BACKEND}.exe" ]; then
+            BACKEND="${BACKEND}.exe"
+          fi
+          if [ ! -f "$BACKEND" ]; then
+            echo "::error::backend sidecar not found at dist/quran-backend-${TARGET}"
+            exit 1
+          fi
+
+          export QURAN_DATA_DIR="$RUNNER_TEMP/quran-smoke-data"
+          mkdir -p "$QURAN_DATA_DIR"
+          "$BACKEND" > backend-output.txt 2>&1 &
+          BGPID=$!
+          cleanup() { kill "$BGPID" 2>/dev/null || true; }
+          trap cleanup EXIT
+
+          PORT=""
+          for _ in $(seq 1 60); do
+            PORT=$(sed -n 's/^PORT=//p' backend-output.txt | head -n 1 | tr -d '\r')
+            if [ -z "$PORT" ]; then
+              for p in $(seq 5000 5020); do
+                if curl -fsS -m 2 "http://127.0.0.1:${p}/" -o /dev/null 2>/dev/null; then
+                  PORT="$p"
+                  break
+                fi
+              done
+            fi
+            if [ -n "$PORT" ]; then
+              break
+            fi
+            if ! kill -0 "$BGPID" 2>/dev/null; then
+              echo "::error::backend exited before listening"
+              cat backend-output.txt || true
+              exit 1
+            fi
+            sleep 1
+          done
+
+          if [ -z "$PORT" ]; then
+            echo "::error::backend never announced a port"
+            cat backend-output.txt || true
+            exit 1
+          fi
+
+          echo "Backend answering on port ${PORT}"
+          OK=""
+          for _ in $(seq 1 30); do
+            if curl -fsS -m 5 "http://127.0.0.1:${PORT}/" -o /dev/null \
+              && curl -fsS -m 5 "http://127.0.0.1:${PORT}/api/library" -o /dev/null; then
+              OK=1
+              break
+            fi
+            sleep 1
+          done
+          if [ -z "$OK" ]; then
+            echo "::error::backend did not serve / or /api/library"
+            cat backend-output.txt || true
+            exit 1
+          fi
+          echo "smoke test OK"
+
       - name: Stage sidecars for Tauri
         shell: bash
         run: |
+          set -euo pipefail
+          TARGET="${{ matrix.target }}"
           mkdir -p tauri-app/src-tauri/bin
-          cp dist/quran-backend-${{ matrix.target }} tauri-app/src-tauri/bin/ || true
-          cp dist/quran-backend-${{ matrix.target }}.* tauri-app/src-tauri/bin/ 2>/dev/null || true
-          cp dist/yt-dlp-${{ matrix.target }} tauri-app/src-tauri/bin/ || true
-          cp dist/yt-dlp-${{ matrix.target }}.* tauri-app/src-tauri/bin/ 2>/dev/null || true
-          ls -R tauri-app/src-tauri/bin
+          for name in quran-backend yt-dlp; do
+            SRC="dist/${name}-${TARGET}"
+            if [ -d "$SRC" ]; then
+              echo "::error::${SRC} is a directory, Tauri externalBin needs one executable"
+              exit 1
+            fi
+            if [ -f "${SRC}.exe" ]; then
+              SRC="${SRC}.exe"
+            fi
+            if [ ! -f "$SRC" ]; then
+              echo "::error::missing sidecar ${SRC}"
+              exit 1
+            fi
+            cp "$SRC" tauri-app/src-tauri/bin/
+          done
+          ls -l tauri-app/src-tauri/bin
 
       - name: Build desktop installers
         working-directory: tauri-app/src-tauri
@@ -104,11 +187,12 @@ jobs:
         with:
           name: ${{ matrix.name }}-installers
           path: |
-            tauri-app/src-tauri/target/release/bundle/**
+            tauri-app/src-tauri/target/${{ matrix.target }}/release/bundle/**
           if-no-files-found: error
 
   release:
     needs: build
+    if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -124,7 +208,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           draft: false
-          prerelease: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
           files: |
             dist/**/*.AppImage
             dist/**/*.deb
@@ -138,6 +222,6 @@ jobs:
 
             - Linux: AppImage and Debian package
             - macOS: DMG
-            - Windows: MSI / EXE
+            - Windows: EXE
 
             The Flask self-hosting setup remains available as an optional source install for advanced users.
