@@ -38,7 +38,7 @@ def pyinstaller_args() -> list[str]:
         sys.executable,
         "-m",
         "PyInstaller",
-        "--onedir",
+        "--onefile",
         "--clean",
         "--name",
         f"quran-backend-{rust_target_triple()}",
@@ -80,10 +80,13 @@ if __name__ == "__main__":
 
     name = f"quran-backend-{rust_target_triple()}"
     sidecar = ROOT / "dist" / name
-    if not sidecar.exists():
-        sidecar = ROOT / "dist" / name / name
 
-    if sidecar.exists():
-        print(f"Built backend sidecar at: {sidecar}")
-    else:
-        print(f"PyInstaller completed, but expected output was not found: {sidecar}")
+    if sidecar.is_dir():
+        raise SystemExit(
+            f"{sidecar} is a directory. Tauri sidecars must be one executable, "
+            "so build with --onefile."
+        )
+    if not sidecar.is_file():
+        raise SystemExit(f"PyInstaller completed, but expected output was not found: {sidecar}")
+
+    print(f"Built backend sidecar at: {sidecar}")
