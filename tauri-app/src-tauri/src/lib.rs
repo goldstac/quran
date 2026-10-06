@@ -44,13 +44,24 @@ fn find_candidate_binary(prefix: &str) -> Option<PathBuf> {
 }
 
 #[cfg(not(target_os = "android"))]
+fn wait_for_http_ok(port: u16) -> bool {
+    for _ in 0..100 {
+        let url = format!("http://127.0.0.1:{port}/");
+        match ureq::get(&url).call() {
+            Ok(response) if response.status() < 500 => return true,
+            _ => std::thread::sleep(Duration::from_millis(100)),
+        }
+    }
+    false
+}
+
+#[cfg(not(target_os = "android"))]
 fn try_find_backend_port() -> Option<u16> {
     for port in 5000..=5100 {
         let url = format!("http://127.0.0.1:{port}/");
-        if let Ok(response) = ureq::get(&url).call() {
-            if response.status() < 500 {
-                return Some(port);
-            }
+        match ureq::get(&url).call() {
+            Ok(response) if response.status() < 500 => return Some(port),
+            _ => {}
         }
         std::thread::sleep(Duration::from_millis(50));
     }
@@ -58,30 +69,58 @@ fn try_find_backend_port() -> Option<u16> {
 }
 
 #[cfg(not(target_os = "android"))]
-fn start_backend() -> Option<Child> {
+fn start_backend(app: &tauri::AppHandle) -> Option<Child> {
     let backend_path = find_candidate_binary("quran-backend-")?;
-    let ytdlp_path = find_candidate_binary("yt-dlp-")?;
-    let mut child = Command::new(&backend_path)
-        .env("YTDLP_PATH", &ytdlp_path)
+
+    let mut command = Command::new(&backend_path);
+    if let Some(ytdlp_path) = find_candidate_binary("yt-dlp-") {
+        command.env("YTDLP_PATH", &ytdlp_path);
+    }
+
+    let mut child = command
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
         .ok()?;
 
     let stdout = child.stdout.take()?;
-    let reader = std::io::BufReader::new(stdout);
+    let stderr = child.stderr.take()?;
+    let (tx, rx) = std::sync::mpsc::channel();
+
     std::thread::spawn(move || {
         use std::io::BufRead;
-        let mut lines = reader.lines();
-        while let Some(line) = lines.next() {
+        let reader = std::io::BufReader::new(stdout);
+        for line in reader.lines() {
             let Ok(line) = line else { break };
             if let Some(port) = line.strip_prefix("PORT=") {
-                let _ = port.parse::<u16>();
+                if let Ok(port) = port.trim().parse::<u16>() {
+                    let _ = tx.send(port);
+                    break;
+                }
             }
         }
     });
 
-    let _ = try_find_backend_port();
+    std::thread::spawn(move || {
+        use std::io::BufRead;
+        let reader = std::io::BufReader::new(stderr);
+        for line in reader.lines() {
+            let Ok(_) = line else { break };
+        }
+    });
+
+    let port = rx
+        .recv_timeout(Duration::from_secs(30))
+        .ok()
+        .or_else(|| try_find_backend_port())
+        .unwrap_or(5000);
+
+    if wait_for_http_ok(port) {
+        if let Some(window) = app.get_webview_window("main") {
+            let _ = window.eval(&format!("window.location.href = 'http://127.0.0.1:{port}/';"));
+        }
+    }
+
     Some(child)
 }
 
@@ -102,7 +141,7 @@ pub fn run() {
             }
             #[cfg(not(target_os = "android"))]
             {
-                if let Some(child) = start_backend() {
+                if let Some(child) = start_backend(app.handle()) {
                     *app.state::<Backend>().0.lock().unwrap() = Some(child);
                 }
             }
