@@ -29,3 +29,8 @@ Thumbs.db
 # Local runtime
 *.log
 nohup.out
+
+# Sidecar build output
+dist/
+.pyinstaller-build/
+tauri-app/src-tauri/bin/
