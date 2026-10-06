@@ -19,7 +19,7 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; connect-src 'self' http://localhost:* http://127.0.0.1:* https://*; media-src http://localhost:* http://127.0.0.1:* https://*; img-src 'self' https://* data: http://localhost:* http://127.0.0.1:*;"
+      "csp": "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline'; connect-src 'self' http://127.0.0.1:* https://; media-src 'self' http://127.0.0.1:* https://; img-src 'self' data: http://127.0.0.1:* https://youtube.com https://i.ytimg.com https://yt4.ggpht.com;"
     }
   },
   "bundle": {
@@ -31,6 +31,10 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "targets": "all"
+    "targets": "all",
+    "externalBin": [
+      "bin/quran-backend",
+      "bin/yt-dlp"
+    ]
   }
 }
