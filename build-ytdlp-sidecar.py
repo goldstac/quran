@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
-import json
 import os
 import platform
-import subprocess
 import sys
 import urllib.request
 from pathlib import Path
@@ -32,44 +30,27 @@ def rust_target_triple() -> str:
     raise RuntimeError(f"Unsupported platform: {system} {machine}")
 
 
-def get_latest_ytdlp_release() -> dict:
-    """Fetch the latest yt-dlp release info from GitHub."""
-    url = "https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest"
-    req = urllib.request.Request(url, headers={"User-Agent": "quran-app-builder"})
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        return json.loads(resp.read().decode("utf-8"))
-
-
 def get_ytdlp_download_url() -> str:
-    """Get the download URL for the yt-dlp standalone binary for this platform."""
-    release = get_latest_ytdlp_release()
-    assets = release.get("assets", [])
-
+    """Get the direct download URL for the yt-dlp standalone binary for this platform."""
     system = platform.system().lower()
     machine = platform.machine().lower()
 
-    candidates: list[str]
     if system.startswith("linux"):
         if "aarch64" in machine or "arm64" in machine:
-            candidates = ["yt-dlp_linux_aarch64", "yt-dlp_linux_arm64"]
+            asset = "yt-dlp_linux_aarch64"
         else:
-            candidates = ["yt-dlp"]
+            asset = "yt-dlp"
     elif system.startswith("darwin"):
         if "aarch64" in machine or "arm64" in machine:
-            candidates = ["yt-dlp_macos_arm64", "yt-dlp_macos_aarch64", "yt-dlp_macos"]
+            asset = "yt-dlp_macos_arm64"
         else:
-            candidates = ["yt-dlp_macos", "yt-dlp_macos_intel"]
+            asset = "yt-dlp_macos"
     elif system.startswith("windows"):
-        candidates = ["yt-dlp.exe"]
+        asset = "yt-dlp.exe"
     else:
-        raise RuntimeError(f"Unsupported platform: {system}")
+        raise RuntimeError(f"Unsupported platform: {system} {machine}")
 
-    for name in candidates:
-        for asset in assets:
-            if asset["name"] == name:
-                return asset["browser_download_url"]
-
-    raise RuntimeError(f"Could not find yt-dlp binary for {system} {machine} in latest release")
+    return f"https://github.com/yt-dlp/yt-dlp/releases/latest/download/{asset}"
 
 
 def download_ytdlp(url: str, dest: Path) -> None:
