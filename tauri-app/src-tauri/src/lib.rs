@@ -32,6 +32,9 @@ fn find_candidate_binary(prefix: &str) -> Option<PathBuf> {
         if let Ok(entries) = fs::read_dir(&dir) {
             for entry in entries.flatten() {
                 let path = entry.path();
+                if !path.is_file() {
+                    continue;
+                }
                 let filename = path.file_name()?.to_string_lossy();
                 if filename.starts_with(prefix) {
                     return Some(path);
@@ -70,10 +73,10 @@ fn try_find_backend_port() -> Option<u16> {
 
 #[cfg(not(target_os = "android"))]
 fn start_backend(app: &tauri::AppHandle) -> Option<Child> {
-    let backend_path = find_candidate_binary("quran-backend-")?;
+    let backend_path = find_candidate_binary("quran-backend")?;
 
     let mut command = Command::new(&backend_path);
-    if let Some(ytdlp_path) = find_candidate_binary("yt-dlp-") {
+    if let Some(ytdlp_path) = find_candidate_binary("yt-dlp") {
         command.env("YTDLP_PATH", &ytdlp_path);
     }
 
