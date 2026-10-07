@@ -80,6 +80,8 @@ if __name__ == "__main__":
 
     name = f"quran-backend-{rust_target_triple()}"
     sidecar = ROOT / "dist" / name
+    if platform.system().lower().startswith("windows"):
+        sidecar = ROOT / "dist" / f"{name}.exe"
 
     if sidecar.is_dir():
         raise SystemExit(
