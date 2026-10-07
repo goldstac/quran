@@ -39,7 +39,7 @@ def get_ytdlp_download_url() -> str:
         if "aarch64" in machine or "arm64" in machine:
             asset = "yt-dlp_linux_aarch64"
         else:
-            asset = "yt-dlp"
+            asset = "yt-dlp_linux"
     elif system.startswith("darwin"):
         asset = "yt-dlp_macos"
     elif system.startswith("windows"):
