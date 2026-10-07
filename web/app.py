@@ -31,6 +31,16 @@ if getattr(sys, "frozen", False):
     base_path = sys._MEIPASS
     app.template_folder = os.path.join(base_path, "templates")
     app.static_folder = os.path.join(base_path, "static")
+    if "SSL_CERT_FILE" not in os.environ:
+        for _ca_file in (
+            "/etc/ssl/certs/ca-certificates.crt",
+            "/etc/pki/tls/certs/ca-bundle.crt",
+            "/etc/ssl/ca-bundle.pem",
+            "/etc/ssl/cert.pem",
+        ):
+            if os.path.isfile(_ca_file):
+                os.environ["SSL_CERT_FILE"] = _ca_file
+                break
 else:
     # Running from source
     base_path = os.path.dirname(os.path.abspath(__file__))
