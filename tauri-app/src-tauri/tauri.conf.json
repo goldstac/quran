@@ -35,6 +35,11 @@
     "externalBin": [
       "bin/quran-backend",
       "bin/yt-dlp"
-    ]
+    ],
+    "linux": {
+      "appimage": {
+        "bundleMediaFramework": true
+      }
+    }
   }
 }
