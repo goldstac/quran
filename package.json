@@ -1,6 +1,6 @@
 {
   "name": "quran-player",
-  "version": "1.2.0-rc.2",
+  "version": "1.2.0-rc.3",
   "private": true,
   "scripts": {
     "build": "tsc -p tsconfig.json",

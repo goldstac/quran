@@ -1,6 +1,6 @@
 {
   "productName": "Quran",
-  "version": "1.2.0-rc.2",
+  "version": "1.2.0-rc.3",
   "identifier": "com.goldstac.quran",
   "build": {
     "beforeDevCommand": "",
