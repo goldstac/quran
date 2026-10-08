@@ -98,7 +98,6 @@ fn start_backend(app: &tauri::AppHandle) -> Option<Child> {
             if let Some(port) = line.strip_prefix("PORT=") {
                 if let Ok(port) = port.trim().parse::<u16>() {
                     let _ = tx.send(port);
-                    break;
                 }
             }
         }
