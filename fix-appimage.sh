@@ -28,22 +28,26 @@ fi
 echo "removing bundled libwayland libs (they break EGL on Mesa 25+ hosts)"
 rm -f "$LIBDIR"/libwayland-*.so*
 
-GSTDIR="$LIBDIR/gstreamer-1.0"
-if [ ! -d "$GSTDIR" ]; then
-  ALT="$(find "$LIBDIR" -maxdepth 2 -type d -name gstreamer-1.0 2>/dev/null | head -n1 || true)"
-  if [ -n "$ALT" ]; then
-    echo "moving bundled gstreamer plugins to $GSTDIR"
-    mv "$ALT" "$GSTDIR"
-  else
-    echo "no bundled gstreamer plugins - neutralizing AppRun GST overrides so the host gstreamer is used"
-    WRAPPED="$APPDIR/AppRun.wrapped"
-    if ! grep -q "GST_PLUGIN_SYSTEM_PATH" "$WRAPPED"; then
-      echo "error: GST_PLUGIN_SYSTEM_PATH override not found in AppRun.wrapped - update fix-appimage.sh" >&2
-      exit 1
-    fi
-    perl -pi -e 's/GST_PLUGIN_SYSTEM_PATH/XST_PLUGIN_SYSTEM_PATH/g' "$WRAPPED"
+echo "removing bundled gstreamer, glib and platform libs (the AppImage uses the host media stack)"
+rm -f "$LIBDIR"/libgst*.so*
+rm -f "$LIBDIR"/libglib-2.0.so* "$LIBDIR"/libgobject-2.0.so* "$LIBDIR"/libgio-2.0.so* "$LIBDIR"/libgmodule-2.0.so* "$LIBDIR"/libgthread-2.0.so*
+rm -f "$LIBDIR"/libmount.so* "$LIBDIR"/libblkid.so* "$LIBDIR"/libsystemd.so* "$LIBDIR"/libudev.so*
+rm -f "$LIBDIR"/libpcre2-8.so* "$LIBDIR"/libnghttp2.so*
+
+for lib in libwayland-client.so.0 libgstreamer-1.0.so.0 libglib-2.0.so.0; do
+  if [ -e "$LIBDIR/$lib" ]; then
+    echo "error: failed to remove bundled $lib" >&2
+    exit 1
   fi
+done
+
+echo "neutralizing AppRun GST overrides so the host gstreamer is used"
+WRAPPED="$APPDIR/AppRun.wrapped"
+if ! grep -q "GST_PLUGIN_SYSTEM_PATH" "$WRAPPED"; then
+  echo "error: GST_PLUGIN_SYSTEM_PATH override not found in AppRun.wrapped - update fix-appimage.sh" >&2
+  exit 1
 fi
+perl -pi -e 's/GST_PLUGIN_SYSTEM_PATH/XST_PLUGIN_SYSTEM_PATH/g' "$WRAPPED"
 
 ARCH="$(uname -m)"
 TOOL="$WORK/appimagetool.AppImage"
