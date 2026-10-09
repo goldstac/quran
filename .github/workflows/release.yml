@@ -253,7 +253,7 @@ jobs:
           fi
           cp -R "$APP" "$HOME/Quran.app"
           hdiutil detach /Volumes/* -quiet || true
-          setsid nohup "$HOME/Quran.app/Contents/MacOS/quran" > /tmp/quran-app.log 2>&1 &
+          nohup "$HOME/Quran.app/Contents/MacOS/quran" > /tmp/quran-app.log 2>&1 < /dev/null &
           echo "app pid $!"
 
       - name: Wait for backend and verify endpoints
