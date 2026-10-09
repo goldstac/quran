@@ -5,10 +5,7 @@ matching section and note the platform when it is not cross-platform.
 
 ## High priority
 
-- [ ] Runtime-test the packaged Windows and macOS apps in CI or manually. CI
-  only smoke tests the Windows backend sidecar (`/` and `/api/library`); the
-  packaged app itself is not exercised on Windows or macOS. The Linux side is
-  covered by the local launch test below.
+- [ ] (none)
 
 ## Medium priority
 
@@ -50,3 +47,9 @@ matching section and note the platform when it is not cross-platform.
 - [x] Add a Settings screen (sidebar nav item): app version, GitHub repo +
   latest release ("Check for updates" via the GitHub API), default volume
   slider. Also a muted `#sidebar-ver` version in the sidebar footer.
+- [x] Runtime-test the packaged Windows and macOS apps in CI (new
+  `runtime-test` job in `release.yml`): it installs/launches the real packaged
+  app, waits for the backend on `127.0.0.1:5000`, checks `/api/version`, then
+  kills the app and asserts the backend exits (proving the orphan fix on real
+  OSes). Linux build keeps a backend sidecar smoke test; the AppImage itself
+  was launch-tested during the rc.3 release.
