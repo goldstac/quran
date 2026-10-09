@@ -61,6 +61,47 @@ def find_free_port(start_port=5000, max_port=65535):
     raise RuntimeError(f"No free ports found between {start_port} and {max_port}")
 
 
+def watch_parent_stdin():
+    """Exit the backend when it is orphaned.
+
+    The desktop app keeps our stdin pipe open for our whole lifetime. Reaching
+    EOF on that pipe means the app is gone (PyInstaller onefile: the bootloader
+    forwards the same pipe to us). Only active when QURAN_STDIN_WATCH=1 is set
+    by the Tauri wrapper, so dev runs and CI smoke tests are unaffected.
+    """
+    if os.environ.get("QURAN_STDIN_WATCH") != "1":
+        return
+    try:
+        fd = os.dup(0)
+    except OSError:
+        try:
+            fd = sys.stdin.fileno()
+        except Exception:
+            return
+
+    def _wait_eof():
+        chunk = b"x"
+        try:
+            while chunk:
+                chunk = os.read(fd, 65536)
+        except OSError:
+            pass
+        os._exit(0)
+
+    threading.Thread(target=_wait_eof, daemon=True).start()
+
+
+def app_version():
+    v = os.environ.get("QURAN_VERSION")
+    if v:
+        return v
+    try:
+        pkg = Path(__file__).resolve().parent.parent / "package.json"
+        return json.loads(pkg.read_text())["version"]
+    except Exception:
+        return "unknown"
+
+
 def find_ytdlp():
     """Find yt-dlp binary: YTDLP_PATH env var, sidecar, or PATH."""
     # Check YTDLP_PATH environment variable
@@ -162,6 +203,11 @@ def api_stream(video_id):
 @app.route("/api/library")
 def api_library():
     return jsonify(load_lib())
+
+
+@app.route("/api/version")
+def api_version():
+    return jsonify({"version": app_version(), "name": "Quran"})
 
 
 @app.route("/api/library/add", methods=["POST"])
@@ -489,5 +535,7 @@ if __name__ == "__main__":
 
     print(f"PORT={port}")
     sys.stdout.flush()
+
+    watch_parent_stdin()
 
     app.run(host=host, port=port, debug=False)

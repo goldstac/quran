@@ -37,6 +37,9 @@
       <button class="nav-item" data-view="quran">
         <i class="fa-solid fa-book-quran"></i><span>Quran</span>
       </button>
+      <button class="nav-item" data-view="settings">
+        <i class="fa-solid fa-gear"></i><span>Settings</span>
+      </button>
     </nav>
 
     <div class="sidebar-sep"></div>
@@ -49,6 +52,8 @@
     <div id="playlist-nav" class="sidebar-playlists"></div>
 
     <p class="sidebar-intent">Made for the Quran &amp; nasheeds, not general music.</p>
+
+    <div id="sidebar-ver" class="sidebar-ver"></div>
   </aside>
 
   <button id="menu-btn" class="menu-btn" type="button" aria-label="Open menu"><i class="fa-solid fa-bars"></i></button>
@@ -188,6 +193,44 @@
           <p class="empty-sub">Loading Quran...</p>
         </div>
         <div id="quran-list" class="track-list" style="display:none"></div>
+      </div>
+    </div>
+
+    <div id="settings-view" class="view">
+      <div class="lib-sticky">
+        <div class="lib-heading">
+          <h1 class="lib-title">Settings</h1>
+        </div>
+        <p class="lib-subtitle">App info and basics</p>
+      </div>
+      <div class="lib-body">
+        <div class="settings-card">
+          <h2 class="settings-card-title">About</h2>
+          <div class="settings-row"><span class="settings-row-label">App</span><span id="set-name">Quran</span></div>
+          <div class="settings-row"><span class="settings-row-label">Version</span><span id="set-version">...</span></div>
+          <div class="settings-row"><span class="settings-row-label">Repository</span><a id="set-repo" href="https://github.com/goldstac/quran" target="_blank" rel="noopener noreferrer">github.com/goldstac/quran</a></div>
+        </div>
+        <div class="settings-card">
+          <h2 class="settings-card-title">Updates</h2>
+          <div class="settings-row">
+            <span class="settings-row-label">Latest release</span><span id="set-latest">Unknown</span>
+          </div>
+          <button id="set-check" class="set-btn" type="button"><i class="fa-solid fa-arrows-rotate"></i><span>Check for updates</span></button>
+          <p id="set-check-note" class="settings-note"></p>
+        </div>
+        <div class="settings-card">
+          <h2 class="settings-card-title">Sound</h2>
+          <div class="settings-row">
+            <span class="settings-row-label">Default volume</span>
+            <div class="vol-track settings-vol" id="settings-volume-bar" role="slider" aria-label="Default volume" aria-valuemin="0" aria-valuemax="100" aria-valuenow="70"></div>
+            <span id="set-vol-label" class="set-vol-label">70%</span>
+          </div>
+          <p class="settings-note">Saved on your device and used when the app starts.</p>
+        </div>
+        <div class="settings-card">
+          <h2 class="settings-card-title">About this app</h2>
+          <p class="settings-note">Made for the Quran and nasheeds, not general music. Everything is stored locally on your device.</p>
+        </div>
       </div>
     </div>
 

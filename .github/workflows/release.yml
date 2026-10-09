@@ -199,8 +199,109 @@ jobs:
             tauri-app/src-tauri/target/${{ matrix.target }}/release/bundle/**
           if-no-files-found: error
 
-  release:
+  runtime-test:
+    name: Runtime test ${{ matrix.name }}
     needs: build
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            name: windows
+            artifact: windows-installers
+          - os: macos-latest
+            name: macos
+            artifact: macos-installers
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: installers
+
+      - name: Install and launch the Windows app
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $installer = Get-ChildItem -Path installers -Recurse -Filter *.exe | Select-Object -First 1
+          if (-not $installer) { throw 'no Windows installer found' }
+          $p = Start-Process -FilePath $installer.FullName -ArgumentList '/S' -Wait -PassThru
+          Write-Output "installer exit code: $($p.ExitCode)"
+          $app = Get-ChildItem -Path "$env:LOCALAPPDATA", "$env:ProgramFiles" -Recurse -Filter quran.exe -ErrorAction SilentlyContinue |
+            Select-Object -First 1
+          if (-not $app) { throw 'installed quran.exe not found' }
+          Write-Output "launching $($app.FullName)"
+          Start-Process -FilePath $app.FullName | Out-Null
+
+      - name: Launch the macOS app
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          DMG=$(find installers -name '*.dmg' | head -n 1)
+          if [ -z "$DMG" ]; then
+            echo "::error::no dmg found in macos-installers"
+            exit 1
+          fi
+          hdiutil attach "$DMG" -nobrowse -quiet
+          APP=$(ls -d /Volumes/*/*.app 2>/dev/null | head -n 1)
+          if [ -z "$APP" ]; then
+            echo "::error::no .app found in the mounted dmg"
+            hdiutil detach /Volumes/* -quiet || true
+            exit 1
+          fi
+          cp -R "$APP" "$HOME/Quran.app"
+          hdiutil detach /Volumes/* -quiet || true
+          setsid nohup "$HOME/Quran.app/Contents/MacOS/quran" > /tmp/quran-app.log 2>&1 &
+          echo "app pid $!"
+
+      - name: Wait for backend and verify endpoints
+        shell: bash
+        run: |
+          set -u
+          for i in $(seq 1 90); do
+            if curl -fsS -m 5 "http://127.0.0.1:5000/" -o /dev/null 2>/dev/null \
+               && curl -fsS -m 5 "http://127.0.0.1:5000/api/version" -o /tmp/ver.json 2>/dev/null; then
+              echo "backend is up on 127.0.0.1:5000"
+              echo -n "version endpoint: "
+              cat /tmp/ver.json
+              echo
+              echo "runtime test OK"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::packaged app never served the backend on 127.0.0.1:5000"
+          [ -f /tmp/quran-app.log ] && cat /tmp/quran-app.log || true
+          exit 1
+
+      - name: Kill app and verify backend exits (orphan fix)
+        shell: bash
+        run: |
+          set -u
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            powershell -Command "Stop-Process -Name quran -Force -ErrorAction SilentlyContinue"
+          else
+            pkill -x quran 2>/dev/null || true
+          fi
+          sleep 10
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            if powershell -Command "Get-Process -Name quran-backend -ErrorAction SilentlyContinue" | Select-Object -First 20 | grep -q quran; then
+              echo "::error::backend still running after the app was killed"
+              exit 1
+            fi
+          else
+            if pgrep -x quran-backend >/dev/null; then
+              echo "::error::backend still running after the app was killed"
+              pgrep -af quran-backend || true
+              exit 1
+            fi
+          fi
+          echo "backend exited with the app - orphan fix OK"
+
+  release:
+    needs: [build, runtime-test]
     if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
     permissions:

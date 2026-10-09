@@ -474,6 +474,9 @@ $$<HTMLElement>('.nav-item').forEach((btn) =>
     } else if (v === 'quran') {
       $('#quran-view').classList.add('active');
       loadQuran();
+    } else if (v === 'settings') {
+      $('#settings-view').classList.add('active');
+      void loadSettings();
     } else {
       $('#library-view').classList.add('active');
       loadLib(v);
@@ -1407,6 +1410,7 @@ vol.onInput = (p) => {
   audio.volume = p / 100;
   store('ns_vol', Math.round(p));
   updateVolIcon();
+  syncSettingsVol();
 };
 $('#vol-btn').addEventListener('click', () => {
   audio.muted = !audio.muted;
@@ -1668,6 +1672,70 @@ $('#add-pl-btn').addEventListener('click', async () => {
   toast('Created playlist: ' + name);
 });
 
+// --- SETTINGS ---
+const REPO_URL = 'https://github.com/goldstac/quran';
+let appVersion = '';
+
+const $settingsVolOrigin = $('#settings-volume-bar');
+const settingsVol = new Slider($settingsVolOrigin);
+
+function syncSettingsVol() {
+  const p = Math.round(vol.getValue());
+  settingsVol.setValue(p);
+  $('#set-vol-label').textContent = p + '%';
+}
+
+settingsVol.onInput = (p) => {
+  audio.volume = p / 100;
+  store('ns_vol', Math.round(p));
+  vol.setValue(p);
+  updateVolIcon();
+  $('#set-vol-label').textContent = Math.round(p) + '%';
+};
+
+async function loadSettings() {
+  try {
+    const d = await getJSON<{ version?: string }>(`${API}/api/version`);
+    appVersion = d.version || '';
+    $('#set-version').textContent = appVersion ? 'v' + appVersion : 'unknown';
+  } catch {
+    $('#set-version').textContent = 'unknown';
+  }
+}
+
+async function loadSidebarVersion() {
+  const ver = $('#sidebar-ver');
+  try {
+    const d = await getJSON<{ version?: string }>(`${API}/api/version`);
+    if (d.version) ver.textContent = 'v' + d.version;
+  } catch {
+    ver.textContent = '';
+  }
+}
+
+$('#set-check').addEventListener('click', async () => {
+  const btn = $('#set-check');
+  const note = $('#set-check-note');
+  btn.classList.add('disabled');
+  note.textContent = 'Checking GitHub...';
+  try {
+    const r = await fetch('https://api.github.com/repos/goldstac/quran/releases/latest');
+    if (!r.ok) throw new Error('bad status');
+    const d = (await r.json()) as { tag_name?: string; html_url?: string };
+    const tag = (d.tag_name || '').replace(/^v/, '');
+    if (tag) $('#set-latest').textContent = 'v' + tag;
+    if (tag && appVersion && tag !== appVersion.replace(/^v/, '')) {
+      note.innerHTML = `A newer version is available: <a href="${esc(d.html_url || REPO_URL)}" target="_blank" rel="noopener noreferrer">get v${esc(tag)}</a>`;
+    } else {
+      note.textContent = 'You are up to date.';
+    }
+  } catch {
+    note.textContent = 'Could not reach GitHub right now.';
+  } finally {
+    btn.classList.remove('disabled');
+  }
+});
+
 try {
   if ('mediaSession' in navigator) {
     navigator.mediaSession.setActionHandler('play', () => {
@@ -1694,3 +1762,5 @@ renderRecentQ();
 syncSearchUI();
 loadPlaylists();
 void loadQuranReciters();
+syncSettingsVol();
+void loadSidebarVersion();

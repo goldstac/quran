@@ -25,6 +25,7 @@ This app is made for the **Quran** and Islamic **nasheeds**. The YouTube search 
 - **Recently Played** view + **recent search chips**
 - **Sort** library by recently added, title, or channel
 - **Keyboard shortcuts** (below), toast notifications, Media Session (lock-screen/OS media keys)
+- **Settings** — app version, GitHub repo and latest release ("Check for updates"), default volume
 - **Everything persists locally** — volume, loop/shuffle/sort, recents, library, playlists
 
 ## Requirements
@@ -34,6 +35,10 @@ This app is made for the **Quran** and Islamic **nasheeds**. The YouTube search 
   - elsewhere: `pip install flask flask-cors`
 - [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) on your `PATH`
 - Node.js 18+ (only needed to build the TypeScript frontend)
+
+> Desktop note: the Linux AppImage plays audio through your system's GStreamer,
+> so it needs mp3/aac/opus codec plugins installed (`gstreamer1.0-plugins-bad`
+> and `-ugly` on most distros). Windows and macOS need nothing extra.
 
 ## Quick start
 

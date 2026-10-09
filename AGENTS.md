@@ -8,7 +8,7 @@ An all-in-one open source Islamic app (Quran + nasheeds), desktop/mobile, Spotif
 
 Two app versions exist in this repo:
 - **`web/`** — active Flask + TypeScript/CSS web app (the one being developed)
-- **`tauri-app/`** — desktop app for testing (Tauri v2): Rust spawns `python3 web/app.py` on startup and kills it on exit; the window loads `http://127.0.0.1:5000` via a loading page. Android (APK) is planned later.
+- **`tauri-app/`** — desktop app for testing (Tauri v2): Rust spawns `python3 web/app.py` on startup and keeps its **stdin pipe open** the whole time; the backend watches that pipe for EOF (`QURAN_STDIN_WATCH=1`) and exits when the app closes, so no orphaned backend survives. The window loads `http://127.0.0.1:5000` via a loading page. Android (APK) is planned later.
 
 ## Commands
 
@@ -44,8 +44,8 @@ Two app versions exist in this repo:
 - `README.md` / `CONTRIBUTING.md` — project overview & contributor guide. Keep them in sync with real commands/conventions (AGENTS.md remains the detailed source of truth).
 - `PRIVACY.md` / `TERMS.md` — privacy policy and terms of service (plain-language, jurisdiction-neutral). Must stay truthful to what the app actually does (local-only storage, no developer servers, third-party requests to YouTube/Google Fonts/cdnjs). Keep the tone casual — the user dislikes heavy legal/rule language (minimal mention of laws/rights). Update both if data/network behavior changes.
 
-- `web/app.py` — Flask backend. All `/api/*` routes: search, stream, proxy (audio), library (add/fav/remove), playlists (create/add/remove/delete/rename — delete/rename take POST body `{name}` / `{old,new}`). Persists to `~/.local/share/quran-app/library.json` (auto-migrates from the old `nasheed-app` dir).
-- `web/templates/index.html` — single-page layout: sidebar (nav + playlists), main (search/view/library views), bottom player bar. Sliders are empty `<div id="progress-bar"|volume-bar>` containers — NOT `<input type=range>`. They are turned into the custom `Slider` widget by TS.
+- `web/app.py` — Flask backend. All `/api/*` routes: search, stream, proxy (audio), library (add/fav/remove), playlists (create/add/remove/delete/rename — delete/rename take POST body `{name}` / `{old,new}`), version (`/api/version`). Persists to `~/.local/share/quran-app/library.json` (auto-migrates from the old `nasheed-app` dir). Two optional env vars: `QURAN_VERSION` (set by the desktop app; falls back to `package.json`) and `QURAN_STDIN_WATCH=1` (starts a thread that exits the process when its stdin pipe hits EOF — how the desktop app prevents orphaned backends).
+- `web/templates/index.html` — single-page layout: sidebar (nav + playlists + muted `#sidebar-ver` version footer), main (search/view/library/settings views), bottom player bar. Sliders are empty `<div id="progress-bar"|volume-bar>` containers — NOT `<input type=range>`. They are turned into the custom `Slider` widget by TS.
 - `web/static/style.css` — all styling (no Tailwind). Calm dark theme: `#0f1311` bg with soft green/gold radial glows, translucent blurred sticky headers, gradient sidebar/player. Accents: green `#1db954` (nasheeds, controls) and gold `#c9a86c` (Quran reading: ayah numbers, active ayah, translation label/toggle). Fonts: Inter (UI), Lora (translation text), Noto Naskh Arabic (Arabic names) via one Google Fonts import, plus Font Awesome. Slider visuals use `.slider`/`.slider-env` (grey track) `.slider-fill` (green, white for volume) `.slider-thumb` classes.
 - `web/ts/app.ts` — ALL frontend logic in TypeScript (navigation, search, rendering, playback, keyboard shortcuts, toasts). Contains the `Slider` class (pointer-event driven, `onInput`/`onChange` callbacks; thumb shows on hover/focus/drag) and typed `Song`/`Playlist`/`Library` interfaces. Compiled output goes to `web/static/app.js` — never edit that file directly, edit `web/ts/app.ts` and run `npm run build`.
 - `package.json` / `tsconfig.json` — TS tooling (rootDir `web/ts`, outDir `web/static`).
@@ -76,6 +76,7 @@ Two app versions exist in this repo:
   - **Media Session API** metadata + play/pause/prev/next handlers (guarded by `'mediaSession' in navigator`).
   - **Seek tooltip** (`#progress-bar .seek-tip`) shows timestamp on hover.
   - **Volume** persisted (`ns_vol`), restored on load.
+  - **Settings** view (`#settings-view`, reached via the `settings` nav item): app version (`#set-version` from `/api/version`), GitHub repo + latest release ("Check for updates" calls the GitHub API directly), and a default-volume slider (`#settings-volume-bar`, synced with the player `vol` slider). The sidebar footer `#sidebar-ver` shows the version too (`loadSidebarVersion`).
   - All persisted keys live in localStorage with the `ns_` prefix; use the `store(key,val)` / `load<T>(key,fallback)` helpers.
 - **User-facing language**: use "nasheeds", never "songs" in UI text (e.g. "Liked Nasheeds").
 - **No em dashes** in any user-facing text (UI, docs, release notes, README/TERMS/PRIVACY). Use commas, periods, semicolons, or " - " instead.
@@ -88,3 +89,4 @@ Two app versions exist in this repo:
 - `yt-dlp` binary is at `/home/admin/.local/bin/yt-dlp` (on PATH).
 - Subprocess calls to yt-dlp must include `--no-warnings --no-playlist` and a timeout.
 - Library is JSON at `~/.local/share/quran-app/library.json` with shape `{"songs":[...], "playlists":[{"name","songs":[]}]}`. Songs have `id`, `title`, `channel`, `thumbnail`, `duration`, `duration_string`, `url`, `favorite` (bool), `filepath`.
+- `/api/version` returns the app version from a single source: `QURAN_VERSION` env var (set by the desktop app from `CARGO_PKG_VERSION`) if present, else the `version` field in `package.json`. Keep version bumps in sync across `package.json`, `tauri-app/src-tauri/Cargo.toml`, `Cargo.lock`, and `tauri.conf.json`.

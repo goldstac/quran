@@ -17,6 +17,7 @@ All requests go straight from your machine to:
 - **YouTube** (via `yt-dlp`) — nasheed searches, audio streaming, thumbnails
 - **Quran.com** and **MP3Quran** — ayah text and translations, reciter lists, Quran audio
 - **Google Fonts** and **cdnjs/Cloudflare** — interface fonts and icons
+- **GitHub API** (`api.github.com`) — only when you click "Check for updates" in Settings, to look up the latest release
 
 That's the full list. No accounts, no analytics, no cookies, no tracking.
 
