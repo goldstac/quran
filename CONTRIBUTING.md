@@ -45,6 +45,7 @@ Tip: free the port first if an old instance is hanging around: `fuser -k 5000/tc
 - Display name is **Quran** (repo slug is `quran`), internal ids are all `quran-*` (package `quran-player`, binary `quran`, identifier `com.goldstac.quran`, data dir `quran-app`).
 - No code comments unless you're asked for them.
 - No browser `prompt()` / `confirm()` / `alert()`, use the existing custom modal helpers (`promptText`, `confirmDialog`, `showPlaylistPicker`).
+- Any in-app search or list picker should reuse the reciter picker's look (`showReciterPicker()`): a modal with a live-filtering search input, an "x of n" count, and a selectable option list.
 - No stock `<input type="range">`, use the custom `Slider` component.
 - UI work should match the existing flat Spotify-dark theme (`#121212` / `#181818` / `#1db954`, Inter font).
 - Keep `PRIVACY.md` and `TERMS.md` honest, if your change alters what data exists or where traffic goes, update them in the same PR.

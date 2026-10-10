@@ -83,6 +83,7 @@ Two app versions exist in this repo:
 - **User-facing language**: use "nasheeds", never "songs" in UI text (e.g. "Liked Nasheeds").
 - **No em dashes** in any user-facing text (UI, docs, release notes, README/TERMS/PRIVACY). Use commas, periods, semicolons, or " - " instead.
 - **No browser dialogs**: `prompt()`, `confirm()`, and `alert()` are banned — build custom modals instead. Use `Modal` (wireframe: `modal-backdrop`/`modal`/`modal-title`/`modal-body`), `promptText(title, placeholder, okLabel, value?)` for text input (returns `Promise<string | null>`, `value` prefills — used for rename), `confirmDialog(title, message)` for yes/no (returns `Promise<boolean>`), and `showPlaylistPicker()` (lists playlists, "New playlist" flow creates then returns the name) for adding nasheeds to playlists.
+- **Search UI**: the user's favorite search pattern is the reciter picker (`showReciterPicker()` in `app.ts`): a `Modal` (`modal-reciter`) holding a live-filtering search `<input>`, an `x of n` count line, and a `.modal-opt` list (current selection marked with a check, matched on Enter/click). Reuse this exact look for any new in-app search or list picker instead of inventing a new layout; the reciter one is the reference implementation.
 - **Do NOT add code comments** unless asked.
 
 ## Backend Conventions
