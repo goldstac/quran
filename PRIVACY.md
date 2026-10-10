@@ -18,6 +18,7 @@ All requests go straight from your machine to:
 - **Quran.com** and **MP3Quran** — ayah text and translations, reciter lists, Quran audio
 - **Google Fonts** and **cdnjs/Cloudflare** — interface fonts and icons
 - **GitHub API** (`api.github.com`) — only when you click "Check for updates" in Settings, to look up the latest release
+- **Discord (only if you turn on Discord presence in Settings)** — what you play is sent to the Discord app on your own machine so it can show up as your profile activity. Nothing is sent when the feature is off, and you can hide any nasheed with its eye button
 
 That's the full list. No accounts, no analytics, no cookies, no tracking.
 

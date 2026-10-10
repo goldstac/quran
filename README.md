@@ -26,6 +26,7 @@ This app is made for the **Quran** and Islamic **nasheeds**. The YouTube search 
 - **Sort** library by recently added, title, or channel
 - **Keyboard shortcuts** (below), toast notifications, Media Session (lock-screen/OS media keys)
 - **Settings** — app version, GitHub repo and latest release ("Check for updates"), default volume
+- **Discord presence** (optional) — share what you're listening to as your Discord activity; toggle it on/off and hide individual nasheeds with the eye button
 - **Everything persists locally** — volume, loop/shuffle/sort, recents, library, playlists
 
 ## Requirements

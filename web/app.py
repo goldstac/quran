@@ -1,4 +1,4 @@
-import os, json, subprocess, re, threading, sys, socket, argparse
+import os, json, subprocess, re, threading, sys, socket, argparse, time, uuid
 from pathlib import Path
 from flask import Flask, render_template, jsonify, request
 from flask_cors import CORS
@@ -523,6 +523,188 @@ def api_quran_translation(chapter_id):
         return jsonify({"lang": lang, "name": _QURAN_TRANS_NAMES[lang], "verses": verses})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+_DISCORD_CLIENT_ID = "1558502162080858172"
+
+
+def _discord_socket_paths():
+    if sys.platform == "win32":
+        return [rf"\\.\pipe\discord-ipc-{i}" for i in range(10)]
+    if sys.platform == "darwin":
+        return [os.path.join(os.environ.get("TMPDIR", "/tmp"), "discord-ipc-0")]
+    runtime = os.environ.get("XDG_RUNTIME_DIR")
+    return ([os.path.join(runtime, "discord-ipc-0")] if runtime else []) + ["/tmp/discord-ipc-0"]
+
+
+class DiscordBridge:
+    RETRY_INTERVAL = 5
+    IDLE_TIMEOUT = 90
+
+    def __init__(self):
+        self._lock = threading.Lock()
+        self._enabled = False
+        self._activity = None
+        self._sock = None
+        self._connected = False
+        self._last_sent = None
+        self._last_activity_at = 0
+        self._last_try = 0
+        threading.Thread(target=self._loop, daemon=True).start()
+
+    def set(self, enabled=False, activity=None):
+        with self._lock:
+            self._enabled = bool(enabled)
+            self._last_activity_at = time.time()
+            if enabled:
+                self._activity = activity
+            else:
+                self._activity = None
+
+    def state(self):
+        with self._lock:
+            if not self._enabled:
+                return "off"
+            if self._connected:
+                return "connected"
+            if self._sock is not None:
+                return "connecting"
+            return "no-discord"
+
+    def _loop(self):
+        while True:
+            try:
+                self._step()
+            except Exception:
+                pass
+            time.sleep(0.5)
+
+    def _step(self):
+        with self._lock:
+            enabled = self._enabled
+        if not enabled:
+            self._drop(self._sock)
+            return
+        with self._lock:
+            idle = time.time() - self._last_activity_at > self.IDLE_TIMEOUT
+            sock = self._sock
+        if idle:
+            self._drop(sock)
+            return
+        if sock is None:
+            if time.time() - self._last_try < self.RETRY_INTERVAL:
+                return
+            self._last_try = time.time()
+            sock = _discord_socket_connect()
+            if sock is None:
+                return
+            with self._lock:
+                self._sock = sock
+                self._connected = False
+            try:
+                _discord_send_frame(sock, 0, {"v": 1, "client_id": _DISCORD_CLIENT_ID})
+            except OSError:
+                self._drop(sock)
+                return
+            threading.Thread(target=self._reader, args=(sock,), daemon=True).start()
+            return
+        with self._lock:
+            activity = self._activity
+            connected = self._connected
+            last_sent = self._last_sent
+        if connected and activity is not last_sent:
+            try:
+                _discord_send_frame(
+                    sock, 1,
+                    {
+                        "cmd": "SET_ACTIVITY",
+                        "args": {
+                            "pid": os.getpid(),
+                            "activity": activity or {},
+                        },
+                        "nonce": uuid.uuid4().hex[:12],
+                    },
+                )
+            except OSError:
+                self._drop(sock)
+                return
+            with self._lock:
+                self._last_sent = activity
+
+    def _reader(self, sock):
+        buf = b""
+        try:
+            while True:
+                chunk = sock.recv(65536)
+                if not chunk:
+                    break
+                buf += chunk
+                while len(buf) >= 8:
+                    length = int.from_bytes(buf[4:8], "little")
+                    if len(buf) < 8 + length:
+                        break
+                    opcode = int.from_bytes(buf[0:4], "little")
+                    payload = buf[8:8 + length]
+                    buf = buf[8 + length:]
+                    if opcode == 1:
+                        try:
+                            msg = json.loads(payload.decode("utf-8"))
+                        except ValueError:
+                            continue
+                        if msg.get("evt") == "READY":
+                            with self._lock:
+                                self._connected = True
+                                self._last_sent = None
+        except OSError:
+            pass
+        self._drop(sock)
+
+    def _drop(self, sock):
+        with self._lock:
+            if sock is not None and self._sock is sock:
+                self._sock = None
+            if sock is not None:
+                self._connected = False
+                self._last_sent = None
+        if sock is not None:
+            try:
+                sock.close()
+            except OSError:
+                pass
+
+
+def _discord_socket_connect():
+    for path in _discord_socket_paths():
+        try:
+            s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            s.settimeout(3)
+            s.connect(path)
+            s.settimeout(None)
+            return s
+        except OSError:
+            continue
+    return None
+
+
+def _discord_send_frame(sock, opcode, payload):
+    data = json.dumps(payload).encode("utf-8")
+    header = opcode.to_bytes(4, "little") + len(data).to_bytes(4, "little")
+    sock.sendall(header + data)
+
+
+_discord = DiscordBridge()
+
+
+@app.route("/api/discord", methods=["POST"])
+def api_discord():
+    data = request.json or {}
+    _discord.set(bool(data.get("enabled")), data.get("activity"))
+    return jsonify({"ok": True})
+
+
+@app.route("/api/discord/status")
+def api_discord_status():
+    return jsonify({"state": _discord.state()})
 
 
 if __name__ == "__main__":

@@ -12,7 +12,6 @@ matching section and note the platform when it is not cross-platform.
 - [ ] Windows installer is unsigned, so SmartScreen shows "Windows protected
   your PC" (user must pick More info then Run anyway). Consider code signing.
 
-
 ## Low priority / notes
 
 - [ ] AppImage requires the host GStreamer (with mp3/aac/opus plugins) for
@@ -54,3 +53,11 @@ matching section and note the platform when it is not cross-platform.
   kills the app and asserts the backend exits (proving the orphan fix on real
   OSes). Linux build keeps a backend sidecar smoke test; the AppImage itself
   was launch-tested during the rc.3 release.
+- [x] Add an opt-in Discord presence. Backend `DiscordBridge` in `app.py`
+  talks to Discord's local IPC socket/named pipe (legacy 8-byte framing,
+  shared `_DISCORD_CLIENT_ID`); the frontend posts activities to
+  `POST /api/discord` and polls `GET /api/discord/status`. Settings toggle +
+  status badge, per-nasheed eye button hide/show (`ns_discord_hidden`),
+  presence on play/seek and cleared on pause/stop/reset. Quran playback shows
+  too (surah title + reciter, refreshed on reciter switch). The socket closes
+  after 90s of no heartbeats to avoid stale presences.

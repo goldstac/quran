@@ -535,9 +535,11 @@ function applyQuranReciter(id, scroll = true) {
         });
         if (currentSong?.kind === 'quran') {
             currentSong.reciter_id = id;
+            currentSong.channel = quranReciterName(id);
             currentSong.stream_url = undefined;
             currentSong.id = `quran:${id}:${currentSong.chapter_id}`;
             updatePlayer();
+            pushDiscord(true);
         }
         renderQuranList();
     }
@@ -980,7 +982,8 @@ function makeRow(song, idx, ctx) {
       <button class="track-act play-act" title="Play"><i class="fa-solid fa-play"></i></button>
       ${canRemove ? '<button class="track-act rem-act" title="Remove"><i class="fa-solid fa-trash"></i></button>' : ''}
       ${isQuran ? '' : `<button class="track-act fav-act" title="Like"><i class="${heart}"></i></button>
-      <button class="track-act pl-act" title="Add to playlist"><i class="fa-solid fa-plus"></i></button>`}
+      <button class="track-act pl-act" title="Add to playlist"><i class="fa-solid fa-plus"></i></button>
+      <button class="track-act disc-act" title="Shown in Discord presence"><i class="fa-solid fa-eye"></i></button>`}
     </div>`;
     r.addEventListener('dblclick', () => playSong(song, idx, ctx));
     let warmTimer;
@@ -994,6 +997,16 @@ function makeRow(song, idx, ctx) {
     if (!isQuran) {
         r.querySelector('.fav-act').addEventListener('click', (e) => { e.stopPropagation(); toggleFav(song); });
         r.querySelector('.pl-act').addEventListener('click', (e) => { e.stopPropagation(); addToPl(song); });
+        const discBtn = r.querySelector('.disc-act');
+        if (discBtn) {
+            const hidden = discIsHidden(song.id);
+            const icon = discBtn.querySelector('i');
+            if (icon)
+                icon.className = hidden ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
+            discBtn.classList.toggle('disc-hide', hidden);
+            discBtn.title = hidden ? 'Hidden from Discord presence' : 'Shown in Discord presence';
+            discBtn.addEventListener('click', (e) => { e.stopPropagation(); discToggleSong(song); });
+        }
     }
     if (canRemove) {
         r.querySelector('.rem-act').addEventListener('click', (e) => { e.stopPropagation(); removeFromList(song); });
@@ -1082,6 +1095,7 @@ async function playSong(song, idx, _ctx, keepQueue = false) {
     if (song.kind !== 'quran')
         recordRecent(song);
     updatePlayer();
+    pushDiscord(true);
     $$('.track-row').forEach((r) => r.classList.toggle('playing', r.dataset.id === song.id));
     startingId = song.id;
     setBuffering(true);
@@ -1234,10 +1248,16 @@ audio.addEventListener('ended', () => {
         resetPlayer();
     }
 });
-audio.addEventListener('play', () => syncIcons());
+audio.addEventListener('play', () => {
+    syncIcons();
+    dcLastRefresh = 0;
+    pushDiscord(true);
+});
 audio.addEventListener('pause', () => {
     startingId = null;
     setBuffering(false);
+    if (discordEnabled)
+        dcClear();
 });
 audio.addEventListener('playing', () => {
     startingId = null;
@@ -1266,6 +1286,9 @@ function resetPlayer() {
     $$('.track-row').forEach((r) => r.classList.remove('playing'));
     audio.removeAttribute('src');
     syncQuranTranslation();
+    dcLastRefresh = 0;
+    if (discordEnabled)
+        dcClear();
     if ('mediaSession' in navigator)
         navigator.mediaSession.metadata = null;
 }
@@ -1334,6 +1357,8 @@ seek.onInput = (p) => {
 };
 seek.onChange = () => {
     progressDrag = false;
+    dcLastRefresh = 0;
+    pushDiscord(true);
 };
 const seekTip = document.createElement('div');
 seekTip.className = 'seek-tip';
@@ -1358,6 +1383,7 @@ setInterval(() => {
     $('#time-pos').textContent = fmt(audio.currentTime);
     $('#time-dur').textContent = fmt(audio.duration);
     highlightTransAyah(true);
+    pushDiscord();
 }, 250);
 // --- VOLUME ---
 const savedVol = load('ns_vol', 70);
@@ -1635,6 +1661,128 @@ $('#add-pl-btn').addEventListener('click', async () => {
     loadPlaylists();
     toast('Created playlist: ' + name);
 });
+// --- DISCORD PRESENCE ---
+let discordEnabled = load('ns_discord', false);
+let dcLastRefresh = 0;
+function discHiddenIds() {
+    return load('ns_discord_hidden', []);
+}
+function discIsHidden(id) {
+    return discHiddenIds().includes(id);
+}
+function discSetHidden(id, hidden) {
+    const set = discHiddenIds().filter((x) => x !== id);
+    if (hidden)
+        set.push(id);
+    store('ns_discord_hidden', set);
+}
+function syncDiscBtns(id) {
+    const hidden = discIsHidden(id);
+    $$(`.track-row[data-id="${id}"] .disc-act`).forEach((b) => {
+        const icon = b.querySelector('i');
+        if (icon)
+            icon.className = hidden ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
+        b.classList.toggle('disc-hide', hidden);
+        b.title = hidden ? 'Hidden from Discord presence' : 'Shown in Discord presence';
+    });
+}
+function discToggleSong(song) {
+    const hidden = !discIsHidden(song.id);
+    discSetHidden(song.id, hidden);
+    syncDiscBtns(song.id);
+    toast(hidden ? 'Hidden from Discord presence' : 'Shown in Discord presence');
+    if (currentSong && currentSong.id === song.id)
+        pushDiscord(true);
+}
+function setDiscordStatus(state) {
+    const el = $('#set-discord-status');
+    if (!el)
+        return;
+    el.classList.remove('ok', 'warn', 'err');
+    if (state === 'connected') {
+        el.textContent = 'Connected';
+        el.classList.add('ok');
+    }
+    else if (state === 'connecting') {
+        el.textContent = 'Connecting...';
+        el.classList.add('warn');
+    }
+    else if (state === 'error') {
+        el.textContent = 'Discord not running';
+        el.classList.add('err');
+    }
+    else {
+        el.textContent = 'Off';
+    }
+}
+function dcActivity() {
+    if (!currentSong || discIsHidden(currentSong.id))
+        return null;
+    return {
+        details: currentSong.title,
+        state: currentSong.channel || 'Quran',
+        timestamps: { start: Date.now() - Math.floor(audio.currentTime * 1000) },
+    };
+}
+function dcPost(body) {
+    void getJSON(`${API}/api/discord`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+    }).catch(() => undefined);
+}
+function pushDiscord(force = false) {
+    const now = Date.now();
+    if (!discordEnabled || now - dcLastRefresh < (force ? 0 : 30000))
+        return;
+    dcLastRefresh = now;
+    dcPost({ enabled: true, activity: dcActivity() });
+}
+function dcClear() {
+    if (!discordEnabled)
+        return;
+    dcPost({ enabled: true, activity: null });
+}
+function pollDiscordStatus() {
+    if (!discordEnabled)
+        return;
+    void getJSON(`${API}/api/discord/status`)
+        .then((d) => {
+        if (!discordEnabled)
+            return;
+        if (d.state === 'connected')
+            setDiscordStatus('connected');
+        else if (d.state === 'connecting')
+            setDiscordStatus('connecting');
+        else
+            setDiscordStatus('error');
+    })
+        .catch(() => {
+        if (discordEnabled)
+            setDiscordStatus('error');
+    });
+}
+function syncDiscordUI() {
+    $('#set-discord').checked = discordEnabled;
+    if (discordEnabled)
+        pollDiscordStatus();
+    else
+        setDiscordStatus('off');
+}
+$('#set-discord').addEventListener('change', (e) => {
+    discordEnabled = e.target.checked;
+    store('ns_discord', discordEnabled);
+    dcLastRefresh = 0;
+    if (discordEnabled) {
+        pollDiscordStatus();
+        pushDiscord(true);
+    }
+    else {
+        dcPost({ enabled: false, activity: null });
+        setDiscordStatus('off');
+    }
+});
+setInterval(pollDiscordStatus, 2000);
 // --- SETTINGS ---
 const REPO_URL = 'https://github.com/goldstac/quran';
 let appVersion = '';
@@ -1727,4 +1875,5 @@ syncSearchUI();
 loadPlaylists();
 void loadQuranReciters();
 syncSettingsVol();
+syncDiscordUI();
 void loadSidebarVersion();

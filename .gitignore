@@ -34,3 +34,6 @@ nohup.out
 dist/
 .pyinstaller-build/
 tauri-app/src-tauri/bin/
+
+# Updater signing keys (private key must never be committed)
+.keys/
