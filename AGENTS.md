@@ -56,7 +56,7 @@ Two app versions exist in this repo:
 - `tauri-app/src-tauri/src/main.rs` — spawns `python3 app.py` (finds `web/` via `QURAN_WEB_DIR`, manifest-relative path, or `./web`), stores the child, kills it on `RunEvent::Exit`.
 - `tauri-app/src-tauri/tauri.conf.json` — window config + CSP (allows `connect-src`/`media-src`/`img-src` to localhost); no `devUrl` so both dev and build serve the loading page.
 - `tauri-app/src/index.html` — loading page: polls `http://127.0.0.1:5000/` (no-cors fetch) and redirects when up; shows an error after 30s.
-- `tauri-app/src-tauri/icons/` — the app icon set (32/128/256 PNG, `.icns`, `.ico`), resized from the master logo `app_logo.png` at the repo root with ImageMagick. Regenerate from that master whenever the logo changes.
+- `tauri-app/src-tauri/icons/` — the app icon set (32/128/256 PNG, `.icns`, `.ico`), resized from the master logo `app_logo.png` at the repo root with ImageMagick. Tauri requires RGBA PNGs, so resize with `PNG32:` output (e.g. `magick app_logo.png -resize 32x32 PNG32:32x32.png`); `.icns` holds PNG chunks ic07-ic10. Regenerate from that master whenever the logo changes.
 - Binary + `Cargo.lock`: binary is gitignored (`target/`, `quran`); commit `Cargo.lock` (it's an app, not a lib).
 
 ## Frontend Conventions
