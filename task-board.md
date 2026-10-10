@@ -11,11 +11,7 @@ matching section and note the platform when it is not cross-platform.
 
 - [ ] Windows installer is unsigned, so SmartScreen shows "Windows protected
   your PC" (user must pick More info then Run anyway). Consider code signing.
-- [ ] Generate proper app icons with reicon.dev. The icons in
-  `tauri-app/src-tauri/icons/` are still generated placeholders (green disc on
-  dark, made with ImageMagick). Feed a real logo source image through
-  reicon.dev, drop the output into `tauri-app/src-tauri/icons/`, and update the
-  web favicon / home screen icon if needed.
+
 
 ## Low priority / notes
 
@@ -37,6 +33,11 @@ matching section and note the platform when it is not cross-platform.
   after the `PORT=` line in `lib.rs`).
 - [x] Restore AppImage audio without a 600 MB bundle (use the host GStreamer
   stack, neutralize the AppRun `GST_PLUGIN_SYSTEM_PATH` overrides).
+- [x] Generate proper app icons from the real logo. Replaced the placeholder
+  green-disc set (`tauri-app/src-tauri/icons/`) with the logo-derived icon set:
+  32/128/256 PNGs plus multi-size `.ico` (ImageMagick) and `.icns` (PNG chunks
+  ic07-ic10) all resized from the 1254x1254 master `app_logo.png` at the repo
+  root.
 - [x] Release `v1.2.0-rc.3` for Linux, macOS and Windows.
 - [x] Kill the orphaned backend on app exit: the app keeps the backend's stdin
   pipe open and the backend exits when it reaches EOF (`QURAN_STDIN_WATCH=1` in
