@@ -1784,8 +1784,10 @@ $('#set-discord').addEventListener('change', (e) => {
 });
 setInterval(pollDiscordStatus, 2000);
 // --- SETTINGS ---
-const REPO_URL = 'https://github.com/goldstac/quran';
+// --- SETTINGS ---
 let appVersion = '';
+let updateBusy = false;
+let updatePoll = null;
 const $settingsVolOrigin = $('#settings-volume-bar');
 const settingsVol = new Slider($settingsVolOrigin);
 function syncSettingsVol() {
@@ -1821,32 +1823,169 @@ async function loadSidebarVersion() {
         ver.textContent = '';
     }
 }
-$('#set-check').addEventListener('click', async () => {
-    const btn = $('#set-check');
+$('#set-check').addEventListener('click', () => {
+    void loadReleases(true);
+});
+function fmtMB(n) {
+    if (!n || n <= 0)
+        return '';
+    return (n / 1048576).toFixed(1) + ' MB';
+}
+function setUpdateBusy(busy) {
+    updateBusy = busy;
+    $('#set-check').classList.toggle('disabled', busy);
+    $('#set-versions').disabled = busy;
+    $('#set-update').disabled = busy;
+}
+async function loadReleases(refresh) {
+    const sel = $('#set-versions');
     const note = $('#set-check-note');
-    btn.classList.add('disabled');
     note.textContent = 'Checking GitHub...';
+    if (refresh)
+        $('#set-update').setAttribute('disabled', '');
     try {
-        const r = await fetch('https://api.github.com/repos/goldstac/quran/releases/latest');
-        if (!r.ok)
-            throw new Error('bad status');
-        const d = (await r.json());
-        const tag = (d.tag_name || '').replace(/^v/, '');
-        if (tag)
-            $('#set-latest').textContent = 'v' + tag;
-        if (tag && appVersion && tag !== appVersion.replace(/^v/, '')) {
-            note.innerHTML = `A newer version is available: <a href="${esc(d.html_url || REPO_URL)}" target="_blank" rel="noopener noreferrer">get v${esc(tag)}</a>`;
+        const d = await getJSON(`${API}/api/updates${refresh ? '?refresh=1' : ''}`);
+        const rels = d.releases || [];
+        const cur = 'v' + (d.current || '').replace(/^v/, '');
+        $('#set-latest').textContent = rels[0] ? rels[0].tag : 'unknown';
+        sel.innerHTML = '';
+        let firstInstallable = '';
+        for (const r of rels) {
+            const opt = document.createElement('option');
+            opt.value = r.asset ? r.tag : '';
+            const marks = [];
+            if (r.prerelease)
+                marks.push('pre-release');
+            if (r.tag === cur)
+                marks.push('installed');
+            if (!r.asset)
+                marks.push('no installer for this platform');
+            opt.textContent = r.tag + (marks.length ? ' (' + marks.join(', ') + ')' : '');
+            opt.disabled = !r.asset;
+            sel.appendChild(opt);
+            if (r.asset && !firstInstallable)
+                firstInstallable = r.tag;
+        }
+        if (!firstInstallable) {
+            note.textContent = 'No installer available for this platform in the recent releases.';
+            $('#set-update').setAttribute('disabled', '');
+            return;
+        }
+        sel.disabled = false;
+        sel.value = firstInstallable;
+        $('#set-update').removeAttribute('disabled');
+        if (firstInstallable === cur) {
+            note.textContent = 'You are on the newest release with an installer for this platform.';
+        }
+        else if (d.error) {
+            note.textContent = 'Showing cached results. The newest release is ' + esc(firstInstallable) + '.';
         }
         else {
-            note.textContent = 'You are up to date.';
+            note.textContent = 'Pick a version (older ones and pre-releases included) and press Update.';
         }
     }
     catch {
         note.textContent = 'Could not reach GitHub right now.';
     }
-    finally {
-        btn.classList.remove('disabled');
+}
+function startUpdatePoll() {
+    if (updatePoll !== null)
+        return;
+    updatePoll = window.setInterval(pollUpdate, 700);
+    void pollUpdate();
+}
+function stopUpdatePoll() {
+    if (updatePoll !== null) {
+        clearInterval(updatePoll);
+        updatePoll = null;
     }
+}
+async function pollUpdate() {
+    let s;
+    try {
+        s = await getJSON(`${API}/api/update/status`);
+    }
+    catch {
+        return;
+    }
+    const wrap = $('#set-progress-wrap');
+    const fill = $('#set-progress-fill');
+    const text = $('#set-progress-text');
+    const note = $('#set-check-note');
+    const runBtn = $('#set-run');
+    if (s.state === 'downloading') {
+        wrap.hidden = false;
+        runBtn.hidden = true;
+        const pct = s.total ? Math.round((s.downloaded / s.total) * 100) : 0;
+        fill.style.width = pct + '%';
+        text.textContent = 'Downloading ' + s.asset + '  ' + (fmtMB(s.downloaded) + (s.total ? ' / ' + fmtMB(s.total) : '')) + (s.total ? ' (' + pct + '%)' : '');
+        note.textContent = 'Downloading ' + s.tag + '...';
+        setUpdateBusy(true);
+        return;
+    }
+    stopUpdatePoll();
+    setUpdateBusy(false);
+    if (s.state === 'installed') {
+        wrap.hidden = true;
+        runBtn.hidden = true;
+        note.innerHTML = 'Updated to <b>' + esc(s.tag) + '</b>. Restart Quran to use it.';
+    }
+    else if (s.state === 'downloaded') {
+        wrap.hidden = true;
+        runBtn.hidden = false;
+        note.innerHTML = 'Downloaded <b>' + esc(s.tag) + '</b> to <code>' + esc(s.path) + '</code>. Run it to use the new version.';
+    }
+    else if (s.state === 'launched') {
+        wrap.hidden = true;
+        runBtn.hidden = true;
+        note.innerHTML = 'Opened the <b>' + esc(s.tag) + '</b> installer. Follow its steps, then reopen Quran.';
+    }
+    else if (s.state === 'error') {
+        wrap.hidden = true;
+        runBtn.hidden = true;
+        note.textContent = 'Update failed: ' + (s.error || 'unknown error');
+    }
+}
+$('#set-update').addEventListener('click', async () => {
+    if (updateBusy)
+        return;
+    const tag = $('#set-versions').value;
+    const note = $('#set-check-note');
+    if (!tag) {
+        note.textContent = 'Pick a version first.';
+        return;
+    }
+    const cur = 'v' + appVersion.replace(/^v/, '');
+    if (tag === cur) {
+        note.textContent = 'You already have ' + tag + ' installed.';
+        return;
+    }
+    setUpdateBusy(true);
+    note.textContent = 'Starting update to ' + tag + '...';
+    try {
+        const r = await fetch(`${API}/api/update`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tag }),
+        });
+        const d = (await r.json());
+        if (!r.ok || !d.ok) {
+            note.textContent = d.error || 'Could not start the update.';
+            setUpdateBusy(false);
+            return;
+        }
+        startUpdatePoll();
+    }
+    catch {
+        note.textContent = 'Could not reach the updater.';
+        setUpdateBusy(false);
+    }
+});
+$('#set-run').addEventListener('click', async () => {
+    const r = await fetch(`${API}/api/update/run`, { method: 'POST' });
+    const d = (await r.json());
+    if (!d.ok)
+        toast(d.error || 'Could not start it');
 });
 try {
     if ('mediaSession' in navigator) {

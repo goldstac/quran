@@ -1,4 +1,4 @@
-import os, json, subprocess, re, threading, sys, socket, argparse, time, uuid
+import os, json, subprocess, re, threading, sys, socket, argparse, time, uuid, shutil, urllib.request
 from pathlib import Path
 from flask import Flask, render_template, jsonify, request
 from flask_cors import CORS
@@ -705,6 +705,197 @@ def api_discord():
 @app.route("/api/discord/status")
 def api_discord_status():
     return jsonify({"state": _discord.state()})
+
+
+_GH_RELEASES_URL = "https://api.github.com/repos/goldstac/quran/releases?per_page=60"
+UPDATE_DIR = os.path.join(DATA_DIR, "updates")
+
+_update_lock = threading.Lock()
+_update_cache = {"at": 0, "releases": None}
+_update_state = {
+    "state": "idle",
+    "tag": "",
+    "asset": "",
+    "downloaded": 0,
+    "total": 0,
+    "path": "",
+    "error": "",
+}
+
+
+def _update_asset_matches(name):
+    n = (name or "").lower()
+    if sys.platform == "win32":
+        return n.endswith(".exe") and "setup" in n
+    if sys.platform == "darwin":
+        return n.endswith(".dmg")
+    return n.endswith(".appimage")
+
+
+def _fetch_releases():
+    req = urllib.request.Request(
+        _GH_RELEASES_URL,
+        headers={"Accept": "application/vnd.github+json", "User-Agent": "quran-app"},
+    )
+    with urllib.request.urlopen(req, timeout=15) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+
+def _releases(force=False):
+    with _update_lock:
+        cached = _update_cache["releases"]
+        fresh = cached is not None and not force and (time.time() - _update_cache["at"]) < 300
+    if fresh:
+        return cached, None
+    try:
+        raw = _fetch_releases()
+    except Exception as e:
+        return (cached or []), ("stale cache" if cached else str(e))
+    out = []
+    for rel in raw:
+        best = None
+        for a in rel.get("assets", []):
+            if _update_asset_matches(a.get("name")):
+                if best is None or a.get("size", 0) > best.get("size", 0):
+                    best = a
+        out.append({
+            "tag": rel.get("tag_name", ""),
+            "name": rel.get("name") or rel.get("tag_name", ""),
+            "prerelease": bool(rel.get("prerelease")),
+            "published_at": rel.get("published_at"),
+            "asset": None if best is None else {
+                "name": best.get("name", ""),
+                "size": best.get("size", 0),
+                "url": best.get("browser_download_url", ""),
+            },
+        })
+    with _update_lock:
+        _update_cache["releases"] = out
+        _update_cache["at"] = time.time()
+    return out, None
+
+
+@app.route("/api/updates")
+def api_updates():
+    force = request.args.get("refresh") == "1"
+    releases, error = _releases(force=force)
+    return jsonify({
+        "current": app_version(),
+        "platform": sys.platform,
+        "releases": releases,
+        "error": error,
+    })
+
+
+@app.route("/api/update", methods=["POST"])
+def api_update():
+    data = request.json or {}
+    tag = (data.get("tag") or "").strip()
+    if not tag:
+        return jsonify({"ok": False, "error": "No version selected"}), 400
+    if not tag.startswith("v"):
+        tag = "v" + tag
+    with _update_lock:
+        if _update_state["state"] == "downloading":
+            return jsonify({"ok": False, "error": "An update is already downloading"}), 409
+    releases, _ = _releases()
+    rel = next((r for r in releases if r.get("tag") == tag), None)
+    if rel is None:
+        return jsonify({"ok": False, "error": f"Release {tag} was not found"}), 404
+    asset = rel.get("asset")
+    if not asset:
+        return jsonify({"ok": False, "error": f"{tag} has no installer for this platform"}), 400
+    threading.Thread(
+        target=_run_update,
+        args=(rel["tag"], asset["url"], asset["name"], asset["size"]),
+        daemon=True,
+    ).start()
+    return jsonify({"ok": True, "tag": tag, "asset": asset["name"]})
+
+
+def _run_update(tag, url, name, size):
+    with _update_lock:
+        _update_state.update(
+            state="downloading", tag=tag, asset=name, downloaded=0,
+            total=size or 0, path="", error="",
+        )
+    os.makedirs(UPDATE_DIR, exist_ok=True)
+    dest = os.path.join(UPDATE_DIR, name)
+    tmp = dest + ".part"
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "quran-app"})
+        with urllib.request.urlopen(req, timeout=60) as resp, open(tmp, "wb") as f:
+            total = size or int(resp.headers.get("Content-Length") or 0)
+            with _update_lock:
+                _update_state["total"] = total
+            got = 0
+            while True:
+                chunk = resp.read(262144)
+                if not chunk:
+                    break
+                f.write(chunk)
+                got += len(chunk)
+                with _update_lock:
+                    _update_state["downloaded"] = got
+        os.replace(tmp, dest)
+    except Exception as e:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+        with _update_lock:
+            _update_state.update(state="error", error=str(e))
+        return
+    try:
+        _apply_update(dest, tag)
+    except Exception as e:
+        with _update_lock:
+            _update_state.update(state="error", error=str(e))
+
+
+def _apply_update(path, tag):
+    if sys.platform == "win32":
+        subprocess.Popen([path])
+        with _update_lock:
+            _update_state.update(state="launched", path=path)
+        return
+    if sys.platform == "darwin":
+        subprocess.Popen(["open", path])
+        with _update_lock:
+            _update_state.update(state="launched", path=path)
+        return
+    os.chmod(path, 0o755)
+    running = os.environ.get("APPIMAGE")
+    if running and os.path.isfile(running):
+        shutil.copy2(path, running)
+        os.chmod(running, 0o755)
+        with _update_lock:
+            _update_state.update(state="installed", path=running)
+    else:
+        with _update_lock:
+            _update_state.update(state="downloaded", path=path)
+
+
+@app.route("/api/update/status")
+def api_update_status():
+    with _update_lock:
+        return jsonify(dict(_update_state))
+
+
+@app.route("/api/update/run", methods=["POST"])
+def api_update_run():
+    with _update_lock:
+        path = _update_state["path"]
+        state = _update_state["state"]
+    if state not in ("downloaded", "installed") or not path or not os.path.isfile(path):
+        return jsonify({"ok": False, "error": "Nothing to run"}), 400
+    if sys.platform == "darwin":
+        subprocess.Popen(["open", path])
+    elif sys.platform == "win32":
+        os.startfile(path)  # type: ignore[attr-defined]
+    else:
+        subprocess.Popen([path])
+    return jsonify({"ok": True})
 
 
 if __name__ == "__main__":

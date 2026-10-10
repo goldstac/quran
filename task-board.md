@@ -53,6 +53,14 @@ matching section and note the platform when it is not cross-platform.
   kills the app and asserts the backend exits (proving the orphan fix on real
   OSes). Linux build keeps a backend sidecar smoke test; the AppImage itself
   was launch-tested during the rc.3 release.
+- [x] Add an in-app self-updater. Backend `/api/updates` lists GitHub releases
+  with the installer matching the current platform (cached, `?refresh=1`);
+  `/api/update` POST `{tag}` streams the chosen release to
+  `~/.local/share/quran-app/updates/` while `/api/update/status` reports
+  progress; `/api/update/run` launches a downloaded build. Settings card lets
+  you pick any version (pre-releases and older ones included) and shows a
+  progress bar. Linux swaps the running `$APPIMAGE` in place; Windows/macOS
+  open the installer.
 - [x] Add an opt-in Discord presence. Backend `DiscordBridge` in `app.py`
   talks to Discord's local IPC socket/named pipe (legacy 8-byte framing,
   shared `_DISCORD_CLIENT_ID`); the frontend posts activities to

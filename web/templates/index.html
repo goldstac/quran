@@ -215,7 +215,21 @@
           <div class="settings-row">
             <span class="settings-row-label">Latest release</span><span id="set-latest">Unknown</span>
           </div>
-          <button id="set-check" class="set-btn" type="button"><i class="fa-solid fa-arrows-rotate"></i><span>Check for updates</span></button>
+          <div class="settings-row">
+            <span class="settings-row-label">Install version</span>
+            <select id="set-versions" class="settings-select" disabled>
+              <option value="">Check for updates first</option>
+            </select>
+          </div>
+          <div class="set-btn-row">
+            <button id="set-check" class="set-btn" type="button"><i class="fa-solid fa-arrows-rotate"></i><span>Check for updates</span></button>
+            <button id="set-update" class="set-btn" type="button" disabled><i class="fa-solid fa-download"></i><span>Update</span></button>
+            <button id="set-run" class="set-btn ghost" type="button" hidden><i class="fa-solid fa-rocket"></i><span>Run new version</span></button>
+          </div>
+          <div id="set-progress-wrap" class="update-progress" hidden>
+            <div class="update-bar"><div id="set-progress-fill" class="update-bar-fill"></div></div>
+            <span id="set-progress-text" class="update-progress-text"></span>
+          </div>
           <p id="set-check-note" class="settings-note"></p>
         </div>
         <div class="settings-card">
