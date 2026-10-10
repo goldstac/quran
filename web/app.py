@@ -708,7 +708,8 @@ def api_discord_status():
 
 
 _GH_RELEASES_URL = "https://api.github.com/repos/goldstac/quran/releases?per_page=60"
-UPDATE_DIR = os.path.join(DATA_DIR, "updates")
+VERSIONS_DIR = os.path.join(DATA_DIR, "versions")
+VERSIONS_FILE = os.path.join(DATA_DIR, "versions.json")
 
 _update_lock = threading.Lock()
 _update_cache = {"at": 0, "releases": None}
@@ -723,6 +724,117 @@ _update_state = {
 }
 
 
+class VersionStore:
+    def __init__(self):
+        self._lock = threading.Lock()
+        self._data = self._load()
+
+    def _load(self):
+        try:
+            with open(VERSIONS_FILE, "r") as f:
+                data = json.load(f)
+        except Exception:
+            data = {}
+        if not isinstance(data, dict):
+            data = {}
+        data.setdefault("active", "")
+        data.setdefault("versions", {})
+        return data
+
+    def _flush(self):
+        try:
+            with open(VERSIONS_FILE, "w") as f:
+                json.dump(self._data, f, indent=2)
+        except Exception:
+            pass
+
+    def entries(self):
+        with self._lock:
+            return {k: dict(v) for k, v in self._data["versions"].items()}
+
+    def active(self):
+        with self._lock:
+            return self._data["active"]
+
+    def has(self, tag):
+        with self._lock:
+            e = self._data["versions"].get(tag)
+        return bool(e) and os.path.isfile(e.get("file", ""))
+
+    def add(self, tag, file, asset, size, kind):
+        with self._lock:
+            self._data["versions"][tag] = {
+                "file": file,
+                "asset": asset,
+                "size": size,
+                "kind": kind,
+                "at": time.time(),
+            }
+            active = self._data["active"]
+            cur = self._data["versions"].get(active)
+            if not active or not cur or not os.path.isfile(cur.get("file", "")):
+                self._data["active"] = tag
+            self._flush()
+
+    def set_active(self, tag):
+        with self._lock:
+            if tag not in self._data["versions"]:
+                return False
+            self._data["active"] = tag
+            self._flush()
+            return True
+
+    def remove(self, tag):
+        with self._lock:
+            e = self._data["versions"].pop(tag, None)
+            active = self._data["active"]
+            cur = self._data["versions"].get(active)
+            if not active or not cur or not os.path.isfile(cur.get("file", "")):
+                self._data["active"] = next(
+                    (t for t, v in self._data["versions"].items() if os.path.isfile(v.get("file", ""))),
+                    "",
+                )
+            self._flush()
+        if e and e.get("file") and os.path.isfile(e["file"]):
+            try:
+                os.remove(e["file"])
+            except OSError:
+                pass
+        return e
+
+    def register_running(self):
+        ver = app_version()
+        if not ver or ver == "unknown":
+            return
+        tag = "v" + ver.lstrip("v")
+        path = kind = None
+        appimage = os.environ.get("APPIMAGE")
+        if appimage and os.path.isfile(appimage):
+            path, kind = appimage, "appimage"
+        elif getattr(sys, "frozen", False) and os.path.isfile(sys.executable):
+            if sys.platform == "darwin":
+                app = os.path.abspath(os.path.join(os.path.dirname(sys.executable), "..", ".."))
+                if app.endswith(".app") and os.path.isdir(app):
+                    path, kind = app, "app"
+            elif sys.platform == "win32":
+                path, kind = sys.executable, "exe"
+        if not path:
+            return
+        try:
+            size = os.path.getsize(path)
+        except OSError:
+            size = 0
+        self.add(tag, path, os.path.basename(path), size, kind)
+        self.set_active(tag)
+
+
+store = VersionStore()
+try:
+    store.register_running()
+except Exception:
+    pass
+
+
 def _update_asset_matches(name):
     n = (name or "").lower()
     if sys.platform == "win32":
@@ -730,6 +842,19 @@ def _update_asset_matches(name):
     if sys.platform == "darwin":
         return n.endswith(".dmg")
     return n.endswith(".appimage")
+
+
+def _kind_for(name):
+    n = (name or "").lower()
+    if n.endswith(".appimage"):
+        return "appimage"
+    if n.endswith(".dmg"):
+        return "dmg"
+    if n.endswith(".exe"):
+        return "exe"
+    if n.endswith(".deb"):
+        return "deb"
+    return "archive"
 
 
 def _fetch_releases():
@@ -775,6 +900,39 @@ def _releases(force=False):
     return out, None
 
 
+def _point_current(path):
+    link = os.path.join(DATA_DIR, "current")
+    try:
+        if os.path.islink(link) or os.path.exists(link):
+            os.remove(link)
+        os.symlink(path, link)
+    except OSError:
+        pass
+
+
+def _activate(tag):
+    entry = store.entries().get(tag)
+    if not entry or not os.path.isfile(entry.get("file", "")):
+        return {"ok": False, "error": "That version is not downloaded yet"}
+    path = entry["file"]
+    if sys.platform == "win32":
+        subprocess.Popen([path])
+    elif sys.platform == "darwin":
+        subprocess.Popen(["open", path])
+    else:
+        os.chmod(path, 0o755)
+        running = os.environ.get("APPIMAGE")
+        if running and os.path.isfile(running) and os.path.abspath(running) != os.path.abspath(path):
+            tmp = running + ".new"
+            shutil.copy2(path, tmp)
+            os.chmod(tmp, 0o755)
+            os.replace(tmp, running)
+            path = running
+        _point_current(path)
+    store.set_active(tag)
+    return {"ok": True, "tag": tag, "active": tag, "path": path, "kind": entry.get("kind", "")}
+
+
 @app.route("/api/updates")
 def api_updates():
     force = request.args.get("refresh") == "1"
@@ -787,6 +945,23 @@ def api_updates():
     })
 
 
+@app.route("/api/versions")
+def api_versions():
+    entries = store.entries()
+    active = store.active()
+    out = []
+    for tag, e in entries.items():
+        out.append({
+            "tag": tag,
+            "asset": e.get("asset", ""),
+            "size": e.get("size", 0),
+            "kind": e.get("kind", ""),
+            "active": tag == active,
+            "present": os.path.isfile(e.get("file", "")),
+        })
+    return jsonify({"running": "v" + app_version().lstrip("v"), "active": active, "versions": out})
+
+
 @app.route("/api/update", methods=["POST"])
 def api_update():
     data = request.json or {}
@@ -795,6 +970,9 @@ def api_update():
         return jsonify({"ok": False, "error": "No version selected"}), 400
     if not tag.startswith("v"):
         tag = "v" + tag
+    if store.has(tag):
+        return jsonify({"ok": True, "tag": tag, "cached": True,
+                        "asset": store.entries().get(tag, {}).get("asset")})
     with _update_lock:
         if _update_state["state"] == "downloading":
             return jsonify({"ok": False, "error": "An update is already downloading"}), 409
@@ -819,8 +997,8 @@ def _run_update(tag, url, name, size):
             state="downloading", tag=tag, asset=name, downloaded=0,
             total=size or 0, path="", error="",
         )
-    os.makedirs(UPDATE_DIR, exist_ok=True)
-    dest = os.path.join(UPDATE_DIR, name)
+    os.makedirs(VERSIONS_DIR, exist_ok=True)
+    dest = os.path.join(VERSIONS_DIR, name)
     tmp = dest + ".part"
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "quran-app"})
@@ -846,34 +1024,14 @@ def _run_update(tag, url, name, size):
         with _update_lock:
             _update_state.update(state="error", error=str(e))
         return
-    try:
-        _apply_update(dest, tag)
-    except Exception as e:
-        with _update_lock:
-            _update_state.update(state="error", error=str(e))
-
-
-def _apply_update(path, tag):
-    if sys.platform == "win32":
-        subprocess.Popen([path])
-        with _update_lock:
-            _update_state.update(state="launched", path=path)
-        return
-    if sys.platform == "darwin":
-        subprocess.Popen(["open", path])
-        with _update_lock:
-            _update_state.update(state="launched", path=path)
-        return
-    os.chmod(path, 0o755)
-    running = os.environ.get("APPIMAGE")
-    if running and os.path.isfile(running):
-        shutil.copy2(path, running)
-        os.chmod(running, 0o755)
-        with _update_lock:
-            _update_state.update(state="installed", path=running)
-    else:
-        with _update_lock:
-            _update_state.update(state="downloaded", path=path)
+    if dest.lower().endswith(".appimage"):
+        try:
+            os.chmod(dest, 0o755)
+        except OSError:
+            pass
+    store.add(tag, dest, name, os.path.getsize(dest), _kind_for(name))
+    with _update_lock:
+        _update_state.update(state="downloaded", path=dest)
 
 
 @app.route("/api/update/status")
@@ -882,20 +1040,54 @@ def api_update_status():
         return jsonify(dict(_update_state))
 
 
-@app.route("/api/update/run", methods=["POST"])
-def api_update_run():
-    with _update_lock:
-        path = _update_state["path"]
-        state = _update_state["state"]
-    if state not in ("downloaded", "installed") or not path or not os.path.isfile(path):
-        return jsonify({"ok": False, "error": "Nothing to run"}), 400
+@app.route("/api/versions/switch", methods=["POST"])
+def api_versions_switch():
+    data = request.json or {}
+    tag = (data.get("tag") or "").strip()
+    if tag and not tag.startswith("v"):
+        tag = "v" + tag
+    if not tag:
+        return jsonify({"ok": False, "error": "No version selected"}), 400
+    result = _activate(tag)
+    return jsonify(result) if result.get("ok") else (jsonify(result), 400)
+
+
+@app.route("/api/versions/run", methods=["POST"])
+def api_versions_run():
+    data = request.json or {}
+    tag = (data.get("tag") or "").strip()
+    if tag and not tag.startswith("v"):
+        tag = "v" + tag
+    if not tag:
+        tag = store.active()
+    entry = store.entries().get(tag)
+    if not entry or not os.path.isfile(entry.get("file", "")):
+        return jsonify({"ok": False, "error": "That version is not downloaded"}), 400
+    path = entry["file"]
     if sys.platform == "darwin":
         subprocess.Popen(["open", path])
     elif sys.platform == "win32":
         os.startfile(path)  # type: ignore[attr-defined]
     else:
+        os.chmod(path, 0o755)
         subprocess.Popen([path])
-    return jsonify({"ok": True})
+    return jsonify({"ok": True, "tag": tag})
+
+
+@app.route("/api/versions/remove", methods=["POST"])
+def api_versions_remove():
+    data = request.json or {}
+    tag = (data.get("tag") or "").strip()
+    if tag and not tag.startswith("v"):
+        tag = "v" + tag
+    if not tag:
+        return jsonify({"ok": False, "error": "No version selected"}), 400
+    if tag == "v" + app_version().lstrip("v"):
+        return jsonify({"ok": False, "error": "Cannot remove the version you are running"}), 400
+    entry = store.remove(tag)
+    if entry is None:
+        return jsonify({"ok": False, "error": "That version is not downloaded"}), 400
+    return jsonify({"ok": True, "tag": tag})
 
 
 if __name__ == "__main__":
