@@ -1707,8 +1707,12 @@ function setDiscordStatus(state) {
         el.textContent = 'Connecting...';
         el.classList.add('warn');
     }
-    else if (state === 'error') {
+    else if (state === 'not-running') {
         el.textContent = 'Discord not running';
+        el.classList.add('warn');
+    }
+    else if (state === 'error') {
+        el.textContent = 'Status unavailable';
         el.classList.add('err');
     }
     else {
@@ -1746,7 +1750,7 @@ function dcClear() {
 function pollDiscordStatus() {
     if (!discordEnabled)
         return;
-    void getJSON(`${API}/api/discord/status`)
+    void getJSON(`${API}/api/discord/status?alive=1`)
         .then((d) => {
         if (!discordEnabled)
             return;
@@ -1754,8 +1758,10 @@ function pollDiscordStatus() {
             setDiscordStatus('connected');
         else if (d.state === 'connecting')
             setDiscordStatus('connecting');
+        else if (d.state === 'off')
+            setDiscordStatus('off');
         else
-            setDiscordStatus('error');
+            setDiscordStatus('not-running');
     })
         .catch(() => {
         if (discordEnabled)
@@ -1764,10 +1770,14 @@ function pollDiscordStatus() {
 }
 function syncDiscordUI() {
     $('#set-discord').checked = discordEnabled;
-    if (discordEnabled)
+    if (discordEnabled) {
+        dcPost({ enabled: true, activity: dcActivity() });
+        dcLastRefresh = Date.now();
         pollDiscordStatus();
-    else
+    }
+    else {
         setDiscordStatus('off');
+    }
 }
 $('#set-discord').addEventListener('change', (e) => {
     discordEnabled = e.target.checked;

@@ -539,7 +539,8 @@ def _discord_socket_paths():
 
 class DiscordBridge:
     RETRY_INTERVAL = 5
-    IDLE_TIMEOUT = 90
+    HEARTBEAT_TIMEOUT = 120
+    CONNECT_TIMEOUT = 10
 
     def __init__(self):
         self._lock = threading.Lock()
@@ -548,18 +549,20 @@ class DiscordBridge:
         self._sock = None
         self._connected = False
         self._last_sent = None
-        self._last_activity_at = 0
-        self._last_try = 0
+        self._last_seen = 0.0
+        self._last_try = 0.0
+        self._connect_at = 0.0
         threading.Thread(target=self._loop, daemon=True).start()
 
     def set(self, enabled=False, activity=None):
         with self._lock:
             self._enabled = bool(enabled)
-            self._last_activity_at = time.time()
-            if enabled:
-                self._activity = activity
-            else:
-                self._activity = None
+            self._last_seen = time.time()
+            self._activity = activity if enabled else None
+
+    def touch(self):
+        with self._lock:
+            self._last_seen = time.time()
 
     def state(self):
         with self._lock:
@@ -580,38 +583,42 @@ class DiscordBridge:
             time.sleep(0.5)
 
     def _step(self):
+        now = time.time()
         with self._lock:
             enabled = self._enabled
-        if not enabled:
-            self._drop(self._sock)
-            return
-        with self._lock:
-            idle = time.time() - self._last_activity_at > self.IDLE_TIMEOUT
             sock = self._sock
-        if idle:
-            self._drop(sock)
+            stale = now - self._last_seen > self.HEARTBEAT_TIMEOUT
+            connecting_since = self._connect_at
+        if not enabled or stale:
+            if sock is not None:
+                self._drop(sock)
             return
         if sock is None:
-            if time.time() - self._last_try < self.RETRY_INTERVAL:
+            if now - self._last_try < self.RETRY_INTERVAL:
                 return
-            self._last_try = time.time()
-            sock = _discord_socket_connect()
-            if sock is None:
+            self._last_try = now
+            new = _discord_socket_connect()
+            if new is None:
                 return
             with self._lock:
-                self._sock = sock
+                self._sock = new
                 self._connected = False
+                self._last_sent = None
+                self._connect_at = now
             try:
-                _discord_send_frame(sock, 0, {"v": 1, "client_id": _DISCORD_CLIENT_ID})
+                _discord_send_frame(new, 0, {"v": 1, "client_id": _DISCORD_CLIENT_ID})
             except OSError:
-                self._drop(sock)
+                self._drop(new)
                 return
-            threading.Thread(target=self._reader, args=(sock,), daemon=True).start()
+            threading.Thread(target=self._reader, args=(new,), daemon=True).start()
             return
         with self._lock:
-            activity = self._activity
             connected = self._connected
+            activity = self._activity
             last_sent = self._last_sent
+        if not connected and now - connecting_since > self.CONNECT_TIMEOUT:
+            self._drop(sock)
+            return
         if connected and activity is not last_sent:
             try:
                 _discord_send_frame(
@@ -660,17 +667,17 @@ class DiscordBridge:
         self._drop(sock)
 
     def _drop(self, sock):
+        if sock is None:
+            return
         with self._lock:
-            if sock is not None and self._sock is sock:
+            if self._sock is sock:
                 self._sock = None
-            if sock is not None:
                 self._connected = False
                 self._last_sent = None
-        if sock is not None:
-            try:
-                sock.close()
-            except OSError:
-                pass
+        try:
+            sock.close()
+        except OSError:
+            pass
 
 
 def _discord_socket_connect():
@@ -704,6 +711,8 @@ def api_discord():
 
 @app.route("/api/discord/status")
 def api_discord_status():
+    if request.args.get("alive") == "1":
+        _discord.touch()
     return jsonify({"state": _discord.state()})
 
 

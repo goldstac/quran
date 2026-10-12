@@ -70,8 +70,10 @@ matching section and note the platform when it is not cross-platform.
 - [x] Add an opt-in Discord presence. Backend `DiscordBridge` in `app.py`
   talks to Discord's local IPC socket/named pipe (legacy 8-byte framing,
   shared `_DISCORD_CLIENT_ID`); the frontend posts activities to
-  `POST /api/discord` and polls `GET /api/discord/status`. Settings toggle +
-  status badge, per-nasheed eye button hide/show (`ns_discord_hidden`),
+  `POST /api/discord` and polls `GET /api/discord/status?alive=1`. Settings
+  toggle + status badge, per-nasheed eye button hide/show (`ns_discord_hidden`),
   presence on play/seek and cleared on pause/stop/reset. Quran playback shows
-  too (surah title + reciter, refreshed on reciter switch). The socket closes
-  after 90s of no heartbeats to avoid stale presences.
+  too (surah title + reciter, refreshed on reciter switch). The connection is
+  kept alive by a heartbeat (drops only after 120s of frontend silence and
+  reconnects within 5s), so the status stops flapping between connected and
+  offline.

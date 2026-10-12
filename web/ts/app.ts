@@ -1727,7 +1727,7 @@ function discToggleSong(song: Song) {
   if (currentSong && currentSong.id === song.id) pushDiscord(true);
 }
 
-function setDiscordStatus(state: 'off' | 'connecting' | 'connected' | 'error') {
+function setDiscordStatus(state: 'off' | 'connecting' | 'connected' | 'not-running' | 'error') {
   const el = $('#set-discord-status');
   if (!el) return;
   el.classList.remove('ok', 'warn', 'err');
@@ -1737,8 +1737,11 @@ function setDiscordStatus(state: 'off' | 'connecting' | 'connected' | 'error') {
   } else if (state === 'connecting') {
     el.textContent = 'Connecting...';
     el.classList.add('warn');
-  } else if (state === 'error') {
+  } else if (state === 'not-running') {
     el.textContent = 'Discord not running';
+    el.classList.add('warn');
+  } else if (state === 'error') {
+    el.textContent = 'Status unavailable';
     el.classList.add('err');
   } else {
     el.textContent = 'Off';
@@ -1776,12 +1779,13 @@ function dcClear() {
 
 function pollDiscordStatus() {
   if (!discordEnabled) return;
-  void getJSON<{ state?: string }>(`${API}/api/discord/status`)
+  void getJSON<{ state?: string }>(`${API}/api/discord/status?alive=1`)
     .then((d) => {
       if (!discordEnabled) return;
       if (d.state === 'connected') setDiscordStatus('connected');
       else if (d.state === 'connecting') setDiscordStatus('connecting');
-      else setDiscordStatus('error');
+      else if (d.state === 'off') setDiscordStatus('off');
+      else setDiscordStatus('not-running');
     })
     .catch(() => {
       if (discordEnabled) setDiscordStatus('error');
@@ -1790,8 +1794,13 @@ function pollDiscordStatus() {
 
 function syncDiscordUI() {
   ($('#set-discord') as HTMLInputElement).checked = discordEnabled;
-  if (discordEnabled) pollDiscordStatus();
-  else setDiscordStatus('off');
+  if (discordEnabled) {
+    dcPost({ enabled: true, activity: dcActivity() });
+    dcLastRefresh = Date.now();
+    pollDiscordStatus();
+  } else {
+    setDiscordStatus('off');
+  }
 }
 
 $('#set-discord').addEventListener('change', (e) => {
