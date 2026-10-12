@@ -60,13 +60,18 @@ matching section and note the platform when it is not cross-platform.
   reports progress.
 - [x] Add a version manager on top of the updater. `VersionStore` tracks
   downloaded builds in `versions.json` and registers the build you launched
-  (`$APPIMAGE` on Linux, `sys.executable` on Windows, the `.app` on macOS).
-  `GET /api/versions` lists them with active/present flags;
-  `POST /api/versions/switch {tag}` makes one active (Linux swaps the running
-  `$APPIMAGE` in place), `/api/versions/run` launches one, and
-  `/api/versions/remove` deletes a stored build. Settings has a searchable
-  version picker (reciter-picker style) marking active/installed/pre-release,
-  and clicking a row switches or downloads instantly.
+  (`$APPIMAGE` on Linux, `sys.executable` on Windows, the `.app` on macOS),
+  keeping an independent copy of it inside the store (hard link, else copy) so
+  switching never clobbers the running build. `GET /api/versions` lists them
+  with active/present flags; `POST /api/versions/switch {tag}` makes one active
+  (Linux swaps the running `$APPIMAGE` in place) and live-reloads into it: a
+  detached shell waits for the backend to exit, re-execs the build, and the
+  desktop parent is signalled so the window restarts (`reload` in the response
+  drives a `#restart-screen` overlay that polls `/api/version` then reloads).
+  `/api/versions/run` launches one, and `/api/versions/remove` deletes a stored
+  build. Settings has a searchable version picker (reciter-picker style) marking
+  active/installed/pre-release, and clicking a row switches or downloads
+  instantly.
 - [x] Add an opt-in Discord presence. Backend `DiscordBridge` in `app.py`
   talks to Discord's local IPC socket/named pipe (legacy 8-byte framing,
   shared `_DISCORD_CLIENT_ID`); the frontend posts activities to

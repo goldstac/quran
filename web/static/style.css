@@ -678,3 +678,12 @@ body{
 .disc-status.warn{color:#c9a86c;background:rgba(201,168,108,.15)}
 .disc-status.err{color:#e0483e;background:rgba(224,72,62,.15)}
 .track-act.disc-hide{color:#5865f2}
+.restart-screen{
+  position:fixed;inset:0;z-index:1000;display:none;align-items:center;justify-content:center;
+  background:#0f1311;color:#e5e5e5;
+}
+.restart-screen.show{display:flex}
+.restart-box{display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;padding:24px}
+.restart-box > i{font-size:34px;color:#1db954}
+.restart-title{font-size:19px;font-weight:600}
+.restart-msg{font-size:13px;color:#a7a7a7;max-width:320px;line-height:1.5}

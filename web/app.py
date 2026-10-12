@@ -1,4 +1,4 @@
-import os, json, subprocess, re, threading, sys, socket, argparse, time, uuid, shutil, urllib.request
+import os, json, subprocess, re, threading, sys, socket, argparse, time, uuid, shutil, signal, shlex, urllib.request
 from pathlib import Path
 from flask import Flask, render_template, jsonify, request
 from flask_cors import CORS
@@ -720,6 +720,34 @@ _GH_RELEASES_URL = "https://api.github.com/repos/goldstac/quran/releases?per_pag
 VERSIONS_DIR = os.path.join(DATA_DIR, "versions")
 VERSIONS_FILE = os.path.join(DATA_DIR, "versions.json")
 
+
+def _present(path):
+    return bool(path) and (os.path.isfile(path) or os.path.isdir(path))
+
+
+def _in_versions_dir(path):
+    try:
+        return os.path.abspath(path).startswith(os.path.abspath(VERSIONS_DIR) + os.sep)
+    except (OSError, ValueError):
+        return False
+
+
+def _independent_copy(src, dst):
+    os.makedirs(VERSIONS_DIR, exist_ok=True)
+    if os.path.exists(dst):
+        return dst
+    try:
+        os.link(src, dst)
+        return dst
+    except OSError:
+        pass
+    try:
+        shutil.copy2(src, dst)
+        return dst
+    except OSError:
+        return None
+
+
 _update_lock = threading.Lock()
 _update_cache = {"at": 0, "releases": None}
 _update_state = {
@@ -768,7 +796,7 @@ class VersionStore:
     def has(self, tag):
         with self._lock:
             e = self._data["versions"].get(tag)
-        return bool(e) and os.path.isfile(e.get("file", ""))
+        return bool(e) and _present(e.get("file", ""))
 
     def add(self, tag, file, asset, size, kind):
         with self._lock:
@@ -798,13 +826,13 @@ class VersionStore:
             e = self._data["versions"].pop(tag, None)
             active = self._data["active"]
             cur = self._data["versions"].get(active)
-            if not active or not cur or not os.path.isfile(cur.get("file", "")):
+            if not active or not cur or not _present(cur.get("file", "")):
                 self._data["active"] = next(
-                    (t for t, v in self._data["versions"].items() if os.path.isfile(v.get("file", ""))),
+                    (t for t, v in self._data["versions"].items() if _present(v.get("file", ""))),
                     "",
                 )
             self._flush()
-        if e and e.get("file") and os.path.isfile(e["file"]):
+        if e and e.get("file") and _present(e["file"]):
             try:
                 os.remove(e["file"])
             except OSError:
@@ -816,24 +844,30 @@ class VersionStore:
         if not ver or ver == "unknown":
             return
         tag = "v" + ver.lstrip("v")
-        path = kind = None
+        running = kind = None
         appimage = os.environ.get("APPIMAGE")
         if appimage and os.path.isfile(appimage):
-            path, kind = appimage, "appimage"
+            running, kind = appimage, "appimage"
         elif getattr(sys, "frozen", False) and os.path.isfile(sys.executable):
             if sys.platform == "darwin":
                 app = os.path.abspath(os.path.join(os.path.dirname(sys.executable), "..", ".."))
                 if app.endswith(".app") and os.path.isdir(app):
-                    path, kind = app, "app"
+                    running, kind = app, "app"
             elif sys.platform == "win32":
-                path, kind = sys.executable, "exe"
-        if not path:
+                running, kind = sys.executable, "exe"
+        if not running:
             return
-        try:
-            size = os.path.getsize(path)
-        except OSError:
-            size = 0
-        self.add(tag, path, os.path.basename(path), size, kind)
+        existing = self._data["versions"].get(tag)
+        if not (existing and _present(existing.get("file", ""))):
+            stored = running
+            if os.path.isfile(running) and not _in_versions_dir(running):
+                ext = os.path.splitext(running)[1] or ".AppImage"
+                stored = _independent_copy(running, os.path.join(VERSIONS_DIR, tag + ext)) or running
+            try:
+                size = os.path.getsize(running)
+            except OSError:
+                size = 0
+            self.add(tag, stored, os.path.basename(running), size, kind)
         self.set_active(tag)
 
 
@@ -921,25 +955,86 @@ def _point_current(path):
 
 def _activate(tag):
     entry = store.entries().get(tag)
-    if not entry or not os.path.isfile(entry.get("file", "")):
-        return {"ok": False, "error": "That version is not downloaded yet"}
+    if not entry or not _present(entry.get("file", "")):
+        return None
     path = entry["file"]
-    if sys.platform == "win32":
-        subprocess.Popen([path])
-    elif sys.platform == "darwin":
-        subprocess.Popen(["open", path])
-    else:
-        os.chmod(path, 0o755)
+    if os.path.isfile(path):
+        try:
+            os.chmod(path, 0o755)
+        except OSError:
+            pass
+    launch = path
+    if sys.platform == "linux":
         running = os.environ.get("APPIMAGE")
-        if running and os.path.isfile(running) and os.path.abspath(running) != os.path.abspath(path):
-            tmp = running + ".new"
-            shutil.copy2(path, tmp)
-            os.chmod(tmp, 0o755)
-            os.replace(tmp, running)
-            path = running
-        _point_current(path)
+        if (
+            running
+            and os.path.isfile(running)
+            and not _in_versions_dir(running)
+            and os.path.abspath(running) != os.path.abspath(path)
+        ):
+            try:
+                tmp = running + ".new"
+                shutil.copy2(path, tmp)
+                os.chmod(tmp, 0o755)
+                os.replace(tmp, running)
+                launch = running
+            except OSError:
+                launch = path
+        elif running and os.path.isfile(running) and not _in_versions_dir(running):
+            launch = running
+    _point_current(path)
     store.set_active(tag)
-    return {"ok": True, "tag": tag, "active": tag, "path": path, "kind": entry.get("kind", "")}
+    return {"launch": launch, "kind": entry.get("kind", "")}
+
+
+def _live_reload_supported():
+    return (
+        getattr(sys, "frozen", False)
+        or os.environ.get("QURAN_STDIN_WATCH") == "1"
+        or bool(os.environ.get("APPIMAGE"))
+    )
+
+
+def _spawn_relaunch(target):
+    pid = os.getpid()
+    devnull = subprocess.DEVNULL
+    if sys.platform == "win32":
+        cmd = (
+            "Wait-Process -Id {pid} -ErrorAction SilentlyContinue; "
+            "Start-Sleep -Milliseconds 700; "
+            "Start-Process -FilePath '{t}'"
+        ).format(pid=pid, t=target.replace("'", "''"))
+        subprocess.Popen(
+            ["powershell", "-NoProfile", "-WindowStyle", "Hidden", "-Command", cmd],
+            creationflags=0x00000008 | 0x00000200,
+            stdin=devnull, stdout=devnull, stderr=devnull,
+        )
+        return
+    quoted = shlex.quote(target)
+    launch = ("exec open -n " + quoted) if sys.platform == "darwin" else ("exec " + quoted)
+    script = "while kill -0 {pid} 2>/dev/null; do sleep 0.1; done; sleep 0.6; {launch}".format(
+        pid=pid, launch=launch
+    )
+    subprocess.Popen(
+        ["/bin/sh", "-c", script], start_new_session=True,
+        stdin=devnull, stdout=devnull, stderr=devnull,
+    )
+
+
+def _schedule_restart(target):
+    _spawn_relaunch(target)
+
+    def worker():
+        time.sleep(0.4)
+        if os.environ.get("QURAN_STDIN_WATCH") == "1":
+            try:
+                os.kill(os.getppid(), signal.SIGTERM)
+            except OSError:
+                pass
+        time.sleep(5)
+        os._exit(0)
+
+    threading.Thread(target=worker, daemon=True).start()
 
 
 @app.route("/api/updates")
@@ -966,7 +1061,7 @@ def api_versions():
             "size": e.get("size", 0),
             "kind": e.get("kind", ""),
             "active": tag == active,
-            "present": os.path.isfile(e.get("file", "")),
+            "present": _present(e.get("file", "")),
         })
     return jsonify({"running": "v" + app_version().lstrip("v"), "active": active, "versions": out})
 
@@ -1057,8 +1152,14 @@ def api_versions_switch():
         tag = "v" + tag
     if not tag:
         return jsonify({"ok": False, "error": "No version selected"}), 400
-    result = _activate(tag)
-    return jsonify(result) if result.get("ok") else (jsonify(result), 400)
+    info = _activate(tag)
+    if info is None:
+        return jsonify({"ok": False, "error": "That version is not downloaded yet"}), 400
+    running_tag = "v" + app_version().lstrip("v")
+    reload = tag != running_tag and _live_reload_supported() and _present(info["launch"])
+    if reload:
+        _schedule_restart(info["launch"])
+    return jsonify({"ok": True, "tag": tag, "active": tag, "reload": reload})
 
 
 @app.route("/api/versions/run", methods=["POST"])
@@ -1070,7 +1171,7 @@ def api_versions_run():
     if not tag:
         tag = store.active()
     entry = store.entries().get(tag)
-    if not entry or not os.path.isfile(entry.get("file", "")):
+    if not entry or not _present(entry.get("file", "")):
         return jsonify({"ok": False, "error": "That version is not downloaded"}), 400
     path = entry["file"]
     if sys.platform == "darwin":

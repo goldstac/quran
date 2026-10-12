@@ -2049,18 +2049,51 @@ async function switchTo(tag: string) {
   const note = $('#set-check-note');
   note.textContent = 'Switching to ' + tag + '...';
   try {
-    const d = await postJSON<{ ok?: boolean; error?: string }>('/api/versions/switch', { tag });
+    const d = await postJSON<{ ok?: boolean; error?: string; reload?: boolean }>('/api/versions/switch', { tag });
     if (!d.ok) {
       note.textContent = d.error || 'Could not switch versions.';
       toast(d.error || 'Could not switch');
       return;
     }
     await refreshVersions();
+    if (d.reload) {
+      showRestarting(tag);
+      return;
+    }
     note.innerHTML = 'Active version is now <b>' + esc(tag) + '</b>. Restart Quran to run it.';
     toast('Switched to ' + tag);
   } catch {
     note.textContent = 'Could not reach the updater.';
   }
+}
+
+function showRestarting(tag: string) {
+  const el = $('#restart-screen');
+  const msg = $('#restart-msg');
+  if (msg) msg.textContent = 'Applying ' + tag + '...';
+  el.classList.add('show');
+  window.setTimeout(() => waitForRestart(tag, 0), 1500);
+}
+
+async function waitForRestart(tag: string, tries: number): Promise<void> {
+  try {
+    const r = await fetch(`${API}/api/version?ts=` + Date.now(), { cache: 'no-store' });
+    if (r.ok) {
+      const d = (await r.json()) as { version?: string };
+      const v = 'v' + String(d.version || '').replace(/^v/, '');
+      if (v === tag) {
+        location.reload();
+        return;
+      }
+    }
+  } catch {
+  }
+  if (tries >= 40) {
+    const msg = $('#restart-msg');
+    if (msg) msg.textContent = 'Could not restart automatically. Close and reopen Quran to run ' + tag + '.';
+    return;
+  }
+  window.setTimeout(() => void waitForRestart(tag, tries + 1), 500);
 }
 
 async function installVersion(tag: string) {
