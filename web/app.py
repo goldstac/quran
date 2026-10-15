@@ -602,7 +602,7 @@ class DiscordBridge:
             connecting_since = self._connect_at
         if not enabled or stale:
             if sock is not None:
-                self._drop(sock)
+                self._clear(sock)
             return
         if sock is None:
             if now - self._last_try < self.RETRY_INTERVAL:
@@ -676,6 +676,20 @@ class DiscordBridge:
                             with self._lock:
                                 self._connected = True
                                 self._last_sent = None
+        except OSError:
+            pass
+        self._drop(sock)
+
+    def _clear(self, sock):
+        try:
+            _discord_send_frame(
+                sock, 1,
+                {
+                    "cmd": "SET_ACTIVITY",
+                    "args": {"pid": os.getpid(), "activity": {}},
+                    "nonce": uuid.uuid4().hex[:12],
+                },
+            )
         except OSError:
             pass
         self._drop(sock)

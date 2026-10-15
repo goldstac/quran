@@ -1826,6 +1826,15 @@ $('#set-discord').addEventListener('change', (e) => {
 
 setInterval(pollDiscordStatus, 2000);
 
+window.addEventListener('pagehide', () => {
+  if (!discordEnabled || !navigator.sendBeacon) return;
+  const body = new Blob(
+    [JSON.stringify({ enabled: false, activity: null })],
+    { type: 'application/json' },
+  );
+  navigator.sendBeacon(`${API}/api/discord`, body);
+});
+
 // --- SETTINGS ---
 let appVersion = '';
 
