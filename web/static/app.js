@@ -1257,7 +1257,7 @@ audio.addEventListener('pause', () => {
     startingId = null;
     setBuffering(false);
     if (discordEnabled)
-        dcClear();
+        dcPause();
 });
 audio.addEventListener('playing', () => {
     startingId = null;
@@ -1719,14 +1719,23 @@ function setDiscordStatus(state) {
         el.textContent = 'Off';
     }
 }
-function dcActivity() {
+function dcActivity(paused = false) {
     if (!currentSong || discIsHidden(currentSong.id))
         return null;
-    return {
+    const channel = currentSong.channel || '';
+    const a = {
         details: currentSong.title,
-        state: currentSong.channel || 'Quran',
-        timestamps: { start: Date.now() - Math.floor(audio.currentTime * 1000) },
+        state: paused ? (channel ? 'Paused - ' + channel : 'Paused') : (channel || 'Quran'),
     };
+    if (!paused)
+        a.timestamps = { start: Date.now() - Math.round(audio.currentTime * 1000) };
+    return a;
+}
+function dcPause() {
+    if (!discordEnabled)
+        return;
+    dcLastRefresh = Date.now();
+    dcPost({ enabled: true, activity: dcActivity(true) });
 }
 function dcPost(body) {
     void getJSON(`${API}/api/discord`, {

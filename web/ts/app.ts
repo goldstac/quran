@@ -1308,7 +1308,7 @@ audio.addEventListener('play', () => {
 audio.addEventListener('pause', () => {
   startingId = null;
   setBuffering(false);
-  if (discordEnabled) dcClear();
+  if (discordEnabled) dcPause();
 });
 audio.addEventListener('playing', () => {
   startingId = null;
@@ -1748,13 +1748,21 @@ function setDiscordStatus(state: 'off' | 'connecting' | 'connected' | 'not-runni
   }
 }
 
-function dcActivity(): Record<string, unknown> | null {
+function dcActivity(paused = false): Record<string, unknown> | null {
   if (!currentSong || discIsHidden(currentSong.id)) return null;
-  return {
+  const channel = currentSong.channel || '';
+  const a: Record<string, unknown> = {
     details: currentSong.title,
-    state: currentSong.channel || 'Quran',
-    timestamps: { start: Date.now() - Math.floor(audio.currentTime * 1000) },
+    state: paused ? (channel ? 'Paused - ' + channel : 'Paused') : (channel || 'Quran'),
   };
+  if (!paused) a.timestamps = { start: Date.now() - Math.round(audio.currentTime * 1000) };
+  return a;
+}
+
+function dcPause() {
+  if (!discordEnabled) return;
+  dcLastRefresh = Date.now();
+  dcPost({ enabled: true, activity: dcActivity(true) });
 }
 
 function dcPost(body: { enabled: boolean; activity?: Record<string, unknown> | null }) {

@@ -526,6 +526,17 @@ def api_quran_translation(chapter_id):
 
 
 _DISCORD_CLIENT_ID = "1558502162080858172"
+_DISCORD_LOGO_URL = "https://raw.githubusercontent.com/goldstac/quran/main/app_logo.png"
+_DISCORD_REPO_URL = "https://github.com/goldstac/quran"
+
+
+def _discord_decorate(activity):
+    a = dict(activity)
+    a.setdefault("type", 2)
+    a.setdefault("status_display_type", 2)
+    a.setdefault("assets", {"large_image": _DISCORD_LOGO_URL, "large_text": "Quran"})
+    a.setdefault("buttons", [{"label": "Get Quran", "url": _DISCORD_REPO_URL}])
+    return a
 
 
 def _discord_socket_paths():
@@ -620,6 +631,9 @@ class DiscordBridge:
             self._drop(sock)
             return
         if connected and activity is not last_sent:
+            payload = None
+            if isinstance(activity, dict):
+                payload = _discord_decorate(activity)
             try:
                 _discord_send_frame(
                     sock, 1,
@@ -627,7 +641,7 @@ class DiscordBridge:
                         "cmd": "SET_ACTIVITY",
                         "args": {
                             "pid": os.getpid(),
-                            "activity": activity or {},
+                            "activity": payload or {},
                         },
                         "nonce": uuid.uuid4().hex[:12],
                     },
