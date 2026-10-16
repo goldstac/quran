@@ -9,12 +9,6 @@ matching section and note the platform when it is not cross-platform.
 
 ## Medium priority
 
-- [ ] Re-add the in-app version manager (multiple downloaded builds + instant
-  switching with live reload). Pulled for now, so Settings is back to the
-  simpler updater (pick a version, download, install). The removed
-  implementation lives in commits `c040831` (VersionStore, `/api/versions*`,
-  reciter-style version picker) and `baee45d` (live reload into a switched
-  build, `#restart-screen`).
 - [ ] Windows installer is unsigned, so SmartScreen shows "Windows protected
   your PC" (user must pick More info then Run anyway). Consider code signing.
 
@@ -32,6 +26,10 @@ matching section and note the platform when it is not cross-platform.
 
 ## Done
 
+- [x] Removed the install-version picker from Settings: no more version
+  dropdown, pre-release/older-version selection, or downgrades. Check for
+  updates now just reports the newest release and offers to install that one;
+  the button stays disabled when you are already on it.
 - [x] See on YouTube: every YouTube nasheed row has a button (and the player bar
   has one for the current nasheed) that opens the same video in the system
   browser via the backend (`/api/open`, YouTube hosts only), since the Tauri
