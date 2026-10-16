@@ -1,4 +1,5 @@
-import os, json, subprocess, re, threading
+import os, json, subprocess, re, threading, sys, socket, argparse, time, uuid, shutil, webbrowser, urllib.request, urllib.parse
+from pathlib import Path
 from flask import Flask, render_template, jsonify, request
 from flask_cors import CORS
 
@@ -6,14 +7,130 @@ app = Flask(__name__)
 CORS(app)
 app.config["TEMPLATES_AUTO_RELOAD"] = True
 
-DATA_DIR = os.path.expanduser("~/.local/share/quran-app")
+# Determine data directory (cross-platform)
+if sys.platform == "win32":
+    base_data_dir = os.path.expanduser("~/AppData/Local/quran-app")
+else:
+    base_data_dir = os.path.expanduser("~/.local/share/quran-app")
+
+DATA_DIR = base_data_dir
 OLD_DATA_DIR = os.path.expanduser("~/.local/share/nasheed-app")
+
+# Migrate from old location if needed
 if not os.path.exists(DATA_DIR) and os.path.exists(OLD_DATA_DIR):
+    os.makedirs(os.path.dirname(DATA_DIR), exist_ok=True)
     os.rename(OLD_DATA_DIR, DATA_DIR)
+
+os.makedirs(DATA_DIR, exist_ok=True)
 LIB_FILE = os.path.join(DATA_DIR, "library.json")
 UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36"
 
-os.makedirs(DATA_DIR, exist_ok=True)
+# Configure template and static folders for frozen app
+if getattr(sys, "frozen", False):
+    # Running as frozen executable (PyInstaller)
+    base_path = sys._MEIPASS
+    app.template_folder = os.path.join(base_path, "templates")
+    app.static_folder = os.path.join(base_path, "static")
+    if "SSL_CERT_FILE" not in os.environ:
+        for _ca_file in (
+            "/etc/ssl/certs/ca-certificates.crt",
+            "/etc/pki/tls/certs/ca-bundle.crt",
+            "/etc/ssl/ca-bundle.pem",
+            "/etc/ssl/cert.pem",
+        ):
+            if os.path.isfile(_ca_file):
+                os.environ["SSL_CERT_FILE"] = _ca_file
+                break
+else:
+    # Running from source
+    base_path = os.path.dirname(os.path.abspath(__file__))
+    app.template_folder = os.path.join(base_path, "templates")
+    app.static_folder = os.path.join(base_path, "static")
+
+
+def find_free_port(start_port=5000, max_port=65535):
+    """Find the first free port starting from start_port."""
+    for port in range(start_port, max_port + 1):
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.bind(("127.0.0.1", port))
+            sock.close()
+            return port
+        except OSError:
+            continue
+    raise RuntimeError(f"No free ports found between {start_port} and {max_port}")
+
+
+def watch_parent_stdin():
+    """Exit the backend when it is orphaned.
+
+    The desktop app keeps our stdin pipe open for our whole lifetime. Reaching
+    EOF on that pipe means the app is gone (PyInstaller onefile: the bootloader
+    forwards the same pipe to us). Only active when QURAN_STDIN_WATCH=1 is set
+    by the Tauri wrapper, so dev runs and CI smoke tests are unaffected.
+    """
+    if os.environ.get("QURAN_STDIN_WATCH") != "1":
+        return
+    try:
+        fd = os.dup(0)
+    except OSError:
+        try:
+            fd = sys.stdin.fileno()
+        except Exception:
+            return
+
+    def _wait_eof():
+        chunk = b"x"
+        try:
+            while chunk:
+                chunk = os.read(fd, 65536)
+        except OSError:
+            pass
+        os._exit(0)
+
+    threading.Thread(target=_wait_eof, daemon=True).start()
+
+
+def app_version():
+    v = os.environ.get("QURAN_VERSION")
+    if v:
+        return v
+    try:
+        pkg = Path(__file__).resolve().parent.parent / "package.json"
+        return json.loads(pkg.read_text())["version"]
+    except Exception:
+        return "unknown"
+
+
+def find_ytdlp():
+    """Find yt-dlp binary: YTDLP_PATH env var, sidecar, or PATH."""
+    # Check YTDLP_PATH environment variable
+    if "YTDLP_PATH" in os.environ:
+        path = os.environ["YTDLP_PATH"]
+        if os.path.isfile(path) and os.access(path, os.X_OK):
+            return path
+
+    # Check for sidecar binary next to executable
+    if getattr(sys, "frozen", False):
+        exe_dir = os.path.dirname(sys.executable)
+        sidecar_name = "yt-dlp.exe" if sys.platform == "win32" else "yt-dlp"
+        sidecar_path = os.path.join(exe_dir, sidecar_name)
+        if os.path.isfile(sidecar_path) and os.access(sidecar_path, os.X_OK):
+            return sidecar_path
+
+    # Check PATH
+    if sys.platform == "win32":
+        result = subprocess.run(["where", "yt-dlp"], capture_output=True, text=True)
+    else:
+        result = subprocess.run(["which", "yt-dlp"], capture_output=True, text=True)
+    if result.returncode == 0:
+        return result.stdout.strip()
+
+    return None
+
+
+YTDLP_PATH = find_ytdlp()
+
 
 def load_lib():
     if os.path.exists(LIB_FILE):
@@ -21,20 +138,25 @@ def load_lib():
             return json.load(f)
     return {"songs": [], "playlists": [{"name": "Favorites", "songs": []}]}
 
+
 def save_lib(data):
     with open(LIB_FILE, "w") as f:
         json.dump(data, f, indent=2)
 
+
 @app.route("/")
 def index():
     return render_template("index.html")
+
 
 @app.route("/api/search")
 def api_search():
     q = request.args.get("q", "").strip()
     if not q:
         return jsonify([])
-    cmd = ["yt-dlp", f"ytsearch15:{q}", "--flat-playlist", "--dump-json",
+    if not YTDLP_PATH:
+        return jsonify({"error": "yt-dlp not found"}), 500
+    cmd = [YTDLP_PATH, f"ytsearch15:{q}", "--flat-playlist", "--dump-json",
            "--no-warnings", "--ignore-errors", "--no-playlist"]
     try:
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
@@ -60,9 +182,12 @@ def api_search():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
 @app.route("/api/stream/<video_id>")
 def api_stream(video_id):
-    cmd = ["yt-dlp", "-f", "bestaudio[ext=m4a]/bestaudio/best", "-g",
+    if not YTDLP_PATH:
+        return jsonify({"error": "yt-dlp not found"}), 500
+    cmd = [YTDLP_PATH, "-f", "bestaudio[ext=m4a]/bestaudio/best", "-g",
            "--no-warnings", "--no-playlist", "--user-agent", UA,
            f"https://www.youtube.com/watch?v={video_id}"]
     try:
@@ -74,9 +199,32 @@ def api_stream(video_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
 @app.route("/api/library")
 def api_library():
     return jsonify(load_lib())
+
+
+@app.route("/api/version")
+def api_version():
+    return jsonify({"version": app_version(), "name": "Quran"})
+
+
+@app.route("/api/open", methods=["POST"])
+def api_open():
+    url = (request.json or {}).get("url", "")
+    parsed = urllib.parse.urlparse(url)
+    host = (parsed.hostname or "").lower()
+    if parsed.scheme != "https" or host not in (
+        "youtube.com", "www.youtube.com", "m.youtube.com", "music.youtube.com", "youtu.be",
+    ):
+        return jsonify({"ok": False, "error": "blocked"}), 400
+    try:
+        webbrowser.open(url)
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
 
 @app.route("/api/library/add", methods=["POST"])
 def api_add():
@@ -88,6 +236,7 @@ def api_add():
         save_lib(lib)
     return jsonify({"ok": True})
 
+
 @app.route("/api/library/fav/<sid>", methods=["POST"])
 def api_fav(sid):
     lib = load_lib()
@@ -98,6 +247,7 @@ def api_fav(sid):
             return jsonify({"favorite": s["favorite"]})
     return jsonify({"error": "not found"}), 404
 
+
 @app.route("/api/library/remove/<sid>", methods=["POST"])
 def api_remove(sid):
     lib = load_lib()
@@ -107,9 +257,11 @@ def api_remove(sid):
     save_lib(lib)
     return jsonify({"ok": True})
 
+
 @app.route("/api/playlists")
 def api_playlists():
     return jsonify(load_lib().get("playlists", []))
+
 
 @app.route("/api/playlists/create", methods=["POST"])
 def api_pl_create():
@@ -121,6 +273,7 @@ def api_pl_create():
         lib["playlists"].append({"name": name, "songs": []})
         save_lib(lib)
     return jsonify({"ok": True})
+
 
 @app.route("/api/playlists/<name>/add", methods=["POST"])
 def api_pl_add(name):
@@ -134,6 +287,7 @@ def api_pl_add(name):
             return jsonify({"ok": True})
     return jsonify({"error": "not found"}), 404
 
+
 @app.route("/api/playlists/<name>/remove/<sid>", methods=["POST"])
 def api_pl_remove(name, sid):
     lib = load_lib()
@@ -143,6 +297,7 @@ def api_pl_remove(name, sid):
             save_lib(lib)
             return jsonify({"ok": True})
     return jsonify({"error": "not found"}), 404
+
 
 @app.route("/api/playlists/delete", methods=["POST"])
 def api_pl_delete():
@@ -156,6 +311,7 @@ def api_pl_delete():
         return jsonify({"error": "not found"}), 404
     save_lib(lib)
     return jsonify({"ok": True})
+
 
 @app.route("/api/playlists/rename", methods=["POST"])
 def api_pl_rename():
@@ -175,15 +331,19 @@ def api_pl_rename():
     save_lib(lib)
     return jsonify({"ok": True})
 
+
 import urllib.request as _urllib
 from flask import request
 
 _stream_cache = {}
 
+
 def resolve_stream(video_id):
     if video_id in _stream_cache:
         return _stream_cache[video_id]
-    cmd = ["yt-dlp", "-f", "bestaudio[ext=m4a]/bestaudio/best", "-g",
+    if not YTDLP_PATH:
+        raise ValueError("yt-dlp not found")
+    cmd = [YTDLP_PATH, "-f", "bestaudio[ext=m4a]/bestaudio/best", "-g",
            "--no-warnings", "--no-playlist", "--user-agent", UA,
            f"https://www.youtube.com/watch?v={video_id}"]
     r = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
@@ -193,6 +353,7 @@ def resolve_stream(video_id):
     _stream_cache[video_id] = url
     return url
 
+
 @app.route("/api/warm/<video_id>")
 def api_warm(video_id):
     try:
@@ -200,6 +361,7 @@ def api_warm(video_id):
         return "", 204
     except Exception as e:
         return str(e), 500
+
 
 @app.route("/api/proxy/<video_id>")
 def api_proxy(video_id):
@@ -243,7 +405,9 @@ def api_proxy(video_id):
         _stream_cache.pop(video_id, None)
         return str(e), 500
 
+
 _quran_cache = {}
+
 
 def _quran_get(url, key, timeout=20):
     if key in _quran_cache:
@@ -253,6 +417,7 @@ def _quran_get(url, key, timeout=20):
         data = json.loads(resp.read().decode("utf-8"))
     _quran_cache[key] = data
     return data
+
 
 def _quran_style_score(name):
     n = (name or "").lower()
@@ -266,12 +431,14 @@ def _quran_style_score(name):
         return 4
     return 3
 
+
 @app.route("/api/quran/chapters")
 def api_quran_chapters():
     try:
         return jsonify(_quran_get("https://api.quran.com/api/v4/chapters?language=en", "chapters"))
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 @app.route("/api/quran/reciters")
 def api_quran_reciters():
@@ -310,6 +477,7 @@ def api_quran_reciters():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
 @app.route("/api/quran/chapter_audio/<int:moshaf_id>/<int:chapter_id>")
 def api_quran_chapter_audio(moshaf_id, chapter_id):
     key = f"audio:{moshaf_id}:{chapter_id}"
@@ -335,13 +503,16 @@ def api_quran_chapter_audio(moshaf_id, chapter_id):
         _quran_cache.pop(key, None)
         return jsonify({"error": str(e)}), 500
 
+
 _QURAN_TRANS_IDS = {"en": 20, "ta": 133}
 _QURAN_TRANS_NAMES = {"en": "Saheeh International", "ta": "Abdul Hameed Baqavi"}
+
 
 def _strip_verse_html(text):
     text = re.sub(r"<sup[^>]*>.*?</sup>", "", text, flags=re.S)
     text = re.sub(r"<[^>]+>", "", text)
     return text.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">").replace("&#39;", "'").replace("&quot;", '"').strip()
+
 
 @app.route("/api/quran/translation/<int:chapter_id>")
 def api_quran_translation(chapter_id):
@@ -369,5 +540,462 @@ def api_quran_translation(chapter_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
+_DISCORD_CLIENT_ID = "1558502162080858172"
+_DISCORD_LOGO_URL = "https://raw.githubusercontent.com/goldstac/quran/main/app_logo.png"
+_DISCORD_REPO_URL = "https://github.com/goldstac/quran"
+
+
+def _discord_decorate(activity):
+    a = dict(activity)
+    a.setdefault("type", 2)
+    a.setdefault("status_display_type", 2)
+    a.setdefault("assets", {"large_image": _DISCORD_LOGO_URL, "large_text": "Quran"})
+    a.setdefault("buttons", [{"label": "Get Quran", "url": _DISCORD_REPO_URL}])
+    return a
+
+
+def _discord_socket_paths():
+    if sys.platform == "win32":
+        return [rf"\\.\pipe\discord-ipc-{i}" for i in range(10)]
+    if sys.platform == "darwin":
+        return [os.path.join(os.environ.get("TMPDIR", "/tmp"), "discord-ipc-0")]
+    runtime = os.environ.get("XDG_RUNTIME_DIR")
+    return ([os.path.join(runtime, "discord-ipc-0")] if runtime else []) + ["/tmp/discord-ipc-0"]
+
+
+class DiscordBridge:
+    RETRY_INTERVAL = 5
+    HEARTBEAT_TIMEOUT = 120
+    CONNECT_TIMEOUT = 10
+
+    def __init__(self):
+        self._lock = threading.Lock()
+        self._enabled = False
+        self._activity = None
+        self._sock = None
+        self._connected = False
+        self._last_sent = None
+        self._last_seen = 0.0
+        self._last_try = 0.0
+        self._connect_at = 0.0
+        threading.Thread(target=self._loop, daemon=True).start()
+
+    def set(self, enabled=False, activity=None):
+        with self._lock:
+            self._enabled = bool(enabled)
+            self._last_seen = time.time()
+            self._activity = activity if enabled else None
+
+    def touch(self):
+        with self._lock:
+            self._last_seen = time.time()
+
+    def state(self):
+        with self._lock:
+            if not self._enabled:
+                return "off"
+            if self._connected:
+                return "connected"
+            if self._sock is not None:
+                return "connecting"
+            return "no-discord"
+
+    def _loop(self):
+        while True:
+            try:
+                self._step()
+            except Exception:
+                pass
+            time.sleep(0.5)
+
+    def _step(self):
+        now = time.time()
+        with self._lock:
+            enabled = self._enabled
+            sock = self._sock
+            stale = now - self._last_seen > self.HEARTBEAT_TIMEOUT
+            connecting_since = self._connect_at
+        if not enabled or stale:
+            if sock is not None:
+                self._clear(sock)
+            return
+        if sock is None:
+            if now - self._last_try < self.RETRY_INTERVAL:
+                return
+            self._last_try = now
+            new = _discord_socket_connect()
+            if new is None:
+                return
+            with self._lock:
+                self._sock = new
+                self._connected = False
+                self._last_sent = None
+                self._connect_at = now
+            try:
+                _discord_send_frame(new, 0, {"v": 1, "client_id": _DISCORD_CLIENT_ID})
+            except OSError:
+                self._drop(new)
+                return
+            threading.Thread(target=self._reader, args=(new,), daemon=True).start()
+            return
+        with self._lock:
+            connected = self._connected
+            activity = self._activity
+            last_sent = self._last_sent
+        if not connected and now - connecting_since > self.CONNECT_TIMEOUT:
+            self._drop(sock)
+            return
+        if connected and activity is not last_sent:
+            payload = None
+            if isinstance(activity, dict):
+                payload = _discord_decorate(activity)
+            try:
+                _discord_send_frame(
+                    sock, 1,
+                    {
+                        "cmd": "SET_ACTIVITY",
+                        "args": {
+                            "pid": os.getpid(),
+                            "activity": payload or {},
+                        },
+                        "nonce": uuid.uuid4().hex[:12],
+                    },
+                )
+            except OSError:
+                self._drop(sock)
+                return
+            with self._lock:
+                self._last_sent = activity
+
+    def _reader(self, sock):
+        buf = b""
+        try:
+            while True:
+                chunk = sock.recv(65536)
+                if not chunk:
+                    break
+                buf += chunk
+                while len(buf) >= 8:
+                    length = int.from_bytes(buf[4:8], "little")
+                    if len(buf) < 8 + length:
+                        break
+                    opcode = int.from_bytes(buf[0:4], "little")
+                    payload = buf[8:8 + length]
+                    buf = buf[8 + length:]
+                    if opcode == 1:
+                        try:
+                            msg = json.loads(payload.decode("utf-8"))
+                        except ValueError:
+                            continue
+                        if msg.get("evt") == "READY":
+                            with self._lock:
+                                self._connected = True
+                                self._last_sent = None
+        except OSError:
+            pass
+        self._drop(sock)
+
+    def _clear(self, sock):
+        try:
+            _discord_send_frame(
+                sock, 1,
+                {
+                    "cmd": "SET_ACTIVITY",
+                    "args": {"pid": os.getpid(), "activity": {}},
+                    "nonce": uuid.uuid4().hex[:12],
+                },
+            )
+        except OSError:
+            pass
+        self._drop(sock)
+
+    def _drop(self, sock):
+        if sock is None:
+            return
+        with self._lock:
+            if self._sock is sock:
+                self._sock = None
+                self._connected = False
+                self._last_sent = None
+        try:
+            sock.close()
+        except OSError:
+            pass
+
+
+def _discord_socket_connect():
+    for path in _discord_socket_paths():
+        try:
+            s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            s.settimeout(3)
+            s.connect(path)
+            s.settimeout(None)
+            return s
+        except OSError:
+            continue
+    return None
+
+
+def _discord_send_frame(sock, opcode, payload):
+    data = json.dumps(payload).encode("utf-8")
+    header = opcode.to_bytes(4, "little") + len(data).to_bytes(4, "little")
+    sock.sendall(header + data)
+
+
+_discord = DiscordBridge()
+_DISCORD_PREF_FILE = os.path.join(DATA_DIR, "discord.json")
+
+
+def _discord_pref_read():
+    try:
+        with open(_DISCORD_PREF_FILE) as f:
+            return bool(json.load(f).get("enabled"))
+    except Exception:
+        return None
+
+
+def _discord_pref_write(enabled):
+    try:
+        with open(_DISCORD_PREF_FILE, "w") as f:
+            json.dump({"enabled": bool(enabled)}, f)
+    except Exception:
+        pass
+
+
+@app.route("/api/discord", methods=["POST"])
+def api_discord():
+    data = request.json or {}
+    _discord.set(bool(data.get("enabled")), data.get("activity"))
+    if data.get("remember"):
+        _discord_pref_write(bool(data.get("enabled")))
+    return jsonify({"ok": True})
+
+
+@app.route("/api/discord/status")
+def api_discord_status():
+    if request.args.get("alive") == "1":
+        _discord.touch()
+    return jsonify({"state": _discord.state(), "enabled": _discord_pref_read()})
+
+
+_GH_RELEASES_URL = "https://api.github.com/repos/goldstac/quran/releases?per_page=60"
+UPDATE_DIR = os.path.join(DATA_DIR, "updates")
+
+_update_lock = threading.Lock()
+_update_cache = {"at": 0, "releases": None}
+_update_state = {
+    "state": "idle",
+    "tag": "",
+    "asset": "",
+    "downloaded": 0,
+    "total": 0,
+    "path": "",
+    "error": "",
+}
+
+
+def _prune_update_downloads():
+    for name in os.listdir(UPDATE_DIR) if os.path.isdir(UPDATE_DIR) else []:
+        try:
+            os.remove(os.path.join(UPDATE_DIR, name))
+        except OSError:
+            pass
+
+
+_prune_update_downloads()
+
+
+def _update_asset_matches(name):
+    n = (name or "").lower()
+    if sys.platform == "win32":
+        return n.endswith(".exe") and "setup" in n
+    if sys.platform == "darwin":
+        return n.endswith(".dmg")
+    return n.endswith(".appimage")
+
+
+def _fetch_releases():
+    req = urllib.request.Request(
+        _GH_RELEASES_URL,
+        headers={"Accept": "application/vnd.github+json", "User-Agent": "quran-app"},
+    )
+    with urllib.request.urlopen(req, timeout=15) as resp:
+        return json.loads(resp.read().decode("utf-8"))
+
+
+def _releases(force=False):
+    with _update_lock:
+        cached = _update_cache["releases"]
+        fresh = cached is not None and not force and (time.time() - _update_cache["at"]) < 300
+    if fresh:
+        return cached, None
+    try:
+        raw = _fetch_releases()
+    except Exception as e:
+        return (cached or []), ("stale cache" if cached else str(e))
+    out = []
+    for rel in raw:
+        best = None
+        for a in rel.get("assets", []):
+            if _update_asset_matches(a.get("name")):
+                if best is None or a.get("size", 0) > best.get("size", 0):
+                    best = a
+        out.append({
+            "tag": rel.get("tag_name", ""),
+            "name": rel.get("name") or rel.get("tag_name", ""),
+            "prerelease": bool(rel.get("prerelease")),
+            "published_at": rel.get("published_at"),
+            "asset": None if best is None else {
+                "name": best.get("name", ""),
+                "size": best.get("size", 0),
+                "url": best.get("browser_download_url", ""),
+            },
+        })
+    with _update_lock:
+        _update_cache["releases"] = out
+        _update_cache["at"] = time.time()
+    return out, None
+
+
+@app.route("/api/updates")
+def api_updates():
+    force = request.args.get("refresh") == "1"
+    releases, error = _releases(force=force)
+    return jsonify({
+        "current": app_version(),
+        "platform": sys.platform,
+        "releases": releases,
+        "error": error,
+    })
+
+
+@app.route("/api/update", methods=["POST"])
+def api_update():
+    data = request.json or {}
+    tag = (data.get("tag") or "").strip()
+    if not tag:
+        return jsonify({"ok": False, "error": "No version selected"}), 400
+    if not tag.startswith("v"):
+        tag = "v" + tag
+    with _update_lock:
+        if _update_state["state"] == "downloading":
+            return jsonify({"ok": False, "error": "An update is already downloading"}), 409
+    releases, _ = _releases()
+    rel = next((r for r in releases if r.get("tag") == tag), None)
+    if rel is None:
+        return jsonify({"ok": False, "error": f"Release {tag} was not found"}), 404
+    asset = rel.get("asset")
+    if not asset:
+        return jsonify({"ok": False, "error": f"{tag} has no installer for this platform"}), 400
+    threading.Thread(
+        target=_run_update,
+        args=(rel["tag"], asset["url"], asset["name"], asset["size"]),
+        daemon=True,
+    ).start()
+    return jsonify({"ok": True, "tag": tag, "asset": asset["name"]})
+
+
+def _run_update(tag, url, name, size):
+    with _update_lock:
+        _update_state.update(
+            state="downloading", tag=tag, asset=name, downloaded=0,
+            total=size or 0, path="", error="",
+        )
+    os.makedirs(UPDATE_DIR, exist_ok=True)
+    dest = os.path.join(UPDATE_DIR, name)
+    tmp = dest + ".part"
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "quran-app"})
+        with urllib.request.urlopen(req, timeout=60) as resp, open(tmp, "wb") as f:
+            total = size or int(resp.headers.get("Content-Length") or 0)
+            with _update_lock:
+                _update_state["total"] = total
+            got = 0
+            while True:
+                chunk = resp.read(262144)
+                if not chunk:
+                    break
+                f.write(chunk)
+                got += len(chunk)
+                with _update_lock:
+                    _update_state["downloaded"] = got
+        os.replace(tmp, dest)
+    except Exception as e:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+        with _update_lock:
+            _update_state.update(state="error", error=str(e))
+        return
+    try:
+        _apply_update(dest, tag)
+    except Exception as e:
+        with _update_lock:
+            _update_state.update(state="error", error=str(e))
+
+
+def _apply_update(path, tag):
+    if sys.platform == "win32":
+        subprocess.Popen([path])
+        with _update_lock:
+            _update_state.update(state="launched", path=path)
+        return
+    if sys.platform == "darwin":
+        subprocess.Popen(["open", path])
+        with _update_lock:
+            _update_state.update(state="launched", path=path)
+        return
+    os.chmod(path, 0o755)
+    running = os.environ.get("APPIMAGE")
+    if running and os.path.isfile(running):
+        shutil.copy2(path, running)
+        os.chmod(running, 0o755)
+        try:
+            os.remove(path)
+        except OSError:
+            pass
+        with _update_lock:
+            _update_state.update(state="installed", path=running)
+    else:
+        with _update_lock:
+            _update_state.update(state="downloaded", path=path)
+
+
+@app.route("/api/update/status")
+def api_update_status():
+    with _update_lock:
+        return jsonify(dict(_update_state))
+
+
+@app.route("/api/update/run", methods=["POST"])
+def api_update_run():
+    with _update_lock:
+        path = _update_state["path"]
+        state = _update_state["state"]
+    if state not in ("downloaded", "installed") or not path or not os.path.isfile(path):
+        return jsonify({"ok": False, "error": "Nothing to run"}), 400
+    if sys.platform == "darwin":
+        subprocess.Popen(["open", path])
+    elif sys.platform == "win32":
+        os.startfile(path)  # type: ignore[attr-defined]
+    else:
+        subprocess.Popen([path])
+    return jsonify({"ok": True})
+
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--port", type=int, default=None, help="Port to run on. Default: auto-find from 5000")
+    args = parser.parse_args()
+
+    port = args.port if args.port else find_free_port()
+    host = "127.0.0.1" if getattr(sys, "frozen", False) else "0.0.0.0"
+
+    print(f"PORT={port}")
+    sys.stdout.flush()
+
+    watch_parent_stdin()
+
+    app.run(host=host, port=port, debug=False)

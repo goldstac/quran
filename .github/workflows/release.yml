@@ -2,117 +2,359 @@ name: Release
 
 on:
   push:
+    branches: [main, development]
     tags:
       - "v*"
+  pull_request:
+    branches: [main, development]
   workflow_dispatch:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
-  contents: write
+  contents: read
 
 jobs:
+  validate:
+    name: Validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: web/requirements.txt
+
+      - name: Install Python deps
+        run: python -m pip install -r web/requirements.txt
+
+      - name: Backend imports cleanly
+        working-directory: web
+        run: python -c "from app import app"
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install JavaScript deps
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Compiled JS is in sync with TypeScript
+        run: git diff --exit-code -- web/static/app.js
+
   build:
+    name: Build ${{ matrix.name }}
+    needs: validate
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
         include:
           - os: ubuntu-22.04
-            asset: quran-linux-x86_64.tar.gz
+            name: linux
+            target: x86_64-unknown-linux-gnu
+            tauri-bundles: appimage,deb
           - os: macos-latest
-            asset: quran-macos-aarch64.tar.gz
+            name: macos
+            target: aarch64-apple-darwin
+            tauri-bundles: dmg
           - os: windows-latest
-            asset: quran-windows-x86_64.zip
-    runs-on: ${{ matrix.os }}
+            name: windows
+            target: x86_64-pc-windows-msvc
+            tauri-bundles: nsis
+
     steps:
       - uses: actions/checkout@v4
 
-      - name: Read version
-        id: ver
-        shell: bash
-        run: echo "version=$(jq -r .version package.json)" >> "$GITHUB_OUTPUT"
-
-      - uses: dtolnay/rust-toolchain@stable
-
-      - uses: swatinem/rust-cache@v2
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          workspaces: tauri-app/src-tauri
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: web/requirements.txt
 
-      - name: Install Linux deps
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: tauri-app/src-tauri -> target
+
+      - name: Install Python build deps
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r web/requirements.txt pyinstaller
+
+      - name: Install Linux build deps
         if: runner.os == 'Linux'
+        shell: bash
         run: |
           sudo apt-get update
           sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev \
             libayatana-appindicator3-dev librsvg2-dev patchelf
 
-      - name: Build release binary
+      - name: Install JavaScript deps
+        shell: bash
+        run: npm ci
+
+      - name: Build backend sidecar
+        shell: bash
+        run: |
+          python build-backend-sidecar.py
+          python build-ytdlp-sidecar.py
+          echo "Built sidecars"
+          ls -R dist
+
+      - name: Smoke test backend sidecar
+        shell: bash
+        run: |
+          set -uo pipefail
+          TARGET="${{ matrix.target }}"
+          BACKEND="dist/quran-backend-${TARGET}"
+
+          if [ -d "$BACKEND" ]; then
+            echo "::error::${BACKEND} is a directory. Tauri externalBin needs one executable, so build with --onefile."
+            exit 1
+          fi
+          if [ -f "${BACKEND}.exe" ]; then
+            BACKEND="${BACKEND}.exe"
+          fi
+          if [ ! -f "$BACKEND" ]; then
+            echo "::error::backend sidecar not found at dist/quran-backend-${TARGET}"
+            exit 1
+          fi
+
+          export QURAN_DATA_DIR="$RUNNER_TEMP/quran-smoke-data"
+          mkdir -p "$QURAN_DATA_DIR"
+          "$BACKEND" > backend-output.txt 2>&1 &
+          BGPID=$!
+          cleanup() { kill "$BGPID" 2>/dev/null || true; }
+          trap cleanup EXIT
+
+          PORT=""
+          for _ in $(seq 1 60); do
+            PORT=$(sed -n 's/^PORT=//p' backend-output.txt | head -n 1 | tr -d '\r')
+            if [ -z "$PORT" ]; then
+              for p in $(seq 5000 5020); do
+                if curl -fsS -m 2 "http://127.0.0.1:${p}/" -o /dev/null 2>/dev/null; then
+                  PORT="$p"
+                  break
+                fi
+              done
+            fi
+            if [ -n "$PORT" ]; then
+              break
+            fi
+            if ! kill -0 "$BGPID" 2>/dev/null; then
+              echo "::error::backend exited before listening"
+              cat backend-output.txt || true
+              exit 1
+            fi
+            sleep 1
+          done
+
+          if [ -z "$PORT" ]; then
+            echo "::error::backend never announced a port"
+            cat backend-output.txt || true
+            exit 1
+          fi
+
+          echo "Backend answering on port ${PORT}"
+          OK=""
+          for _ in $(seq 1 30); do
+            if curl -fsS -m 5 "http://127.0.0.1:${PORT}/" -o /dev/null \
+              && curl -fsS -m 5 "http://127.0.0.1:${PORT}/api/library" -o /dev/null; then
+              OK=1
+              break
+            fi
+            sleep 1
+          done
+          if [ -z "$OK" ]; then
+            echo "::error::backend did not serve / or /api/library"
+            cat backend-output.txt || true
+            exit 1
+          fi
+          echo "smoke test OK"
+
+      - name: Stage sidecars for Tauri
+        shell: bash
+        run: |
+          set -euo pipefail
+          TARGET="${{ matrix.target }}"
+          mkdir -p tauri-app/src-tauri/bin
+          for name in quran-backend yt-dlp; do
+            SRC="dist/${name}-${TARGET}"
+            if [ -d "$SRC" ]; then
+              echo "::error::${SRC} is a directory, Tauri externalBin needs one executable"
+              exit 1
+            fi
+            if [ -f "${SRC}.exe" ]; then
+              SRC="${SRC}.exe"
+            fi
+            if [ ! -f "$SRC" ]; then
+              echo "::error::missing sidecar ${SRC}"
+              exit 1
+            fi
+            cp "$SRC" tauri-app/src-tauri/bin/
+          done
+          ls -l tauri-app/src-tauri/bin
+
+      - name: Build desktop installers
         working-directory: tauri-app/src-tauri
         shell: bash
-        run: cargo build --release
+        run: npx tauri build --target ${{ matrix.target }} --bundles ${{ matrix.tauri-bundles }}
 
-      - name: Package (unix)
-        if: runner.os != 'Windows'
+      - name: Fix AppImage bundling
+        if: runner.os == 'Linux'
         shell: bash
         run: |
-          set -euo pipefail
-          stage="quran-${{ steps.ver.outputs.version }}"
-          mkdir -p "$stage/web"
-          cp tauri-app/src-tauri/target/release/quran "$stage/"
-          if [ -d web/__pycache__ ]; then rm -rf web/__pycache__; fi
-          cp -R web/. "$stage/web/"
-          rm -rf "$stage/web/ts" "$stage/web/node_modules"
-          cp README.md PRIVACY.md TERMS.md "$stage/"
-          printf '%s\n' \
-            "Quran ${{ steps.ver.outputs.version }}" \
-            "" \
-            "Made for the Quran & nasheeds - not general music." \
-            "" \
-            "Requirements: Python 3.11+ with flask and flask-cors, yt-dlp on PATH." \
-            "" \
-            "Linux/macOS:   ./quran" \
-            "Windows:       quran.exe" \
-            "" \
-            "Keep the web/ folder next to the binary (or set QURAN_WEB_DIR)." \
-            > "$stage/START.txt"
-          tar -czf "${{ matrix.asset }}" "$stage"
+          chmod +x fix-appimage.sh
+          APPIMAGE_PATH=$(ls tauri-app/src-tauri/target/${{ matrix.target }}/release/bundle/appimage/*.AppImage)
+          ./fix-appimage.sh "$APPIMAGE_PATH"
+          ls -lh tauri-app/src-tauri/target/${{ matrix.target }}/release/bundle/appimage/
 
-      - name: Package (windows)
-        if: runner.os == 'Windows'
-        shell: bash
-        run: |
-          set -euo pipefail
-          stage="quran-${{ steps.ver.outputs.version }}"
-          mkdir -p "$stage/web"
-          cp tauri-app/src-tauri/target/release/quran.exe "$stage/"
-          cp -R web/. "$stage/web/"
-          rm -rf "$stage/web/ts" "$stage/web/node_modules" "$stage/web/__pycache__"
-          cp README.md PRIVACY.md TERMS.md "$stage/"
-          printf '%s\n' \
-            "Quran ${{ steps.ver.outputs.version }}" \
-            "" \
-            "Made for the Quran & nasheeds - not general music." \
-            "" \
-            "Requirements: Python 3.11+ with flask and flask-cors, yt-dlp on PATH." \
-            "" \
-            "Windows: quran.exe" \
-            "Keep the web/ folder next to the exe (or set QURAN_WEB_DIR)." \
-            > "$stage/START.txt"
-          7z a "${{ matrix.asset }}" "$stage"
-
-      - uses: actions/upload-artifact@v4
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.asset }}
-          path: ${{ matrix.asset }}
+          name: ${{ matrix.name }}-installers
+          path: |
+            tauri-app/src-tauri/target/${{ matrix.target }}/release/bundle/**
           if-no-files-found: error
 
-  release:
+  runtime-test:
+    name: Runtime test ${{ matrix.name }}
     needs: build
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            name: windows
+            artifact: windows-installers
+          - os: macos-latest
+            name: macos
+            artifact: macos-installers
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: installers
+
+      - name: Install and launch the Windows app
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $installer = Get-ChildItem -Path installers -Recurse -Filter *.exe | Select-Object -First 1
+          if (-not $installer) { throw 'no Windows installer found' }
+          $p = Start-Process -FilePath $installer.FullName -ArgumentList '/S' -Wait -PassThru
+          Write-Output "installer exit code: $($p.ExitCode)"
+          $app = Get-ChildItem -Path "$env:LOCALAPPDATA", "$env:ProgramFiles" -Recurse -Filter quran.exe -ErrorAction SilentlyContinue |
+            Select-Object -First 1
+          if (-not $app) { throw 'installed quran.exe not found' }
+          Write-Output "launching $($app.FullName)"
+          Start-Process -FilePath $app.FullName | Out-Null
+
+      - name: Launch the macOS app
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          DMG=$(find installers -name '*.dmg' | head -n 1)
+          if [ -z "$DMG" ]; then
+            echo "::error::no dmg found in macos-installers"
+            exit 1
+          fi
+          hdiutil attach "$DMG" -nobrowse -quiet
+          APP=$(ls -d /Volumes/*/*.app 2>/dev/null | head -n 1)
+          if [ -z "$APP" ]; then
+            echo "::error::no .app found in the mounted dmg"
+            hdiutil detach /Volumes/* -quiet || true
+            exit 1
+          fi
+          cp -R "$APP" "$HOME/Quran.app"
+          hdiutil detach /Volumes/* -quiet || true
+          nohup "$HOME/Quran.app/Contents/MacOS/quran" > /tmp/quran-app.log 2>&1 < /dev/null &
+          echo "app pid $!"
+
+      - name: Wait for backend and verify endpoints
+        shell: bash
+        run: |
+          set -u
+          for i in $(seq 1 90); do
+            if curl -fsS -m 5 "http://127.0.0.1:5000/" -o /dev/null 2>/dev/null \
+               && curl -fsS -m 5 "http://127.0.0.1:5000/api/version" -o /tmp/ver.json 2>/dev/null; then
+              echo "backend is up on 127.0.0.1:5000"
+              echo -n "version endpoint: "
+              cat /tmp/ver.json
+              echo
+              echo "runtime test OK"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::packaged app never served the backend on 127.0.0.1:5000"
+          [ -f /tmp/quran-app.log ] && cat /tmp/quran-app.log || true
+          exit 1
+
+      - name: Kill app and verify backend exits (orphan fix)
+        shell: bash
+        run: |
+          set -u
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            powershell -Command "Stop-Process -Name quran -Force -ErrorAction SilentlyContinue"
+          else
+            pkill -x quran 2>/dev/null || true
+          fi
+          sleep 10
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            if powershell -Command "Get-Process -Name quran-backend -ErrorAction SilentlyContinue" | Select-Object -First 20 | grep -q quran; then
+              echo "::error::backend still running after the app was killed"
+              exit 1
+            fi
+          else
+            if pgrep -x quran-backend >/dev/null; then
+              echo "::error::backend still running after the app was killed"
+              pgrep -af quran-backend || true
+              exit 1
+            fi
+          fi
+          echo "backend exited with the app - orphan fix OK"
+
+  release:
+    needs: [build, runtime-test]
+    if: startsWith(github.ref, 'refs/tags/')
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
-
-      - name: Read version
-        id: ver
-        shell: bash
-        run: echo "version=$(jq -r .version package.json)" >> "$GITHUB_OUTPUT"
 
       - uses: actions/download-artifact@v4
         with:
@@ -122,36 +364,21 @@ jobs:
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          name: Quran ${{ steps.ver.outputs.version }}
-          tag_name: ${{ github.ref_name }}
           draft: false
-          prerelease: false
-          fail_on_unmatched_files: true
+          prerelease: ${{ contains(github.ref_name, '-') }}
           files: |
-            dist/*.tar.gz
-            dist/*.zip
+            dist/**/*.AppImage
+            dist/**/*.deb
+            dist/**/*.dmg
+            dist/**/*.msi
+            dist/**/*.exe
           body: |
-            ## Quran ${{ steps.ver.outputs.version }}
+            ## Quran release
 
-            Local player for the **Quran** and Islamic **nasheeds**. No accounts, no tracking.
+            Desktop installers are bundled with the Python backend and yt-dlp sidecars, so you install nothing else.
 
-            ### Downloads
-            | Platform | File |
-            |---|---|
-            | Linux (x86_64) | `quran-linux-x86_64.tar.gz` |
-            | macOS (Apple Silicon) | `quran-macos-aarch64.tar.gz` |
-            | Windows (x86_64) | `quran-windows-x86_64.zip` |
+            - Linux: AppImage and Debian package
+            - macOS: DMG
+            - Windows: EXE
 
-            Unzip, keep `web/` next to the binary, then run it. See `START.txt`.
-
-            **Needs on your machine:** Python 3.11+ (`flask`, `flask-cors`) and [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) on `PATH`.
-
-            ### Highlights
-            - **Quran**: all 114 surahs, 170+ reciters, ayah reader with big Arabic text + English/Tamil translation, click any ayah to jump
-            - **Nasheed search** on YouTube with local library, likes, playlists
-            - Range-aware audio proxy (seeking works), shuffle, loop-one, keyboard shortcuts, media keys
-            - Everything stored locally on your device
-
-            ### Notes
-            - Builds are **unsigned**. macOS may need *Right-click → Open* (or `xattr -d com.apple.quarantine`), Windows SmartScreen may warn (More info → Run anyway).
-            - Still happy from source? `./run-web.sh` works as before.
+            The Flask self-hosting setup remains available as an optional source install for advanced users.

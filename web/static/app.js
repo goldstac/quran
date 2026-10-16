@@ -427,6 +427,10 @@ $$('.nav-item').forEach((btn) => btn.addEventListener('click', () => {
         $('#quran-view').classList.add('active');
         loadQuran();
     }
+    else if (v === 'settings') {
+        $('#settings-view').classList.add('active');
+        void loadSettings();
+    }
     else {
         $('#library-view').classList.add('active');
         loadLib(v);
@@ -531,9 +535,11 @@ function applyQuranReciter(id, scroll = true) {
         });
         if (currentSong?.kind === 'quran') {
             currentSong.reciter_id = id;
+            currentSong.channel = quranReciterName(id);
             currentSong.stream_url = undefined;
             currentSong.id = `quran:${id}:${currentSong.chapter_id}`;
             updatePlayer();
+            pushDiscord(true);
         }
         renderQuranList();
     }
@@ -976,7 +982,9 @@ function makeRow(song, idx, ctx) {
       <button class="track-act play-act" title="Play"><i class="fa-solid fa-play"></i></button>
       ${canRemove ? '<button class="track-act rem-act" title="Remove"><i class="fa-solid fa-trash"></i></button>' : ''}
       ${isQuran ? '' : `<button class="track-act fav-act" title="Like"><i class="${heart}"></i></button>
-      <button class="track-act pl-act" title="Add to playlist"><i class="fa-solid fa-plus"></i></button>`}
+      <button class="track-act pl-act" title="Add to playlist"><i class="fa-solid fa-plus"></i></button>
+      <button class="track-act yt-act" title="See on YouTube"><i class="fa-brands fa-youtube"></i></button>
+      <button class="track-act disc-act" title="Shown in Discord presence"><i class="fa-solid fa-eye"></i></button>`}
     </div>`;
     r.addEventListener('dblclick', () => playSong(song, idx, ctx));
     let warmTimer;
@@ -990,6 +998,17 @@ function makeRow(song, idx, ctx) {
     if (!isQuran) {
         r.querySelector('.fav-act').addEventListener('click', (e) => { e.stopPropagation(); toggleFav(song); });
         r.querySelector('.pl-act').addEventListener('click', (e) => { e.stopPropagation(); addToPl(song); });
+        r.querySelector('.yt-act').addEventListener('click', (e) => { e.stopPropagation(); seeOnYouTube(song); });
+        const discBtn = r.querySelector('.disc-act');
+        if (discBtn) {
+            const hidden = discIsHidden(song.id);
+            const icon = discBtn.querySelector('i');
+            if (icon)
+                icon.className = hidden ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
+            discBtn.classList.toggle('disc-hide', hidden);
+            discBtn.title = hidden ? 'Hidden from Discord presence' : 'Shown in Discord presence';
+            discBtn.addEventListener('click', (e) => { e.stopPropagation(); discToggleSong(song); });
+        }
     }
     if (canRemove) {
         r.querySelector('.rem-act').addEventListener('click', (e) => { e.stopPropagation(); removeFromList(song); });
@@ -1078,6 +1097,7 @@ async function playSong(song, idx, _ctx, keepQueue = false) {
     if (song.kind !== 'quran')
         recordRecent(song);
     updatePlayer();
+    pushDiscord(true);
     $$('.track-row').forEach((r) => r.classList.toggle('playing', r.dataset.id === song.id));
     startingId = song.id;
     setBuffering(true);
@@ -1129,6 +1149,7 @@ function updatePlayer() {
             icon.className = currentSong.kind === 'quran' ? 'fa-solid fa-book-quran' : 'fa-solid fa-music';
     }
     $('#fav-btn i').className = currentSong.favorite ? 'fa-solid fa-heart fav-on' : 'fa-regular fa-heart';
+    $('#yt-btn').classList.toggle('hidden', currentSong.kind === 'quran');
     syncQuranTranslation();
     if ('mediaSession' in navigator) {
         navigator.mediaSession.metadata = new MediaMetadata({
@@ -1140,6 +1161,11 @@ function updatePlayer() {
     }
 }
 // --- CONTROLS ---
+$('#yt-btn').addEventListener('click', () => {
+    if (!currentSong || currentSong.kind === 'quran')
+        return;
+    seeOnYouTube(currentSong);
+});
 $('#fav-btn').addEventListener('click', () => {
     if (!currentSong)
         return;
@@ -1230,10 +1256,22 @@ audio.addEventListener('ended', () => {
         resetPlayer();
     }
 });
-audio.addEventListener('play', () => syncIcons());
+audio.addEventListener('play', () => {
+    syncIcons();
+    dcLastRefresh = 0;
+    pushDiscord(true);
+});
+audio.addEventListener('loadedmetadata', () => {
+    if (!audio.paused) {
+        dcLastRefresh = 0;
+        pushDiscord(true);
+    }
+});
 audio.addEventListener('pause', () => {
     startingId = null;
     setBuffering(false);
+    if (discordEnabled)
+        dcPause();
 });
 audio.addEventListener('playing', () => {
     startingId = null;
@@ -1256,12 +1294,16 @@ function resetPlayer() {
     $('#player-thumb').style.display = 'none';
     $('#player-thumb-ph').style.display = 'flex';
     $('#fav-btn i').className = 'fa-regular fa-heart';
+    $('#yt-btn').classList.add('hidden');
     seek.setValue(0);
     $('#time-pos').textContent = '0:00';
     $('#time-dur').textContent = '0:00';
     $$('.track-row').forEach((r) => r.classList.remove('playing'));
     audio.removeAttribute('src');
     syncQuranTranslation();
+    dcLastRefresh = 0;
+    if (discordEnabled)
+        dcClear();
     if ('mediaSession' in navigator)
         navigator.mediaSession.metadata = null;
 }
@@ -1330,6 +1372,8 @@ seek.onInput = (p) => {
 };
 seek.onChange = () => {
     progressDrag = false;
+    dcLastRefresh = 0;
+    pushDiscord(true);
 };
 const seekTip = document.createElement('div');
 seekTip.className = 'seek-tip';
@@ -1354,6 +1398,7 @@ setInterval(() => {
     $('#time-pos').textContent = fmt(audio.currentTime);
     $('#time-dur').textContent = fmt(audio.duration);
     highlightTransAyah(true);
+    pushDiscord();
 }, 250);
 // --- VOLUME ---
 const savedVol = load('ns_vol', 70);
@@ -1363,6 +1408,7 @@ vol.onInput = (p) => {
     audio.volume = p / 100;
     store('ns_vol', Math.round(p));
     updateVolIcon();
+    syncSettingsVol();
 };
 $('#vol-btn').addEventListener('click', () => {
     audio.muted = !audio.muted;
@@ -1495,6 +1541,16 @@ async function addToPl(song) {
     });
     loadPlaylists();
     toast('Added to ' + name);
+}
+function seeOnYouTube(song) {
+    fetch(`${API}/api/open`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: `https://www.youtube.com/watch?v=${encodeURIComponent(song.id)}` }),
+    }).then((r) => {
+        if (!r.ok)
+            toast('Could not open YouTube');
+    }).catch(() => toast('Could not open YouTube'));
 }
 // --- PLAYLISTS ---
 async function deletePlaylist(name) {
@@ -1630,6 +1686,360 @@ $('#add-pl-btn').addEventListener('click', async () => {
     loadPlaylists();
     toast('Created playlist: ' + name);
 });
+// --- DISCORD PRESENCE ---
+let discordEnabled = load('ns_discord', false);
+let dcLastRefresh = 0;
+function discHiddenIds() {
+    return load('ns_discord_hidden', []);
+}
+function discIsHidden(id) {
+    return discHiddenIds().includes(id);
+}
+function discSetHidden(id, hidden) {
+    const set = discHiddenIds().filter((x) => x !== id);
+    if (hidden)
+        set.push(id);
+    store('ns_discord_hidden', set);
+}
+function syncDiscBtns(id) {
+    const hidden = discIsHidden(id);
+    $$(`.track-row[data-id="${id}"] .disc-act`).forEach((b) => {
+        const icon = b.querySelector('i');
+        if (icon)
+            icon.className = hidden ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
+        b.classList.toggle('disc-hide', hidden);
+        b.title = hidden ? 'Hidden from Discord presence' : 'Shown in Discord presence';
+    });
+}
+function discToggleSong(song) {
+    const hidden = !discIsHidden(song.id);
+    discSetHidden(song.id, hidden);
+    syncDiscBtns(song.id);
+    toast(hidden ? 'Hidden from Discord presence' : 'Shown in Discord presence');
+    if (currentSong && currentSong.id === song.id)
+        pushDiscord(true);
+}
+function setDiscordStatus(state) {
+    const el = $('#set-discord-status');
+    if (!el)
+        return;
+    el.classList.remove('ok', 'warn', 'err');
+    if (state === 'connected') {
+        el.textContent = 'Connected';
+        el.classList.add('ok');
+    }
+    else if (state === 'connecting') {
+        el.textContent = 'Connecting...';
+        el.classList.add('warn');
+    }
+    else if (state === 'not-running') {
+        el.textContent = 'Discord not running';
+        el.classList.add('warn');
+    }
+    else if (state === 'error') {
+        el.textContent = 'Status unavailable';
+        el.classList.add('err');
+    }
+    else {
+        el.textContent = 'Off';
+    }
+}
+function dcActivity(paused = false) {
+    if (!currentSong || discIsHidden(currentSong.id))
+        return null;
+    const channel = currentSong.channel || '';
+    const a = {
+        details: currentSong.title,
+        state: paused ? (channel ? 'Paused - ' + channel : 'Paused') : (channel || 'Quran'),
+    };
+    if (!paused) {
+        const start = Date.now() - Math.round(audio.currentTime * 1000);
+        const dur = Number.isFinite(audio.duration) && audio.duration > 0
+            ? audio.duration
+            : (currentSong.duration || 0);
+        a.timestamps = dur ? { start, end: start + Math.round(dur * 1000) } : { start };
+    }
+    return a;
+}
+function dcPause() {
+    if (!discordEnabled)
+        return;
+    dcLastRefresh = Date.now();
+    dcPost({ enabled: true, activity: dcActivity(true) });
+}
+function dcPost(body) {
+    void getJSON(`${API}/api/discord`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+    }).catch(() => undefined);
+}
+function pushDiscord(force = false) {
+    const now = Date.now();
+    if (!discordEnabled || now - dcLastRefresh < (force ? 0 : 30000))
+        return;
+    dcLastRefresh = now;
+    dcPost({ enabled: true, activity: dcActivity(audio.paused) });
+}
+function dcClear() {
+    if (!discordEnabled)
+        return;
+    dcPost({ enabled: true, activity: null });
+}
+function pollDiscordStatus() {
+    if (!discordEnabled)
+        return;
+    void getJSON(`${API}/api/discord/status?alive=1`)
+        .then((d) => {
+        if (!discordEnabled)
+            return;
+        if (d.state === 'connected')
+            setDiscordStatus('connected');
+        else if (d.state === 'connecting')
+            setDiscordStatus('connecting');
+        else if (d.state === 'off') {
+            setDiscordStatus('connecting');
+            pushDiscord(true);
+        }
+        else
+            setDiscordStatus('not-running');
+    })
+        .catch(() => {
+        if (discordEnabled)
+            setDiscordStatus('error');
+    });
+}
+function syncDiscordUI() {
+    $('#set-discord').checked = discordEnabled;
+    if (discordEnabled) {
+        dcPost({ enabled: true, activity: dcActivity() });
+        dcLastRefresh = Date.now();
+        pollDiscordStatus();
+    }
+    else {
+        setDiscordStatus('off');
+    }
+}
+$('#set-discord').addEventListener('change', (e) => {
+    discordEnabled = e.target.checked;
+    store('ns_discord', discordEnabled);
+    dcLastRefresh = 0;
+    if (discordEnabled) {
+        pollDiscordStatus();
+        dcPost({ enabled: true, activity: dcActivity(audio.paused), remember: true });
+    }
+    else {
+        dcPost({ enabled: false, activity: null, remember: true });
+        setDiscordStatus('off');
+    }
+});
+async function initDiscord() {
+    let remote = null;
+    try {
+        const d = await getJSON(`${API}/api/discord/status`);
+        if (typeof d.enabled === 'boolean')
+            remote = d.enabled;
+    }
+    catch { }
+    if (remote !== null) {
+        discordEnabled = remote;
+        store('ns_discord', discordEnabled);
+    }
+    else if (discordEnabled) {
+        dcPost({ enabled: true, activity: null, remember: true });
+    }
+    syncDiscordUI();
+}
+setInterval(pollDiscordStatus, 2000);
+window.addEventListener('pagehide', () => {
+    if (!discordEnabled || !navigator.sendBeacon)
+        return;
+    const body = new Blob([JSON.stringify({ enabled: false, activity: null })], { type: 'application/json' });
+    navigator.sendBeacon(`${API}/api/discord`, body);
+});
+// --- SETTINGS ---
+let appVersion = '';
+let updateBusy = false;
+let updatePoll = null;
+let latestTag = '';
+const $settingsVolOrigin = $('#settings-volume-bar');
+const settingsVol = new Slider($settingsVolOrigin);
+function syncSettingsVol() {
+    const p = Math.round(vol.getValue());
+    settingsVol.setValue(p);
+    $('#set-vol-label').textContent = p + '%';
+}
+settingsVol.onInput = (p) => {
+    audio.volume = p / 100;
+    store('ns_vol', Math.round(p));
+    vol.setValue(p);
+    updateVolIcon();
+    $('#set-vol-label').textContent = Math.round(p) + '%';
+};
+async function loadSettings() {
+    try {
+        const d = await getJSON(`${API}/api/version`);
+        appVersion = d.version || '';
+        $('#set-version').textContent = appVersion ? 'v' + appVersion : 'unknown';
+    }
+    catch {
+        $('#set-version').textContent = 'unknown';
+    }
+}
+async function loadSidebarVersion() {
+    const ver = $('#sidebar-ver');
+    try {
+        const d = await getJSON(`${API}/api/version`);
+        if (d.version)
+            ver.textContent = 'v' + d.version;
+    }
+    catch {
+        ver.textContent = '';
+    }
+}
+$('#set-check').addEventListener('click', () => {
+    void loadReleases(true);
+});
+function fmtMB(n) {
+    if (!n || n <= 0)
+        return '';
+    return (n / 1048576).toFixed(1) + ' MB';
+}
+function setUpdateBusy(busy) {
+    updateBusy = busy;
+    $('#set-check').classList.toggle('disabled', busy);
+    $('#set-update').disabled = busy;
+}
+async function loadReleases(refresh) {
+    const note = $('#set-check-note');
+    note.textContent = 'Checking GitHub...';
+    if (refresh)
+        $('#set-update').setAttribute('disabled', '');
+    try {
+        const d = await getJSON(`${API}/api/updates${refresh ? '?refresh=1' : ''}`);
+        const rels = d.releases || [];
+        const cur = 'v' + (d.current || '').replace(/^v/, '');
+        const installable = rels.find((r) => r.asset);
+        $('#set-latest').textContent = rels[0] ? rels[0].tag : 'unknown';
+        if (!installable) {
+            latestTag = '';
+            note.textContent = 'No installer available for this platform yet.';
+            $('#set-update').setAttribute('disabled', '');
+            return;
+        }
+        latestTag = installable.tag;
+        if (installable.tag === cur) {
+            note.textContent = 'You are on the newest release.';
+            $('#set-update').setAttribute('disabled', '');
+        }
+        else {
+            note.textContent = (d.error ? 'Showing cached results. ' : '') + 'Version ' + esc(installable.tag) + ' is available.';
+            $('#set-update').removeAttribute('disabled');
+        }
+    }
+    catch {
+        note.textContent = 'Could not reach GitHub right now.';
+    }
+}
+function startUpdatePoll() {
+    if (updatePoll !== null)
+        return;
+    updatePoll = window.setInterval(pollUpdate, 700);
+    void pollUpdate();
+}
+function stopUpdatePoll() {
+    if (updatePoll !== null) {
+        clearInterval(updatePoll);
+        updatePoll = null;
+    }
+}
+async function pollUpdate() {
+    let s;
+    try {
+        s = await getJSON(`${API}/api/update/status`);
+    }
+    catch {
+        return;
+    }
+    const wrap = $('#set-progress-wrap');
+    const fill = $('#set-progress-fill');
+    const text = $('#set-progress-text');
+    const note = $('#set-check-note');
+    const runBtn = $('#set-run');
+    if (s.state === 'downloading') {
+        wrap.hidden = false;
+        runBtn.hidden = true;
+        const pct = s.total ? Math.round((s.downloaded / s.total) * 100) : 0;
+        fill.style.width = pct + '%';
+        text.textContent = 'Downloading ' + s.asset + '  ' + (fmtMB(s.downloaded) + (s.total ? ' / ' + fmtMB(s.total) : '')) + (s.total ? ' (' + pct + '%)' : '');
+        note.textContent = 'Downloading ' + s.tag + '...';
+        setUpdateBusy(true);
+        return;
+    }
+    stopUpdatePoll();
+    setUpdateBusy(false);
+    if (s.state === 'installed') {
+        wrap.hidden = true;
+        runBtn.hidden = true;
+        note.innerHTML = 'Updated to <b>' + esc(s.tag) + '</b>. Restart Quran to use it.';
+    }
+    else if (s.state === 'downloaded') {
+        wrap.hidden = true;
+        runBtn.hidden = false;
+        note.innerHTML = 'Downloaded <b>' + esc(s.tag) + '</b> to <code>' + esc(s.path) + '</code>. Run it to use the new version.';
+    }
+    else if (s.state === 'launched') {
+        wrap.hidden = true;
+        runBtn.hidden = true;
+        note.innerHTML = 'Opened the <b>' + esc(s.tag) + '</b> installer. Follow its steps, then reopen Quran.';
+    }
+    else if (s.state === 'error') {
+        wrap.hidden = true;
+        runBtn.hidden = true;
+        note.textContent = 'Update failed: ' + (s.error || 'unknown error');
+    }
+}
+$('#set-update').addEventListener('click', async () => {
+    if (updateBusy)
+        return;
+    const tag = latestTag;
+    const note = $('#set-check-note');
+    if (!tag) {
+        note.textContent = 'Check for updates first.';
+        return;
+    }
+    const cur = 'v' + appVersion.replace(/^v/, '');
+    if (tag === cur) {
+        note.textContent = 'You already have ' + tag + ' installed.';
+        return;
+    }
+    setUpdateBusy(true);
+    note.textContent = 'Starting update to ' + tag + '...';
+    try {
+        const r = await fetch(`${API}/api/update`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tag }),
+        });
+        const d = (await r.json());
+        if (!r.ok || !d.ok) {
+            note.textContent = d.error || 'Could not start the update.';
+            setUpdateBusy(false);
+            return;
+        }
+        startUpdatePoll();
+    }
+    catch {
+        note.textContent = 'Could not reach the updater.';
+        setUpdateBusy(false);
+    }
+});
+$('#set-run').addEventListener('click', async () => {
+    const r = await fetch(`${API}/api/update/run`, { method: 'POST' });
+    const d = (await r.json());
+    if (!d.ok)
+        toast(d.error || 'Could not start it');
+});
 try {
     if ('mediaSession' in navigator) {
         navigator.mediaSession.setActionHandler('play', () => {
@@ -1656,3 +2066,6 @@ renderRecentQ();
 syncSearchUI();
 loadPlaylists();
 void loadQuranReciters();
+syncSettingsVol();
+void initDiscord();
+void loadSidebarVersion();
