@@ -32,9 +32,10 @@ matching section and note the platform when it is not cross-platform.
 
 ## Done
 
-- [x] See on YouTube: every YouTube nasheed row has a button that opens the
-  same video in the system browser via the backend (`/api/open`, YouTube hosts
-  only), since the Tauri webview cannot open external URLs itself.
+- [x] See on YouTube: every YouTube nasheed row has a button (and the player bar
+  has one for the current nasheed) that opens the same video in the system
+  browser via the backend (`/api/open`, YouTube hosts only), since the Tauri
+  webview cannot open external URLs itself.
 - [x] Faster, safer CI: a fast `validate` job on every push to `main`/`development`
   and every PR (Python import, `npm run build`, and a check that the committed
   `web/static/app.js` still matches `web/ts/app.ts`), pip/npm/Rust caching, the

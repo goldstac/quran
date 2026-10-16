@@ -74,7 +74,7 @@ Two app versions exist in this repo:
   - **Loop** is off↔one only, persisted (`ns_loop`).
   - **Recently Played** nav view reads localStorage `ns_recent` (cap 50, recorded in `playSong` via `recordRecent`). **Recent search chips** (`#recent-q`) read `ns_recentq` (cap 8, saved in `doSearch`); chips show only while the search input is empty.
   - **Library**: header has green Play (`#pl-play`) + shuffle-play, sort dropdown (`#lib-sort`, modes added/title/channel, persisted `ns_sort`), rename (pencil, playlists only). `loadLib` sets `currentLibMode`/`currentLibSource` (library/favorites are reversed to newest-first). Rows in library contexts get a trash (`rem-act`) → `removeFromList` (playlist context removes from that playlist, otherwise from library) — search-result rows have no trash.
-  - **See on YouTube**: every YouTube nasheed row (all views) has a `yt-act` button (YouTube brand icon) that POSTs `{url: https://www.youtube.com/watch?v=<song.id>}` to `/api/open`, which opens it in the system browser (`webbrowser.open`); Quran rows have no such button.
+  - **See on YouTube**: every YouTube nasheed row (all views) has a `yt-act` button (YouTube brand icon) that POSTs `{url: https://www.youtube.com/watch?v=<song.id>}` to `/api/open`, which opens it in the system browser (`webbrowser.open`); the player bar has the same action (`#yt-btn`, hidden for Quran). Quran rows have no such button.
   - **Media Session API** metadata + play/pause/prev/next handlers (guarded by `'mediaSession' in navigator`).
   - **Seek tooltip** (`#progress-bar .seek-tip`) shows timestamp on hover.
   - **Volume** persisted (`ns_vol`), restored on load.
