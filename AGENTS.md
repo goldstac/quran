@@ -16,7 +16,7 @@ Two app versions exist in this repo:
 - Build frontend TS → JS: `npm run build` (from repo root; compiles `web/ts/app.ts` → `web/static/app.js`). Use `npm run watch` during dev.
 - Build the desktop binary: `cargo build --release` (in `tauri-app/src-tauri/`) → `target/release/quran` (gitignored). Run it directly; it spawns the Flask backend itself. If the backend lives elsewhere, set `QURAN_WEB_DIR`. If port 5000 is already held (e.g. `run-web.sh` running), it just connects to the existing server.
 - No test suite, no linter configured. Verify Python loads cleanly before finishing: `python3 -c "from app import app"` (run from `web/`)
-- CI validation: push to `development`, then `gh workflow run release.yml --ref development`. The workflow builds all three platforms and has a `runtime-test` job that launches the packaged Windows/macOS apps, checks the backend on `127.0.0.1:5000`, and confirms the backend exits when the app is killed. Never release (tag push) until it passes.
+- CI: every push to `main`/`development` and every PR runs the fast `validate` job (Python import, `npm run build`, and a check that the committed `web/static/app.js` still matches `web/ts/app.ts`). The full pipeline is tag/dispatch only: `build` (three platforms, with pip/npm/Rust caching and the npm Tauri CLI) then `runtime-test` (launches the packaged Windows/macOS apps, checks the backend on `127.0.0.1:5000`, and confirms the backend exits when the app is killed). To validate before releasing: push to `development`, then `gh workflow run release.yml --ref development`. Never release (tag push) until it passes.
 
 ## Git & Conventional Commits
 
