@@ -1839,13 +1839,17 @@ $('#set-discord').addEventListener('change', (e) => {
 });
 
 async function initDiscord() {
+  let remote: boolean | null = null;
   try {
     const d = await getJSON<{ enabled?: boolean | null }>(`${API}/api/discord/status`);
-    if (typeof d.enabled === 'boolean') {
-      discordEnabled = d.enabled;
-      store('ns_discord', discordEnabled);
-    }
+    if (typeof d.enabled === 'boolean') remote = d.enabled;
   } catch {}
+  if (remote !== null) {
+    discordEnabled = remote;
+    store('ns_discord', discordEnabled);
+  } else if (discordEnabled) {
+    dcPost({ enabled: true, activity: null, remember: true });
+  }
   syncDiscordUI();
 }
 
