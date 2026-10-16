@@ -1,4 +1,4 @@
-import os, json, subprocess, re, threading, sys, socket, argparse, time, uuid, shutil, urllib.request
+import os, json, subprocess, re, threading, sys, socket, argparse, time, uuid, shutil, webbrowser, urllib.request, urllib.parse
 from pathlib import Path
 from flask import Flask, render_template, jsonify, request
 from flask_cors import CORS
@@ -208,6 +208,22 @@ def api_library():
 @app.route("/api/version")
 def api_version():
     return jsonify({"version": app_version(), "name": "Quran"})
+
+
+@app.route("/api/open", methods=["POST"])
+def api_open():
+    url = (request.json or {}).get("url", "")
+    parsed = urllib.parse.urlparse(url)
+    host = (parsed.hostname or "").lower()
+    if parsed.scheme != "https" or host not in (
+        "youtube.com", "www.youtube.com", "m.youtube.com", "music.youtube.com", "youtu.be",
+    ):
+        return jsonify({"ok": False, "error": "blocked"}), 400
+    try:
+        webbrowser.open(url)
+        return jsonify({"ok": True})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
 
 
 @app.route("/api/library/add", methods=["POST"])

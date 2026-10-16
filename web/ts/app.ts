@@ -1049,6 +1049,7 @@ function makeRow(song: Song, idx: number, ctx: string): HTMLElement {
       ${canRemove ? '<button class="track-act rem-act" title="Remove"><i class="fa-solid fa-trash"></i></button>' : ''}
       ${isQuran ? '' : `<button class="track-act fav-act" title="Like"><i class="${heart}"></i></button>
       <button class="track-act pl-act" title="Add to playlist"><i class="fa-solid fa-plus"></i></button>
+      <button class="track-act yt-act" title="See on YouTube"><i class="fa-brands fa-youtube"></i></button>
       <button class="track-act disc-act" title="Shown in Discord presence"><i class="fa-solid fa-eye"></i></button>`}
     </div>`;
 
@@ -1064,6 +1065,7 @@ function makeRow(song: Song, idx: number, ctx: string): HTMLElement {
   if (!isQuran) {
     r.querySelector('.fav-act')!.addEventListener('click', (e) => { e.stopPropagation(); toggleFav(song); });
     r.querySelector('.pl-act')!.addEventListener('click', (e) => { e.stopPropagation(); addToPl(song); });
+    r.querySelector('.yt-act')!.addEventListener('click', (e) => { e.stopPropagation(); seeOnYouTube(song); });
     const discBtn = r.querySelector<HTMLElement>('.disc-act');
     if (discBtn) {
       const hidden = discIsHidden(song.id);
@@ -1564,6 +1566,16 @@ async function addToPl(song: Song) {
   });
   loadPlaylists();
   toast('Added to ' + name);
+}
+
+function seeOnYouTube(song: Song) {
+  fetch(`${API}/api/open`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url: `https://www.youtube.com/watch?v=${encodeURIComponent(song.id)}` }),
+  }).then((r) => {
+    if (!r.ok) toast('Could not open YouTube');
+  }).catch(() => toast('Could not open YouTube'));
 }
 
 // --- PLAYLISTS ---
