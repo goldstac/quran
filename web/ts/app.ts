@@ -1855,20 +1855,8 @@ type UpdateStatus = {
   path: string;
   error: string;
 };
-type VersionEntry = {
-  tag: string;
-  asset: string;
-  size: number;
-  kind: string;
-  active: boolean;
-  present: boolean;
-};
-type VersionsResp = { running: string; active: string; versions: VersionEntry[] };
-type UpdatesResp = { current: string; releases: UpdateRelease[]; error?: string | null };
-
 let updateBusy = false;
 let updatePoll: number | null = null;
-let pendingSwitch = '';
 
 const $settingsVolOrigin = $('#settings-volume-bar');
 const settingsVol = new Slider($settingsVolOrigin);
@@ -1895,7 +1883,6 @@ async function loadSettings() {
   } catch {
     $('#set-version').textContent = 'unknown';
   }
-  void refreshVersions();
 }
 
 async function loadSidebarVersion() {
@@ -1908,6 +1895,10 @@ async function loadSidebarVersion() {
   }
 }
 
+$('#set-check').addEventListener('click', () => {
+  void loadReleases(true);
+});
+
 function fmtMB(n: number): string {
   if (!n || n <= 0) return '';
   return (n / 1048576).toFixed(1) + ' MB';
@@ -1916,224 +1907,53 @@ function fmtMB(n: number): string {
 function setUpdateBusy(busy: boolean) {
   updateBusy = busy;
   $('#set-check').classList.toggle('disabled', busy);
-  $('#set-browse').classList.toggle('disabled', busy);
+  ($('#set-versions') as HTMLSelectElement).disabled = busy;
+  ($('#set-update') as HTMLButtonElement).disabled = busy;
 }
 
-async function postJSON<T>(path: string, body?: unknown): Promise<T> {
-  const r = await fetch(API + path, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body || {}),
-  });
-  return (await r.json()) as T;
-}
-
-async function refreshVersions(): Promise<VersionsResp | null> {
-  try {
-    const v = await getJSON<VersionsResp>(`${API}/api/versions`);
-    $('#set-active').textContent = v.active || 'none';
-    return v;
-  } catch {
-    $('#set-active').textContent = 'unknown';
-    return null;
-  }
-}
-
-async function showVersionPicker() {
-  if (updateBusy) {
-    toast('A download is already in progress');
-    return;
-  }
+async function loadReleases(refresh: boolean) {
+  const sel = $('#set-versions') as HTMLSelectElement;
   const note = $('#set-check-note');
-  note.textContent = 'Loading versions...';
-  let updates: UpdatesResp;
-  let local: VersionsResp;
+  note.textContent = 'Checking GitHub...';
+  if (refresh) $('#set-update').setAttribute('disabled', '');
   try {
-    [updates, local] = await Promise.all([
-      getJSON<UpdatesResp>(`${API}/api/updates`),
-      getJSON<VersionsResp>(`${API}/api/versions`),
-    ]);
-  } catch {
-    note.textContent = 'Could not load the version list.';
-    return;
-  }
-  note.textContent = '';
-  const installed = new Map(local.versions.map((v) => [v.tag, v]));
-  const releases = updates.releases || [];
-
-  let done = false;
-  const finish = () => {
-    if (done) return;
-    done = true;
-    m.close();
-  };
-
-  const input = document.createElement('input');
-  input.type = 'text';
-  input.className = 'modal-input';
-  input.placeholder = 'Search versions...';
-  input.spellcheck = false;
-  const count = document.createElement('div');
-  count.className = 'modal-hint';
-  const list = document.createElement('div');
-  list.className = 'modal-list';
-
-  const render = (q: string) => {
-    const term = q.trim().toLowerCase();
-    const items = releases.filter((r) => !term || r.tag.toLowerCase().includes(term));
-    list.innerHTML = '';
-    if (!items.length) {
-      const h = document.createElement('div');
-      h.className = 'modal-hint';
-      h.innerHTML = '<i class="fa-solid fa-magnifying-glass" style="margin-right:8px"></i>No versions found';
-      list.appendChild(h);
-    }
-    items.forEach((r) => {
-      const local_ = installed.get(r.tag);
-      const isInstalled = !!local_ && local_.present;
-      const isActive = isInstalled && (local_!.active || r.tag === local.running);
+    const d = await getJSON<{ current: string; releases: UpdateRelease[]; error?: string | null }>(
+      `${API}/api/updates${refresh ? '?refresh=1' : ''}`,
+    );
+    const rels = d.releases || [];
+    const cur = 'v' + (d.current || '').replace(/^v/, '');
+    $('#set-latest').textContent = rels[0] ? rels[0].tag : 'unknown';
+    sel.innerHTML = '';
+    let firstInstallable = '';
+    for (const r of rels) {
+      const opt = document.createElement('option');
+      opt.value = r.asset ? r.tag : '';
       const marks: string[] = [];
       if (r.prerelease) marks.push('pre-release');
-      if (isActive) marks.push('active');
-      else if (isInstalled) marks.push('installed');
-      else if (!r.asset) marks.push('no installer for this platform');
-
-      const row = document.createElement('div');
-      row.className = 'version-opt' + (isActive ? ' active' : '');
-      const main = document.createElement('button');
-      main.type = 'button';
-      main.className = 'version-opt-main';
-      main.disabled = !r.asset && !isInstalled;
-      main.innerHTML =
-        '<i class="fa-solid ' +
-        (isActive ? 'fa-circle-check' : isInstalled ? 'fa-hard-drive' : 'fa-cloud-arrow-down') +
-        '"></i><span class="version-opt-text"><span class="version-opt-name">' +
-        esc(r.tag) +
-        '</span>' +
-        (marks.length ? '<span class="version-opt-mark">' + esc(marks.join(', ')) + '</span>' : '') +
-        '</span>';
-      main.addEventListener('click', () => {
-        finish();
-        if (isActive) {
-          toast('Already on ' + r.tag);
-        } else if (isInstalled) {
-          void switchTo(r.tag);
-        } else {
-          void installVersion(r.tag);
-        }
-      });
-      row.appendChild(main);
-      if (isInstalled && !isActive) {
-        const rm = document.createElement('button');
-        rm.type = 'button';
-        rm.className = 'version-opt-remove';
-        rm.title = 'Remove this downloaded version';
-        rm.innerHTML = '<i class="fa-solid fa-trash"></i>';
-        rm.addEventListener('click', async () => {
-          const d = await postJSON<{ ok?: boolean; error?: string }>('/api/versions/remove', { tag: r.tag });
-          toast(d.ok ? 'Removed ' + r.tag : d.error || 'Could not remove it');
-          finish();
-          void refreshVersions();
-        });
-        row.appendChild(rm);
-      }
-      list.appendChild(row);
-    });
-    count.textContent = term
-      ? `${items.length} of ${releases.length} versions`
-      : `${releases.length} versions`;
-  };
-
-  input.addEventListener('input', () => render(input.value));
-  input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      const first = list.querySelector<HTMLButtonElement>('.version-opt-main:not([disabled])');
-      if (first) {
-        e.preventDefault();
-        first.click();
-      }
+      if (r.tag === cur) marks.push('installed');
+      if (!r.asset) marks.push('no installer for this platform');
+      opt.textContent = r.tag + (marks.length ? ' (' + marks.join(', ') + ')' : '');
+      opt.disabled = !r.asset;
+      sel.appendChild(opt);
+      if (r.asset && !firstInstallable) firstInstallable = r.tag;
     }
-  });
-  const body = document.createElement('div');
-  body.className = 'modal-body reciter-picker';
-  body.append(input, count, list);
-  const m = new Modal('Choose version', body, () => finish(), 'modal-reciter');
-  render('');
-  window.setTimeout(() => input.focus(), 30);
-}
-
-async function switchTo(tag: string) {
-  const note = $('#set-check-note');
-  note.textContent = 'Switching to ' + tag + '...';
-  try {
-    const d = await postJSON<{ ok?: boolean; error?: string; reload?: boolean }>('/api/versions/switch', { tag });
-    if (!d.ok) {
-      note.textContent = d.error || 'Could not switch versions.';
-      toast(d.error || 'Could not switch');
+    if (!firstInstallable) {
+      note.textContent = 'No installer available for this platform in the recent releases.';
+      $('#set-update').setAttribute('disabled', '');
       return;
     }
-    await refreshVersions();
-    if (d.reload) {
-      showRestarting(tag);
-      return;
-    }
-    note.innerHTML = 'Active version is now <b>' + esc(tag) + '</b>. Restart Quran to run it.';
-    toast('Switched to ' + tag);
-  } catch {
-    note.textContent = 'Could not reach the updater.';
-  }
-}
-
-function showRestarting(tag: string) {
-  const el = $('#restart-screen');
-  const msg = $('#restart-msg');
-  if (msg) msg.textContent = 'Applying ' + tag + '...';
-  el.classList.add('show');
-  window.setTimeout(() => waitForRestart(tag, 0), 1500);
-}
-
-async function waitForRestart(tag: string, tries: number): Promise<void> {
-  try {
-    const r = await fetch(`${API}/api/version?ts=` + Date.now(), { cache: 'no-store' });
-    if (r.ok) {
-      const d = (await r.json()) as { version?: string };
-      const v = 'v' + String(d.version || '').replace(/^v/, '');
-      if (v === tag) {
-        location.reload();
-        return;
-      }
+    sel.disabled = false;
+    sel.value = firstInstallable;
+    $('#set-update').removeAttribute('disabled');
+    if (firstInstallable === cur) {
+      note.textContent = 'You are on the newest release with an installer for this platform.';
+    } else if (d.error) {
+      note.textContent = 'Showing cached results. The newest release is ' + esc(firstInstallable) + '.';
+    } else {
+      note.textContent = 'Pick a version (older ones and pre-releases included) and press Update.';
     }
   } catch {
-  }
-  if (tries >= 40) {
-    const msg = $('#restart-msg');
-    if (msg) msg.textContent = 'Could not restart automatically. Close and reopen Quran to run ' + tag + '.';
-    return;
-  }
-  window.setTimeout(() => void waitForRestart(tag, tries + 1), 500);
-}
-
-async function installVersion(tag: string) {
-  const note = $('#set-check-note');
-  setUpdateBusy(true);
-  note.textContent = 'Starting download of ' + tag + '...';
-  try {
-    const d = await postJSON<{ ok?: boolean; error?: string; cached?: boolean }>('/api/update', { tag });
-    if (!d.ok) {
-      note.textContent = d.error || 'Could not start the download.';
-      setUpdateBusy(false);
-      return;
-    }
-    if (d.cached) {
-      setUpdateBusy(false);
-      await switchTo(tag);
-      return;
-    }
-    pendingSwitch = tag;
-    startUpdatePoll();
-  } catch {
-    note.textContent = 'Could not reach the updater.';
-    setUpdateBusy(false);
+    note.textContent = 'Could not reach GitHub right now.';
   }
 }
 
@@ -2161,41 +1981,76 @@ async function pollUpdate() {
   const fill = $('#set-progress-fill');
   const text = $('#set-progress-text');
   const note = $('#set-check-note');
+  const runBtn = $('#set-run') as HTMLButtonElement;
   if (s.state === 'downloading') {
     wrap.hidden = false;
+    runBtn.hidden = true;
     const pct = s.total ? Math.round((s.downloaded / s.total) * 100) : 0;
     fill.style.width = pct + '%';
-    text.textContent =
-      'Downloading ' + s.asset + '  ' + fmtMB(s.downloaded) + (s.total ? ' / ' + fmtMB(s.total) + ' (' + pct + '%)' : '');
+    text.textContent = 'Downloading ' + s.asset + '  ' + (fmtMB(s.downloaded) + (s.total ? ' / ' + fmtMB(s.total) : '')) + (s.total ? ' (' + pct + '%)' : '');
     note.textContent = 'Downloading ' + s.tag + '...';
     setUpdateBusy(true);
     return;
   }
   stopUpdatePoll();
   setUpdateBusy(false);
-  wrap.hidden = true;
-  if (s.state === 'downloaded') {
-    await refreshVersions();
-    const tag = pendingSwitch || s.tag;
-    pendingSwitch = '';
-    await switchTo(tag);
+  if (s.state === 'installed') {
+    wrap.hidden = true;
+    runBtn.hidden = true;
+    note.innerHTML = 'Updated to <b>' + esc(s.tag) + '</b>. Restart Quran to use it.';
+  } else if (s.state === 'downloaded') {
+    wrap.hidden = true;
+    runBtn.hidden = false;
+    note.innerHTML = 'Downloaded <b>' + esc(s.tag) + '</b> to <code>' + esc(s.path) + '</code>. Run it to use the new version.';
+  } else if (s.state === 'launched') {
+    wrap.hidden = true;
+    runBtn.hidden = true;
+    note.innerHTML = 'Opened the <b>' + esc(s.tag) + '</b> installer. Follow its steps, then reopen Quran.';
   } else if (s.state === 'error') {
-    pendingSwitch = '';
+    wrap.hidden = true;
+    runBtn.hidden = true;
     note.textContent = 'Update failed: ' + (s.error || 'unknown error');
   }
 }
 
-$('#set-browse').addEventListener('click', () => {
-  void showVersionPicker();
+$('#set-update').addEventListener('click', async () => {
+  if (updateBusy) return;
+  const tag = ($('#set-versions') as HTMLSelectElement).value;
+  const note = $('#set-check-note');
+  if (!tag) {
+    note.textContent = 'Pick a version first.';
+    return;
+  }
+  const cur = 'v' + appVersion.replace(/^v/, '');
+  if (tag === cur) {
+    note.textContent = 'You already have ' + tag + ' installed.';
+    return;
+  }
+  setUpdateBusy(true);
+  note.textContent = 'Starting update to ' + tag + '...';
+  try {
+    const r = await fetch(`${API}/api/update`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tag }),
+    });
+    const d = (await r.json()) as { ok?: boolean; error?: string };
+    if (!r.ok || !d.ok) {
+      note.textContent = d.error || 'Could not start the update.';
+      setUpdateBusy(false);
+      return;
+    }
+    startUpdatePoll();
+  } catch {
+    note.textContent = 'Could not reach the updater.';
+    setUpdateBusy(false);
+  }
 });
 
-$('#set-check').addEventListener('click', async () => {
-  if (updateBusy) return;
-  const note = $('#set-check-note');
-  note.textContent = 'Refreshing...';
-  await getJSON<UpdatesResp>(`${API}/api/updates?refresh=1`).catch(() => null);
-  await refreshVersions();
-  note.textContent = 'Version list refreshed.';
+$('#set-run').addEventListener('click', async () => {
+  const r = await fetch(`${API}/api/update/run`, { method: 'POST' });
+  const d = (await r.json()) as { ok?: boolean; error?: string };
+  if (!d.ok) toast(d.error || 'Could not start it');
 });
 
 try {

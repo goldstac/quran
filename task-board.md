@@ -9,6 +9,12 @@ matching section and note the platform when it is not cross-platform.
 
 ## Medium priority
 
+- [ ] Re-add the in-app version manager (multiple downloaded builds + instant
+  switching with live reload). Pulled for now, so Settings is back to the
+  simpler updater (pick a version, download, install). The removed
+  implementation lives in commits `c040831` (VersionStore, `/api/versions*`,
+  reciter-style version picker) and `baee45d` (live reload into a switched
+  build, `#restart-screen`).
 - [ ] Windows installer is unsigned, so SmartScreen shows "Windows protected
   your PC" (user must pick More info then Run anyway). Consider code signing.
 
@@ -55,23 +61,12 @@ matching section and note the platform when it is not cross-platform.
   was launch-tested during the rc.3 release.
 - [x] Add an in-app self-updater. Backend `/api/updates` lists GitHub releases
   with the installer matching the current platform (cached, `?refresh=1`);
-  `POST /api/update {tag}` streams the chosen release into a downloaded-builds
-  store under `~/.local/share/quran-app/versions/` while `/api/update/status`
-  reports progress.
-- [x] Add a version manager on top of the updater. `VersionStore` tracks
-  downloaded builds in `versions.json` and registers the build you launched
-  (`$APPIMAGE` on Linux, `sys.executable` on Windows, the `.app` on macOS),
-  keeping an independent copy of it inside the store (hard link, else copy) so
-  switching never clobbers the running build. `GET /api/versions` lists them
-  with active/present flags; `POST /api/versions/switch {tag}` makes one active
-  (Linux swaps the running `$APPIMAGE` in place) and live-reloads into it: a
-  detached shell waits for the backend to exit, re-execs the build, and the
-  desktop parent is signalled so the window restarts (`reload` in the response
-  drives a `#restart-screen` overlay that polls `/api/version` then reloads).
-  `/api/versions/run` launches one, and `/api/versions/remove` deletes a stored
-  build. Settings has a searchable version picker (reciter-picker style) marking
-  active/installed/pre-release, and clicking a row switches or downloads
-  instantly.
+  `/api/update` POST `{tag}` streams the chosen release to
+  `~/.local/share/quran-app/updates/` while `/api/update/status` reports
+  progress; `/api/update/run` launches a downloaded build. Settings card lets
+  you pick any version (pre-releases and older ones included) and shows a
+  progress bar. Linux swaps the running `$APPIMAGE` in place; Windows/macOS
+  open the installer.
 - [x] Add an opt-in Discord presence. Backend `DiscordBridge` in `app.py`
   talks to Discord's local IPC socket/named pipe (legacy 8-byte framing,
   shared `_DISCORD_CLIENT_ID`); the frontend posts activities to
