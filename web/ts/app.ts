@@ -1904,6 +1904,7 @@ type UpdateStatus = {
 };
 let updateBusy = false;
 let updatePoll: number | null = null;
+let latestTag = '';
 
 const $settingsVolOrigin = $('#settings-volume-bar');
 const settingsVol = new Slider($settingsVolOrigin);
@@ -1954,12 +1955,10 @@ function fmtMB(n: number): string {
 function setUpdateBusy(busy: boolean) {
   updateBusy = busy;
   $('#set-check').classList.toggle('disabled', busy);
-  ($('#set-versions') as HTMLSelectElement).disabled = busy;
   ($('#set-update') as HTMLButtonElement).disabled = busy;
 }
 
 async function loadReleases(refresh: boolean) {
-  const sel = $('#set-versions') as HTMLSelectElement;
   const note = $('#set-check-note');
   note.textContent = 'Checking GitHub...';
   if (refresh) $('#set-update').setAttribute('disabled', '');
@@ -1969,35 +1968,21 @@ async function loadReleases(refresh: boolean) {
     );
     const rels = d.releases || [];
     const cur = 'v' + (d.current || '').replace(/^v/, '');
+    const installable = rels.find((r) => r.asset);
     $('#set-latest').textContent = rels[0] ? rels[0].tag : 'unknown';
-    sel.innerHTML = '';
-    let firstInstallable = '';
-    for (const r of rels) {
-      const opt = document.createElement('option');
-      opt.value = r.asset ? r.tag : '';
-      const marks: string[] = [];
-      if (r.prerelease) marks.push('pre-release');
-      if (r.tag === cur) marks.push('installed');
-      if (!r.asset) marks.push('no installer for this platform');
-      opt.textContent = r.tag + (marks.length ? ' (' + marks.join(', ') + ')' : '');
-      opt.disabled = !r.asset;
-      sel.appendChild(opt);
-      if (r.asset && !firstInstallable) firstInstallable = r.tag;
-    }
-    if (!firstInstallable) {
-      note.textContent = 'No installer available for this platform in the recent releases.';
+    if (!installable) {
+      latestTag = '';
+      note.textContent = 'No installer available for this platform yet.';
       $('#set-update').setAttribute('disabled', '');
       return;
     }
-    sel.disabled = false;
-    sel.value = firstInstallable;
-    $('#set-update').removeAttribute('disabled');
-    if (firstInstallable === cur) {
-      note.textContent = 'You are on the newest release with an installer for this platform.';
-    } else if (d.error) {
-      note.textContent = 'Showing cached results. The newest release is ' + esc(firstInstallable) + '.';
+    latestTag = installable.tag;
+    if (installable.tag === cur) {
+      note.textContent = 'You are on the newest release.';
+      $('#set-update').setAttribute('disabled', '');
     } else {
-      note.textContent = 'Pick a version (older ones and pre-releases included) and press Update.';
+      note.textContent = (d.error ? 'Showing cached results. ' : '') + 'Version ' + esc(installable.tag) + ' is available.';
+      $('#set-update').removeAttribute('disabled');
     }
   } catch {
     note.textContent = 'Could not reach GitHub right now.';
@@ -2062,10 +2047,10 @@ async function pollUpdate() {
 
 $('#set-update').addEventListener('click', async () => {
   if (updateBusy) return;
-  const tag = ($('#set-versions') as HTMLSelectElement).value;
+  const tag = latestTag;
   const note = $('#set-check-note');
   if (!tag) {
-    note.textContent = 'Pick a version first.';
+    note.textContent = 'Check for updates first.';
     return;
   }
   const cur = 'v' + appVersion.replace(/^v/, '');
