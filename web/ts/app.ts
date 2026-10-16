@@ -1205,6 +1205,7 @@ function updatePlayer() {
     if (icon) icon.className = currentSong.kind === 'quran' ? 'fa-solid fa-book-quran' : 'fa-solid fa-music';
   }
   $('#fav-btn i').className = currentSong.favorite ? 'fa-solid fa-heart fav-on' : 'fa-regular fa-heart';
+  $('#yt-btn').classList.toggle('hidden', currentSong.kind === 'quran');
   syncQuranTranslation();
   if ('mediaSession' in navigator) {
     navigator.mediaSession.metadata = new MediaMetadata({
@@ -1217,6 +1218,10 @@ function updatePlayer() {
 }
 
 // --- CONTROLS ---
+$('#yt-btn').addEventListener('click', () => {
+  if (!currentSong || currentSong.kind === 'quran') return;
+  seeOnYouTube(currentSong);
+});
 $('#fav-btn').addEventListener('click', () => {
   if (!currentSong) return;
   if (currentSong.kind === 'quran') {
@@ -1339,6 +1344,7 @@ function resetPlayer() {
   $('#player-thumb').style.display = 'none';
   $('#player-thumb-ph').style.display = 'flex';
   $('#fav-btn i').className = 'fa-regular fa-heart';
+  $('#yt-btn').classList.add('hidden');
   seek.setValue(0);
   $('#time-pos').textContent = '0:00';
   $('#time-dur').textContent = '0:00';

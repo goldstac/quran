@@ -254,6 +254,7 @@ body{
   border-radius:50%;transition:color .15s;font-size:14px;flex-shrink:0;
 }
 .player-fav:hover{color:#fff}
+.player-fav.player-yt:hover{color:#ff0033}
 
 /* center */
 .player-center{display:flex;flex-direction:column;align-items:center;gap:6px;width:100%}
