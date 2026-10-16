@@ -760,6 +760,17 @@ _update_state = {
 }
 
 
+def _prune_update_downloads():
+    for name in os.listdir(UPDATE_DIR) if os.path.isdir(UPDATE_DIR) else []:
+        try:
+            os.remove(os.path.join(UPDATE_DIR, name))
+        except OSError:
+            pass
+
+
+_prune_update_downloads()
+
+
 def _update_asset_matches(name):
     n = (name or "").lower()
     if sys.platform == "win32":
@@ -906,6 +917,10 @@ def _apply_update(path, tag):
     if running and os.path.isfile(running):
         shutil.copy2(path, running)
         os.chmod(running, 0o755)
+        try:
+            os.remove(path)
+        except OSError:
+            pass
         with _update_lock:
             _update_state.update(state="installed", path=running)
     else:
