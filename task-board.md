@@ -32,6 +32,16 @@ matching section and note the platform when it is not cross-platform.
 
 ## Done
 
+- [x] Faster, safer CI: a fast `validate` job on every push to `main`/`development`
+  and every PR (Python import, `npm run build`, and a check that the committed
+  `web/static/app.js` still matches `web/ts/app.ts`), pip/npm/Rust caching, the
+  npm Tauri CLI instead of compiling `cargo install tauri-cli`, concurrency
+  cancellation, per-job timeouts, and `contents: write` scoped to the release
+  job. The full three-platform build now runs only on tags and manual dispatch.
+- [x] Remember the Discord presence on/off toggle: stored server-side in
+  `~/.local/share/quran-app/discord.json` (mirrored to localStorage `ns_discord`),
+  restored on load, and re-enabled automatically if the backend restarted.
+
 - [x] Fix the EGL abort on Mesa 25+ hosts (strip bundled `libwayland` in
   `fix-appimage.sh`).
 - [x] Keep the backend sidecar alive (drain its stdout instead of `break`ing
