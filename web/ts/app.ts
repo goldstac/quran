@@ -1777,7 +1777,7 @@ function dcPause() {
   dcPost({ enabled: true, activity: dcActivity(true) });
 }
 
-function dcPost(body: { enabled: boolean; activity?: Record<string, unknown> | null }) {
+function dcPost(body: { enabled: boolean; activity?: Record<string, unknown> | null; remember?: boolean }) {
   void getJSON<{ ok: boolean }>(`${API}/api/discord`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -1804,8 +1804,10 @@ function pollDiscordStatus() {
       if (!discordEnabled) return;
       if (d.state === 'connected') setDiscordStatus('connected');
       else if (d.state === 'connecting') setDiscordStatus('connecting');
-      else if (d.state === 'off') setDiscordStatus('off');
-      else setDiscordStatus('not-running');
+      else if (d.state === 'off') {
+        setDiscordStatus('connecting');
+        pushDiscord(true);
+      } else setDiscordStatus('not-running');
     })
     .catch(() => {
       if (discordEnabled) setDiscordStatus('error');
@@ -1829,12 +1831,23 @@ $('#set-discord').addEventListener('change', (e) => {
   dcLastRefresh = 0;
   if (discordEnabled) {
     pollDiscordStatus();
-    pushDiscord(true);
+    dcPost({ enabled: true, activity: dcActivity(audio.paused), remember: true });
   } else {
-    dcPost({ enabled: false, activity: null });
+    dcPost({ enabled: false, activity: null, remember: true });
     setDiscordStatus('off');
   }
 });
+
+async function initDiscord() {
+  try {
+    const d = await getJSON<{ enabled?: boolean | null }>(`${API}/api/discord/status`);
+    if (typeof d.enabled === 'boolean') {
+      discordEnabled = d.enabled;
+      store('ns_discord', discordEnabled);
+    }
+  } catch {}
+  syncDiscordUI();
+}
 
 setInterval(pollDiscordStatus, 2000);
 
@@ -2092,5 +2105,5 @@ syncSearchUI();
 loadPlaylists();
 void loadQuranReciters();
 syncSettingsVol();
-syncDiscordUI();
+void initDiscord();
 void loadSidebarVersion();

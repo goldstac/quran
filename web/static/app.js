@@ -1778,8 +1778,10 @@ function pollDiscordStatus() {
             setDiscordStatus('connected');
         else if (d.state === 'connecting')
             setDiscordStatus('connecting');
-        else if (d.state === 'off')
-            setDiscordStatus('off');
+        else if (d.state === 'off') {
+            setDiscordStatus('connecting');
+            pushDiscord(true);
+        }
         else
             setDiscordStatus('not-running');
     })
@@ -1805,13 +1807,24 @@ $('#set-discord').addEventListener('change', (e) => {
     dcLastRefresh = 0;
     if (discordEnabled) {
         pollDiscordStatus();
-        pushDiscord(true);
+        dcPost({ enabled: true, activity: dcActivity(audio.paused), remember: true });
     }
     else {
-        dcPost({ enabled: false, activity: null });
+        dcPost({ enabled: false, activity: null, remember: true });
         setDiscordStatus('off');
     }
 });
+async function initDiscord() {
+    try {
+        const d = await getJSON(`${API}/api/discord/status`);
+        if (typeof d.enabled === 'boolean') {
+            discordEnabled = d.enabled;
+            store('ns_discord', discordEnabled);
+        }
+    }
+    catch { }
+    syncDiscordUI();
+}
 setInterval(pollDiscordStatus, 2000);
 window.addEventListener('pagehide', () => {
     if (!discordEnabled || !navigator.sendBeacon)
@@ -2049,5 +2062,5 @@ syncSearchUI();
 loadPlaylists();
 void loadQuranReciters();
 syncSettingsVol();
-syncDiscordUI();
+void initDiscord();
 void loadSidebarVersion();

@@ -728,12 +728,31 @@ def _discord_send_frame(sock, opcode, payload):
 
 
 _discord = DiscordBridge()
+_DISCORD_PREF_FILE = os.path.join(DATA_DIR, "discord.json")
+
+
+def _discord_pref_read():
+    try:
+        with open(_DISCORD_PREF_FILE) as f:
+            return bool(json.load(f).get("enabled"))
+    except Exception:
+        return None
+
+
+def _discord_pref_write(enabled):
+    try:
+        with open(_DISCORD_PREF_FILE, "w") as f:
+            json.dump({"enabled": bool(enabled)}, f)
+    except Exception:
+        pass
 
 
 @app.route("/api/discord", methods=["POST"])
 def api_discord():
     data = request.json or {}
     _discord.set(bool(data.get("enabled")), data.get("activity"))
+    if data.get("remember"):
+        _discord_pref_write(bool(data.get("enabled")))
     return jsonify({"ok": True})
 
 
@@ -741,7 +760,7 @@ def api_discord():
 def api_discord_status():
     if request.args.get("alive") == "1":
         _discord.touch()
-    return jsonify({"state": _discord.state()})
+    return jsonify({"state": _discord.state(), "enabled": _discord_pref_read()})
 
 
 _GH_RELEASES_URL = "https://api.github.com/repos/goldstac/quran/releases?per_page=60"
