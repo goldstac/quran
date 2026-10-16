@@ -1253,6 +1253,12 @@ audio.addEventListener('play', () => {
     dcLastRefresh = 0;
     pushDiscord(true);
 });
+audio.addEventListener('loadedmetadata', () => {
+    if (!audio.paused) {
+        dcLastRefresh = 0;
+        pushDiscord(true);
+    }
+});
 audio.addEventListener('pause', () => {
     startingId = null;
     setBuffering(false);
@@ -1727,8 +1733,13 @@ function dcActivity(paused = false) {
         details: currentSong.title,
         state: paused ? (channel ? 'Paused - ' + channel : 'Paused') : (channel || 'Quran'),
     };
-    if (!paused)
-        a.timestamps = { start: Date.now() - Math.round(audio.currentTime * 1000) };
+    if (!paused) {
+        const start = Date.now() - Math.round(audio.currentTime * 1000);
+        const dur = Number.isFinite(audio.duration) && audio.duration > 0
+            ? audio.duration
+            : (currentSong.duration || 0);
+        a.timestamps = dur ? { start, end: start + Math.round(dur * 1000) } : { start };
+    }
     return a;
 }
 function dcPause() {
@@ -1749,7 +1760,7 @@ function pushDiscord(force = false) {
     if (!discordEnabled || now - dcLastRefresh < (force ? 0 : 30000))
         return;
     dcLastRefresh = now;
-    dcPost({ enabled: true, activity: dcActivity() });
+    dcPost({ enabled: true, activity: dcActivity(audio.paused) });
 }
 function dcClear() {
     if (!discordEnabled)
