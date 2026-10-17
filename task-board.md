@@ -21,8 +21,9 @@ matching section and note the platform when it is not cross-platform.
     guards for spawning the desktop backend; on Android we'll run the embedded
     HTTP server in-process (we already have `server::start` in `server.rs` used
     on Android in `lib.rs`).
-  - Generate Android project scaffolding via `tauri android init` if needed,
-    and ensure icons/adaptive icons are set (we have base icon assets).
+  - Generate Android project scaffolding via `tauri android init` if needed.
+    Android SDK/NDK not present locally; we'll generate scaffolding in CI or
+    commit generated files if needed. For now, note environment constraints.
   - Keep the same frontend (`web/*`) served locally by the embedded server on
     Android (port 5000) or adjust to Tauri's asset serving; the existing loading
     logic expects localhost backend so in-process server is fine.
