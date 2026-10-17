@@ -5,16 +5,15 @@ matching section and note the platform when it is not cross-platform.
 
 ## High priority
 
-- [ ] (none)
-+ [ ] Working on v1.2.1
+- [ ] Working on v1.2.1
 
-  ## Medium priority
+## Medium priority
 
-+ [ ] Android app (mobile build): create an Android version of the app using Tauri
-+   mobile/Android tooling, planned to run primarily in CI (not built locally).
-+   Keep the existing web+Tauri desktop architecture; adapt UI for mobile where
-+   needed. This replaces the previous note about "Android (APK) is planned later"
-+   with an active track.
+- [ ] Android app (mobile build): create an Android version of the app using Tauri
+  mobile/Android tooling, planned to run primarily in CI (not built locally).
+  Keep the existing web+Tauri desktop architecture; adapt UI for mobile where
+  needed. This replaces the previous note about "Android (APK) is planned later"
+  with an active track.
 
 ## Medium priority
 
