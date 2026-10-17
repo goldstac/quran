@@ -15,6 +15,22 @@ matching section and note the platform when it is not cross-platform.
   needed. This replaces the previous note about "Android (APK) is planned later"
   with an active track.
 
+  Implementation plan:
+  - Add Android support to Tauri configuration (ensure Cargo/lib setup works for
+    mobile targets). The Rust code already has `#[cfg(not(target_os = "android"))]`
+    guards for spawning the desktop backend; on Android we'll run the embedded
+    HTTP server in-process (we already have `server::start` in `server.rs` used
+    on Android in `lib.rs`).
+  - Generate Android project scaffolding via `tauri android init` if needed,
+    and ensure icons/adaptive icons are set (we have base icon assets).
+  - Keep the same frontend (`web/*`) served locally by the embedded server on
+    Android (port 5000) or adjust to Tauri's asset serving; the existing loading
+    logic expects localhost backend so in-process server is fine.
+  - Update CI to build Android APK/AAB in a dedicated job (trigger on tags or
+    manual dispatch) with Android SDK/NDK setup; no local Android builds required.
+  - Update `AGENTS.md` and docs to reflect Android build/run process.
+  - Test APK in CI/runtime smoke test if feasible.
+
 - [ ] Windows installer is unsigned, so SmartScreen shows "Windows protected
   your PC" (user must pick More info then Run anyway). Consider code signing.
 
