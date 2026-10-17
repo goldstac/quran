@@ -2395,7 +2395,7 @@ dependencies = [
 
 [[package]]
 name = "quran-player"
-version = "1.2.0"
+version = "1.2.1"
 dependencies = [
  "serde",
  "serde_json",
@@ -2656,7 +2656,7 @@ dependencies = [
 
 [[package]]
 name = "scopeguard"
-version = "1.2.0"
+version = "1.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
 
