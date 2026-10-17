@@ -15,8 +15,6 @@ matching section and note the platform when it is not cross-platform.
   needed. This replaces the previous note about "Android (APK) is planned later"
   with an active track.
 
-## Medium priority
-
 - [ ] Windows installer is unsigned, so SmartScreen shows "Windows protected
   your PC" (user must pick More info then Run anyway). Consider code signing.
 
