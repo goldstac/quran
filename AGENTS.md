@@ -8,7 +8,7 @@ An all-in-one open source Islamic app (Quran + nasheeds), desktop/mobile, Spotif
 
 Two app versions exist in this repo:
 - **`web/`** — active Flask + TypeScript/CSS web app (the one being developed)
-- **`tauri-app/`** — desktop app for testing (Tauri v2): Rust spawns `python3 web/app.py` on startup and keeps its **stdin pipe open** the whole time; the backend watches that pipe for EOF (`QURAN_STDIN_WATCH=1`) and exits when the app closes, so no orphaned backend survives. The window loads `http://127.0.0.1:5000` via a loading page. Android (APK) is planned later.
+- **`tauri-app/`** — desktop app for testing (Tauri v2): Rust spawns `python3 web/app.py` on startup and keeps its **stdin pipe open** the whole time; the backend watches that pipe for EOF (`QURAN_STDIN_WATCH=1`) and exits when the app closes, so no orphaned backend survives. The window loads `http://127.0.0.1:5000` via a loading page. Android (APK/AAB) is planned.
 
 ## Commands
 
