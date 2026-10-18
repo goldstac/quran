@@ -9,7 +9,6 @@ venv/
 # Tauri / Rust
 target/
 tauri-app/src-tauri/target/
-tauri-app/src-tauri/gen/
 tauri-app/src-tauri/bundles/
 nasheed-player
 *.AppImage
@@ -25,6 +24,11 @@ Thumbs.db
 *.swp
 .idea/
 .vscode/
+
+# Android local build state (scaffolding under gen/android is committed)
+gen/android/**/.gradle/
+gen/android/**/build/
+gen/android/local.properties
 
 # Local runtime
 *.log
