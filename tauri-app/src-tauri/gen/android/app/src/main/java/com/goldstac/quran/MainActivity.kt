@@ -1,4 +1,4 @@
-package com.nasheed.app
+package com.goldstac.quran
 
 import android.os.Bundle
 import androidx.activity.enableEdgeToEdge
