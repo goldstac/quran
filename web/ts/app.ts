@@ -1905,6 +1905,7 @@ type UpdateStatus = {
 let updateBusy = false;
 let updatePoll: number | null = null;
 let latestTag = '';
+let includePrerelease = load<boolean>('ns_prerelease', false);
 
 const $settingsVolOrigin = $('#settings-volume-bar');
 const settingsVol = new Slider($settingsVolOrigin);
@@ -1931,6 +1932,7 @@ async function loadSettings() {
   } catch {
     $('#set-version').textContent = 'unknown';
   }
+  applyPrereleaseChannel();
 }
 
 async function loadSidebarVersion() {
@@ -2008,7 +2010,7 @@ async function loadReleases(refresh: boolean) {
     );
     const rels = d.releases || [];
     const cur = d.current || '';
-    const installable = rels.find((r) => r.asset);
+    const installable = rels.find((r) => r.asset && (includePrerelease || !r.prerelease));
     $('#set-latest').textContent = rels[0] ? rels[0].tag : 'unknown';
     if (!installable) {
       latestTag = '';
@@ -2028,6 +2030,18 @@ async function loadReleases(refresh: boolean) {
     note.textContent = 'Could not reach GitHub right now.';
   }
 }
+
+function applyPrereleaseChannel() {
+  ($('#set-prerelease') as HTMLInputElement).checked = includePrerelease;
+  void loadReleases(false);
+}
+
+$('#set-prerelease').addEventListener('change', (e) => {
+  includePrerelease = (e.target as HTMLInputElement).checked;
+  store('ns_prerelease', includePrerelease);
+  latestTag = '';
+  applyPrereleaseChannel();
+});
 
 function startUpdatePoll() {
   if (updatePoll !== null) return;

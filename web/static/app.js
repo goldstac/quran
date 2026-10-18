@@ -1862,6 +1862,7 @@ let appVersion = '';
 let updateBusy = false;
 let updatePoll = null;
 let latestTag = '';
+let includePrerelease = load('ns_prerelease', false);
 const $settingsVolOrigin = $('#settings-volume-bar');
 const settingsVol = new Slider($settingsVolOrigin);
 function syncSettingsVol() {
@@ -1885,6 +1886,7 @@ async function loadSettings() {
     catch {
         $('#set-version').textContent = 'unknown';
     }
+    applyPrereleaseChannel();
 }
 async function loadSidebarVersion() {
     const ver = $('#sidebar-ver');
@@ -1967,7 +1969,7 @@ async function loadReleases(refresh) {
         const d = await getJSON(`${API}/api/updates${refresh ? '?refresh=1' : ''}`);
         const rels = d.releases || [];
         const cur = d.current || '';
-        const installable = rels.find((r) => r.asset);
+        const installable = rels.find((r) => r.asset && (includePrerelease || !r.prerelease));
         $('#set-latest').textContent = rels[0] ? rels[0].tag : 'unknown';
         if (!installable) {
             latestTag = '';
@@ -1989,6 +1991,16 @@ async function loadReleases(refresh) {
         note.textContent = 'Could not reach GitHub right now.';
     }
 }
+function applyPrereleaseChannel() {
+    $('#set-prerelease').checked = includePrerelease;
+    void loadReleases(false);
+}
+$('#set-prerelease').addEventListener('change', (e) => {
+    includePrerelease = e.target.checked;
+    store('ns_prerelease', includePrerelease);
+    latestTag = '';
+    applyPrereleaseChannel();
+});
 function startUpdatePoll() {
     if (updatePoll !== null)
         return;
