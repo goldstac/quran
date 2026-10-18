@@ -199,6 +199,28 @@ jobs:
           fi
           echo "smoke test OK"
 
+      - name: Stamp prerelease version
+        if: contains(github.ref_name, '-')
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME#v}"
+          echo "stamping prerelease version ${TAG}"
+          python3 - "$TAG" <<'PY'
+          import json, re, sys
+          ver = sys.argv[1]
+          with open('package.json') as f:
+              pkg = json.load(f)
+          pkg['version'] = ver
+          with open('package.json', 'w') as f:
+              json.dump(pkg, f, indent=2)
+              f.write('\n')
+          path = 'tauri-app/src-tauri/Cargo.toml'
+          src = open(path).read()
+          src = re.sub(r'(?m)^(version = ")[^"]+(")', r'\g<1>' + ver + r'\g<2>', src, count=1)
+          open(path, 'w').write(src)
+          PY
+
       - name: Stage sidecars for Tauri
         shell: bash
         run: |
@@ -438,6 +460,30 @@ jobs:
       - name: Install JavaScript deps
         shell: bash
         run: npm ci
+
+      - name: Stamp prerelease version
+        if: contains(github.ref_name, '-')
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME#v}"
+          echo "stamping prerelease version ${TAG}"
+          python3 - "$TAG" <<'PY'
+          import os, re, sys
+          ver = sys.argv[1]
+          with open('package.json') as f:
+              pkg = json.load(f)
+          pkg['version'] = ver
+          with open('package.json', 'w') as f:
+              json.dump(pkg, f, indent=2)
+              f.write('\n')
+          path = 'tauri-app/src-tauri/Cargo.toml'
+          src = open(path).read()
+          src = re.sub(r'(?m)^(version = ")[^"]+(")', r'\g<1>' + ver + r'\g<2>', src, count=1)
+          open(path, 'w').write(src)
+          with open(os.environ['GITHUB_ENV'], 'a') as f:
+              f.write(f'ANDROID_VERSION_NAME={ver}\n')
+          PY
 
       - name: Restore Android signing keystore
         shell: bash

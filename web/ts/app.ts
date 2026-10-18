@@ -1958,6 +1958,46 @@ function setUpdateBusy(busy: boolean) {
   ($('#set-update') as HTMLButtonElement).disabled = busy;
 }
 
+function semverParts(tag: string): { nums: number[]; pre: string[] } {
+  const m = tag.replace(/^v/i, '').match(/^(\d+(?:\.\d+)*)(?:-([0-9A-Za-z.-]+))?/);
+  const nums = (m ? m[1] : '0').split('.').map((n) => parseInt(n, 10) || 0);
+  const pre = m && m[2] ? m[2].split('.') : [];
+  return { nums, pre };
+}
+
+function cmpSemver(a: string, b: string): number {
+  const pa = semverParts(a);
+  const pb = semverParts(b);
+  const len = Math.max(pa.nums.length, pb.nums.length);
+  for (let i = 0; i < len; i++) {
+    const x = pa.nums[i] || 0;
+    const y = pb.nums[i] || 0;
+    if (x !== y) return x < y ? -1 : 1;
+  }
+  if (pa.pre.length === 0 && pb.pre.length === 0) return 0;
+  if (pa.pre.length === 0) return 1;
+  if (pb.pre.length === 0) return -1;
+  const plen = Math.max(pa.pre.length, pb.pre.length);
+  for (let i = 0; i < plen; i++) {
+    const sa = pa.pre[i];
+    const sb = pb.pre[i];
+    if (sa === undefined) return -1;
+    if (sb === undefined) return 1;
+    const na = /^\d+$/.test(sa) ? parseInt(sa, 10) : null;
+    const nb = /^\d+$/.test(sb) ? parseInt(sb, 10) : null;
+    if (na !== null && nb !== null) {
+      if (na !== nb) return na < nb ? -1 : 1;
+    } else if (na !== null) {
+      return -1;
+    } else if (nb !== null) {
+      return 1;
+    } else if (sa !== sb) {
+      return sa < sb ? -1 : 1;
+    }
+  }
+  return 0;
+}
+
 async function loadReleases(refresh: boolean) {
   const note = $('#set-check-note');
   note.textContent = 'Checking GitHub...';
@@ -1967,7 +2007,7 @@ async function loadReleases(refresh: boolean) {
       `${API}/api/updates${refresh ? '?refresh=1' : ''}`,
     );
     const rels = d.releases || [];
-    const cur = 'v' + (d.current || '').replace(/^v/, '');
+    const cur = d.current || '';
     const installable = rels.find((r) => r.asset);
     $('#set-latest').textContent = rels[0] ? rels[0].tag : 'unknown';
     if (!installable) {
@@ -1977,7 +2017,7 @@ async function loadReleases(refresh: boolean) {
       return;
     }
     latestTag = installable.tag;
-    if (installable.tag === cur) {
+    if (cmpSemver(installable.tag, cur) <= 0) {
       note.textContent = 'You are on the newest release.';
       $('#set-update').setAttribute('disabled', '');
     } else {
@@ -2053,8 +2093,8 @@ $('#set-update').addEventListener('click', async () => {
     note.textContent = 'Check for updates first.';
     return;
   }
-  const cur = 'v' + appVersion.replace(/^v/, '');
-  if (tag === cur) {
+  const cur = appVersion;
+  if (cmpSemver(tag, cur) <= 0) {
     note.textContent = 'You already have ' + tag + ' installed.';
     return;
   }
