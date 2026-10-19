@@ -212,6 +212,7 @@ body{
 .track-row.playing .track-name{color:#1db954}
 .track-row:hover .track-actions{opacity:1}
 .track-thumb{width:40px;height:40px;border-radius:4px;object-fit:cover;background:#282828;flex-shrink:0}
+.track-thumb-ph{display:flex;align-items:center;justify-content:center;color:#6f6f6f;font-size:15px}
 .track-info{min-width:0;display:flex;flex-direction:column;gap:2px}
 .track-name{
   font-size:14px;font-weight:500;color:#fff;white-space:nowrap;

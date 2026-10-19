@@ -976,7 +976,9 @@ function makeRow(song, idx, ctx) {
     r.innerHTML = `
     ${isQuran
         ? `<div class="track-num">${(song.chapter_id ?? idx + 1)}</div>`
-        : `<img class="track-thumb" src="${song.thumbnail || ''}" onerror="this.style.display='none'" loading="lazy" alt="">`}
+        : song.local && !song.thumbnail
+            ? `<div class="track-thumb track-thumb-ph"><i class="fa-solid fa-music"></i></div>`
+            : `<img class="track-thumb" src="${song.thumbnail || ''}" onerror="this.style.display='none'" loading="lazy" alt="">`}
     <div class="track-info">
       <div class="track-name">${esc(song.title)}</div>
       <div class="track-channel">${sub}</div>
