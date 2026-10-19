@@ -1,6 +1,6 @@
-import os, json, subprocess, re, threading, sys, socket, argparse, time, uuid, shutil, webbrowser, urllib.request, urllib.parse
+import os, json, subprocess, re, threading, sys, socket, argparse, time, uuid, shutil, webbrowser, urllib.request, urllib.parse, mimetypes
 from pathlib import Path
-from flask import Flask, render_template, jsonify, request
+from flask import Flask, render_template, jsonify, request, send_file
 from flask_cors import CORS
 
 app = Flask(__name__)
@@ -248,13 +248,286 @@ def api_fav(sid):
     return jsonify({"error": "not found"}), 404
 
 
+DOWNLOAD_DIR = os.path.join(DATA_DIR, "downloads")
+LOCAL_DIR = os.path.join(DATA_DIR, "local")
+
+
+def ensure_dirs():
+    os.makedirs(DOWNLOAD_DIR, exist_ok=True)
+    os.makedirs(LOCAL_DIR, exist_ok=True)
+
+
+def in_dir(path, directory):
+    try:
+        return os.path.commonpath(
+            [os.path.realpath(directory), os.path.realpath(path)]
+        ) == os.path.realpath(directory)
+    except ValueError:
+        return False
+
+
+def find_lib_song(sid):
+    for s in load_lib().get("songs", []):
+        if s.get("id") == sid:
+            return s
+    return None
+
+
+def song_file_path(song):
+    if not song:
+        return None
+    p = song.get("filepath") or ""
+    if p and os.path.isfile(p) and in_dir(p, DATA_DIR):
+        return p
+    return None
+
+
+def delete_song_file(song):
+    p = (song or {}).get("filepath") or ""
+    if not p or not os.path.isfile(p) or not in_dir(p, DATA_DIR):
+        return
+    if in_dir(p, DOWNLOAD_DIR) or in_dir(p, LOCAL_DIR):
+        try:
+            os.remove(p)
+        except OSError:
+            pass
+
+
+FILE_MIMES = {
+    ".m4a": "audio/mp4",
+    ".mp4": "audio/mp4",
+    ".mp3": "audio/mpeg",
+    ".webm": "audio/webm",
+    ".opus": "audio/opus",
+    ".ogg": "audio/ogg",
+    ".oga": "audio/ogg",
+    ".wav": "audio/wav",
+    ".flac": "audio/flac",
+    ".aac": "audio/aac",
+}
+
+
+def file_mime(path):
+    ext = os.path.splitext(path)[1].lower()
+    return FILE_MIMES.get(ext) or mimetypes.guess_type(path)[0] or "application/octet-stream"
+
+
+def serve_song_file(path):
+    return send_file(
+        path,
+        mimetype=file_mime(path),
+        conditional=True,
+        max_age=0,
+    )
+
+
+@app.route("/api/file/<sid>")
+def api_file(sid):
+    path = song_file_path(find_lib_song(sid))
+    if not path:
+        return jsonify({"error": "no file"}), 404
+    return serve_song_file(path)
+
+
+_dl_lock = threading.Lock()
+_downloads = {}
+DL_FORMATS = "bestaudio[ext=m4a]/bestaudio[ext=mp3]/bestaudio"
+
+
+def _run_download(sid):
+    if not YTDLP_PATH:
+        _downloads[sid] = {"state": "error", "error": "yt-dlp not found"}
+        return
+    ensure_dirs()
+    for f in os.listdir(DOWNLOAD_DIR):
+        if f.startswith(sid + "."):
+            try:
+                os.remove(os.path.join(DOWNLOAD_DIR, f))
+            except OSError:
+                pass
+    outtmpl = os.path.join(DOWNLOAD_DIR, sid + ".%(ext)s")
+    cmd = [
+        YTDLP_PATH, "-f", DL_FORMATS, "--no-playlist", "--no-warnings",
+        "--newline", "-o", outtmpl,
+        f"https://www.youtube.com/watch?v={sid}",
+    ]
+    err = None
+    try:
+        proc = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            stdin=subprocess.DEVNULL,
+            text=True,
+        )
+    except Exception as e:
+        _downloads[sid] = {"state": "error", "error": str(e)}
+        return
+    _downloads[sid]["proc"] = proc
+    assert proc.stdout is not None
+    for line in proc.stdout:
+        m = re.search(r"\[download\]\s+([\d.]+)%", line)
+        if m:
+            _downloads[sid]["progress"] = float(m.group(1))
+        if "ERROR" in line:
+            err = line.strip()
+    proc.wait()
+    if _downloads.get(sid, {}).get("state") != "downloading":
+        return
+    produced = None
+    for f in os.listdir(DOWNLOAD_DIR):
+        if f.startswith(sid + ".") and not f.endswith(".part"):
+            produced = os.path.join(DOWNLOAD_DIR, f)
+            break
+    if proc.returncode == 0 and produced:
+        lib = load_lib()
+        for s in lib["songs"]:
+            if s["id"] == sid:
+                s["downloaded"] = True
+                s["filepath"] = produced
+                break
+        save_lib(lib)
+        _downloads[sid] = {"state": "done", "progress": 100}
+    else:
+        if produced:
+            try:
+                os.remove(produced)
+            except OSError:
+                pass
+        _downloads[sid] = {"state": "error", "error": err or "download failed"}
+
+
+@app.route("/api/download", methods=["POST"])
+def api_download():
+    sid = (request.json or {}).get("id", "")
+    song = find_lib_song(sid)
+    if not song:
+        return jsonify({"error": "not found"}), 404
+    if song.get("local"):
+        return jsonify({"error": "already local"}), 400
+    if song_file_path(song) and song.get("downloaded"):
+        return jsonify({"ok": True, "already": True})
+    with _dl_lock:
+        st = _downloads.get(sid)
+        if st and st.get("state") == "downloading":
+            return jsonify({"ok": True, "already": True})
+        _downloads[sid] = {"state": "downloading", "progress": 0}
+    threading.Thread(target=_run_download, args=(sid,), daemon=True).start()
+    return jsonify({"ok": True})
+
+
+@app.route("/api/download/status")
+def api_download_status():
+    with _dl_lock:
+        out = {
+            sid: {
+                "state": st.get("state"),
+                "progress": st.get("progress", 0),
+                "error": st.get("error"),
+            }
+            for sid, st in _downloads.items()
+        }
+    return jsonify({"downloads": out})
+
+
+@app.route("/api/download/remove", methods=["POST"])
+def api_download_remove():
+    sid = (request.json or {}).get("id", "")
+    with _dl_lock:
+        st = _downloads.get(sid)
+    if st and st.get("state") == "downloading":
+        proc = st.get("proc")
+        if proc:
+            try:
+                proc.kill()
+            except OSError:
+                pass
+        with _dl_lock:
+            _downloads.pop(sid, None)
+        return jsonify({"ok": True, "canceled": True})
+    lib = load_lib()
+    for s in lib["songs"]:
+        if s["id"] == sid:
+            delete_song_file(s)
+            s.pop("filepath", None)
+            s.pop("downloaded", None)
+            save_lib(lib)
+            break
+    with _dl_lock:
+        _downloads.pop(sid, None)
+    return jsonify({"ok": True})
+
+
+LOCAL_EXTS = {".mp3", ".m4a", ".mp4", ".webm", ".ogg", ".oga", ".opus", ".wav", ".flac", ".aac"}
+
+
+def file_duration(path):
+    try:
+        import mutagen
+        f = mutagen.File(path)
+        if f is not None and getattr(f, "info", None) is not None:
+            length = getattr(f.info, "length", None)
+            if length:
+                return float(length)
+    except Exception:
+        pass
+    return None
+
+
+def fmt_duration(sec):
+    sec = int(sec or 0)
+    h, rem = divmod(sec, 3600)
+    m, s = divmod(rem, 60)
+    return f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"
+
+
+@app.route("/api/local", methods=["POST"])
+def api_local():
+    f = request.files.get("file")
+    if not f or not f.filename:
+        return jsonify({"error": "file required"}), 400
+    ext = os.path.splitext(f.filename)[1].lower()
+    if ext not in LOCAL_EXTS:
+        return jsonify({"error": "unsupported file type"}), 400
+    ensure_dirs()
+    sid = "local-" + uuid.uuid4().hex[:12]
+    path = os.path.join(LOCAL_DIR, sid + ext)
+    try:
+        f.save(path)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    title = os.path.splitext(os.path.basename(f.filename))[0].strip() or "Local nasheed"
+    dur = file_duration(path)
+    song = {
+        "id": sid,
+        "title": title,
+        "channel": "Local nasheeds",
+        "thumbnail": "",
+        "duration": dur,
+        "duration_string": fmt_duration(dur) if dur else "",
+        "url": "",
+        "favorite": False,
+        "local": True,
+        "filepath": path,
+    }
+    lib = load_lib()
+    lib["songs"].append(song)
+    save_lib(lib)
+    return jsonify({"ok": True, "song": song})
+
+
 @app.route("/api/library/remove/<sid>", methods=["POST"])
 def api_remove(sid):
     lib = load_lib()
+    removed = [s for s in lib["songs"] if s["id"] == sid]
     lib["songs"] = [s for s in lib["songs"] if s["id"] != sid]
     for pl in lib["playlists"]:
         pl["songs"] = [s for s in pl["songs"] if s["id"] != sid]
     save_lib(lib)
+    for s in removed:
+        delete_song_file(s)
+    with _dl_lock:
+        _downloads.pop(sid, None)
     return jsonify({"ok": True})
 
 
@@ -365,6 +638,9 @@ def api_warm(video_id):
 
 @app.route("/api/proxy/<video_id>")
 def api_proxy(video_id):
+    local_path = song_file_path(find_lib_song(video_id))
+    if local_path:
+        return serve_song_file(local_path)
     try:
         url = resolve_stream(video_id)
     except Exception as e:
@@ -992,9 +1268,16 @@ if __name__ == "__main__":
 
     port = args.port if args.port else find_free_port()
     host = "127.0.0.1" if getattr(sys, "frozen", False) else "0.0.0.0"
-
     print(f"PORT={port}")
     sys.stdout.flush()
+
+    ensure_dirs()
+    try:
+        for name in os.listdir(DOWNLOAD_DIR):
+            if name.endswith(".part"):
+                os.remove(os.path.join(DOWNLOAD_DIR, name))
+    except OSError:
+        pass
 
     watch_parent_stdin()
 

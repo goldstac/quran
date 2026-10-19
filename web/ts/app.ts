@@ -9,6 +9,8 @@ interface Song {
   duration_string?: string;
   url?: string;
   favorite?: boolean;
+  local?: boolean;
+  downloaded?: boolean;
   kind?: 'quran';
   stream_url?: string;
   arabic?: string;
@@ -45,6 +47,9 @@ let currentLibSource: Song[] = [];
 let sortMode: SortMode = 'added';
 let startingId: string | null = null;
 let buffering = false;
+const downloadedIds = new Set<string>();
+const dlActive = new Set<string>();
+let dlPollTimer: number | undefined;
 
 const SORT_LABELS: Record<SortMode, string> = {
   added: 'Recently added',
@@ -1027,6 +1032,7 @@ function makeRow(song: Song, idx: number, ctx: string): HTMLElement {
   r.dataset.id = song.id;
   if (currentSong && currentSong.id === song.id) r.classList.add('playing');
   const isQuran = ctx === 'quran' || song.kind === 'quran';
+  const isLocal = !!song.local;
   const canRemove = ctx !== 'search' && !isQuran;
   const heart = song.favorite ? 'fa-solid fa-heart fav-on' : 'fa-regular fa-heart';
   const sub = isQuran
@@ -1049,7 +1055,8 @@ function makeRow(song: Song, idx: number, ctx: string): HTMLElement {
       ${canRemove ? '<button class="track-act rem-act" title="Remove"><i class="fa-solid fa-trash"></i></button>' : ''}
       ${isQuran ? '' : `<button class="track-act fav-act" title="Like"><i class="${heart}"></i></button>
       <button class="track-act pl-act" title="Add to playlist"><i class="fa-solid fa-plus"></i></button>
-      <button class="track-act yt-act" title="See on YouTube"><i class="fa-brands fa-youtube"></i></button>
+      ${isLocal ? '' : '<button class="track-act dl-act" title="Download for offline"><i class="fa-solid fa-download"></i></button>'}
+      ${isLocal ? '' : '<button class="track-act yt-act" title="See on YouTube"><i class="fa-brands fa-youtube"></i></button>'}
       <button class="track-act disc-act" title="Shown in Discord presence"><i class="fa-solid fa-eye"></i></button>`}
     </div>`;
 
@@ -1066,6 +1073,11 @@ function makeRow(song: Song, idx: number, ctx: string): HTMLElement {
     r.querySelector('.fav-act')!.addEventListener('click', (e) => { e.stopPropagation(); toggleFav(song); });
     r.querySelector('.pl-act')!.addEventListener('click', (e) => { e.stopPropagation(); addToPl(song); });
     r.querySelector('.yt-act')!.addEventListener('click', (e) => { e.stopPropagation(); seeOnYouTube(song); });
+    const dlBtn = r.querySelector<HTMLElement>('.dl-act');
+    if (dlBtn) {
+      dlBtnUi(dlBtn, song.id);
+      dlBtn.addEventListener('click', (e) => { e.stopPropagation(); void dlAction(song); });
+    }
     const discBtn = r.querySelector<HTMLElement>('.disc-act');
     if (discBtn) {
       const hidden = discIsHidden(song.id);
@@ -1086,11 +1098,128 @@ function makeRow(song: Song, idx: number, ctx: string): HTMLElement {
 const warmed = new Set<string>();
 
 function warm(id: string) {
+  if (id.startsWith('local-') || downloadedIds.has(id)) return;
   if (warmed.has(id)) return;
   warmed.add(id);
   fetch(`${API}/api/warm/${id}`).then((r) => {
     if (!r.ok) warmed.delete(id);
   }).catch(() => warmed.delete(id));
+}
+
+// --- DOWNLOADS ---
+function dlBtnUi(btn: HTMLElement, id: string) {
+  const active = dlActive.has(id);
+  const done = downloadedIds.has(id);
+  btn.classList.toggle('dl-active', active);
+  btn.classList.toggle('dl-done', done);
+  const i = btn.querySelector('i');
+  if (i) {
+    i.className = active
+      ? 'fa-solid fa-arrows-rotate fa-spin'
+      : done
+        ? 'fa-solid fa-circle-check'
+        : 'fa-solid fa-download';
+  }
+  btn.title = active ? 'Downloading, click to cancel' : done ? 'Downloaded, click to remove' : 'Download for offline';
+}
+
+function refreshDl(id: string) {
+  $$<HTMLElement>(`.track-row[data-id="${id}"] .dl-act`).forEach((b) => dlBtnUi(b, id));
+  if (currentSong && currentSong.id === id) dlBtnUi($('#dl-btn'), id);
+}
+
+async function dlAction(song: Song) {
+  if (song.kind === 'quran' || song.local) return;
+  if (dlActive.has(song.id)) {
+    await getJSON<{ ok: boolean }>(`${API}/api/download/remove`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: song.id }),
+    }).catch(() => undefined);
+    dlActive.delete(song.id);
+    refreshDl(song.id);
+    toast('Download canceled');
+    return;
+  }
+  if (downloadedIds.has(song.id)) {
+    const ok = await confirmDialog('Remove download', `Remove the downloaded copy of "${song.title}"? It will need wifi to play again.`);
+    if (!ok) return;
+    await getJSON<{ ok: boolean }>(`${API}/api/download/remove`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: song.id }),
+    }).catch(() => undefined);
+    downloadedIds.delete(song.id);
+    if (currentSong && currentSong.id === song.id) currentSong.downloaded = false;
+    refreshDl(song.id);
+    toast('Download removed');
+    return;
+  }
+  await getJSON<{ ok: boolean }>(`${API}/api/library/add`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(song),
+  }).catch(() => undefined);
+  const r = await getJSON<{ ok?: boolean; error?: string }>(`${API}/api/download`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id: song.id }),
+  }).catch(() => ({ error: 'failed' }) as { ok?: boolean; error?: string });
+  if (r.error || r.ok === false) {
+    toast('Could not start download');
+    return;
+  }
+  dlActive.add(song.id);
+  refreshDl(song.id);
+  toast(`Downloading "${song.title}"`);
+  startDlPoll();
+}
+
+function startDlPoll() {
+  if (dlPollTimer) return;
+  dlPollTimer = window.setInterval(() => void pollDownloads(), 1000);
+}
+
+async function pollDownloads() {
+  const d = await getJSON<{ downloads: Record<string, { state: string; progress: number; error?: string }> }>(
+    `${API}/api/download/status`,
+  ).catch(() => null);
+  if (!d) return;
+  let active = 0;
+  for (const id of Object.keys(d.downloads || {})) {
+    const st = d.downloads[id];
+    if (st.state === 'downloading') {
+      active++;
+      if (!dlActive.has(id)) {
+        dlActive.add(id);
+        refreshDl(id);
+      }
+    } else if (st.state === 'done') {
+      if (dlActive.has(id)) toast('Downloaded. Plays without wifi now');
+      dlActive.delete(id);
+      downloadedIds.add(id);
+      if (currentSong && currentSong.id === id) currentSong.downloaded = true;
+      refreshDl(id);
+    } else if (st.state === 'error') {
+      if (dlActive.has(id)) toast('Download failed' + (st.error ? `: ${st.error}` : ''));
+      dlActive.delete(id);
+      refreshDl(id);
+    }
+  }
+  if (!active && dlPollTimer) {
+    window.clearInterval(dlPollTimer);
+    dlPollTimer = undefined;
+  }
+}
+
+async function initDownloads() {
+  try {
+    const lib = await getJSON<Library>(`${API}/api/library`);
+    (lib.songs || []).forEach((s) => {
+      if (s.downloaded || s.local) downloadedIds.add(s.id);
+    });
+  } catch {}
+  void pollDownloads();
 }
 
 function syncIcons() {
@@ -1119,6 +1248,7 @@ function songSrc(song: Song): string {
     const chapter = song.chapter_id ?? 1;
     return `${API}/api/quran/chapter_audio/${reciter}/${chapter}`;
   }
+  if (song.local) return `${API}/api/file/${song.id}`;
   return `${API}/api/proxy/${song.id}`;
 }
 
@@ -1205,7 +1335,11 @@ function updatePlayer() {
     if (icon) icon.className = currentSong.kind === 'quran' ? 'fa-solid fa-book-quran' : 'fa-solid fa-music';
   }
   $('#fav-btn i').className = currentSong.favorite ? 'fa-solid fa-heart fav-on' : 'fa-regular fa-heart';
-  $('#yt-btn').classList.toggle('hidden', currentSong.kind === 'quran');
+  $('#yt-btn').classList.toggle('hidden', currentSong.kind === 'quran' || !!currentSong.local);
+  const dlBtn = $('#dl-btn');
+  const canDownload = currentSong.kind !== 'quran' && !currentSong.local;
+  dlBtn.classList.toggle('hidden', !canDownload);
+  if (canDownload) dlBtnUi(dlBtn, currentSong.id);
   syncQuranTranslation();
   if ('mediaSession' in navigator) {
     navigator.mediaSession.metadata = new MediaMetadata({
@@ -1219,8 +1353,12 @@ function updatePlayer() {
 
 // --- CONTROLS ---
 $('#yt-btn').addEventListener('click', () => {
-  if (!currentSong || currentSong.kind === 'quran') return;
+  if (!currentSong || currentSong.kind === 'quran' || currentSong.local) return;
   seeOnYouTube(currentSong);
+});
+$('#dl-btn').addEventListener('click', () => {
+  if (!currentSong || currentSong.kind === 'quran' || currentSong.local) return;
+  void dlAction(currentSong);
 });
 $('#fav-btn').addEventListener('click', () => {
   if (!currentSong) return;
@@ -1486,6 +1624,12 @@ async function loadLib(mode: string | undefined) {
   } else if (mode === 'favorites') {
     songs = (lib.songs || []).filter((s) => s.favorite).reverse();
     title = 'Liked Nasheeds';
+  } else if (mode === 'downloads') {
+    songs = (lib.songs || []).filter((s) => s.downloaded).reverse();
+    title = 'Downloads';
+  } else if (mode === 'local') {
+    songs = (lib.songs || []).filter((s) => s.local).reverse();
+    title = 'Your Nasheeds';
   } else if (mode === 'recent') {
     const stored = load<Song[]>('ns_recent', []);
     songs = stored.map((r) => {
@@ -1506,9 +1650,19 @@ async function loadLib(mode: string | undefined) {
   currentLibSource = songs;
   $('#lib-del').classList.toggle('hidden', !isPlaylist);
   $('#lib-rename').classList.toggle('hidden', !isPlaylist);
+  $('#local-add').classList.toggle('hidden', mode !== 'local');
   $('#lib-title').textContent = title;
   $('#lib-subtitle').textContent = `${songs.length} nasheed${songs.length !== 1 ? 's' : ''}`;
   $('#lib-actions').classList.toggle('hidden', !songs.length);
+  const emptyCopy: Record<string, [string, string]> = {
+    downloads: ['No downloads yet', 'Hit the download button on any nasheed to save it for offline listening'],
+    local: ['No local nasheeds yet', 'Add your own mp3 or mp4 files with the + button above'],
+  };
+  const [emptyTitle, emptySub] = emptyCopy[mode ?? ''] ?? ['Nothing here yet', 'Search and save nasheeds to see them here'];
+  const et = $('#lib-empty').querySelector('.empty-title');
+  if (et) et.textContent = emptyTitle;
+  const es = $('#lib-empty').querySelector('.empty-sub');
+  if (es) es.textContent = emptySub;
   if (!songs.length) {
     $('#lib-list').style.display = 'none';
     $('#lib-empty').style.display = '';
@@ -1518,6 +1672,32 @@ async function loadLib(mode: string | undefined) {
     $('#lib-list').style.display = '';
   }
 }
+
+async function addLocalFiles(files: File[]) {
+  let added = 0;
+  for (const f of files) {
+    const fd = new FormData();
+    fd.append('file', f, f.name);
+    const r = await getJSON<{ ok?: boolean; error?: string }>(`${API}/api/local`, {
+      method: 'POST',
+      body: fd,
+    }).catch(() => ({ error: 'failed' }) as { ok?: boolean; error?: string });
+    if (r.ok) added++;
+    else toast(`Could not add ${f.name}${r.error ? `: ${r.error}` : ''}`);
+  }
+  if (added) {
+    toast(added === 1 ? 'Added to Your Nasheeds' : `Added ${added} nasheeds to Your Nasheeds`);
+    loadLib('local');
+  }
+}
+
+$('#local-add').addEventListener('click', () => $('#local-file').click());
+$('#local-file').addEventListener('change', () => {
+  const input = $('#local-file') as HTMLInputElement;
+  const files = Array.from(input.files || []);
+  input.value = '';
+  if (files.length) void addLocalFiles(files);
+});
 
 async function removeFromList(song: Song) {
   if (currentPlaylistName && currentLibMode && currentLibMode.startsWith('playlist:')) {
@@ -2164,6 +2344,7 @@ updateVolIcon();
 renderRecentQ();
 syncSearchUI();
 loadPlaylists();
+void initDownloads();
 void loadQuranReciters();
 syncSettingsVol();
 void initDiscord();

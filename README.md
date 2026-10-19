@@ -21,19 +21,21 @@ This app is made for the **Quran** and Islamic **nasheeds**. The YouTube search 
 - **Smooth playback** through a local proxy — seeking/scrubbing works (Range-aware streaming)
 - **Custom UI components** — hand-built seek/volume sliders and modals, no stock browser widgets, calm dark theme with green and gold accents
 - **Your Library** — auto-saves what you play; likes ("Liked Nasheeds"), playlists with create / rename / delete, per-row remove
+- **Offline downloads** — save any nasheed to your device and keep playing with no wifi; a **Downloads** view collects them
+- **Your Nasheeds** — add your own MP3/MP4 files and play them like any other nasheed (no YouTube needed)
 - **Shuffle** (restores original order when toggled off) and **loop-one**; queue **auto-advances** when a track ends
 - **Recently Played** view + **recent search chips**
 - **Sort** library by recently added, title, or channel
 - **Keyboard shortcuts** (below), toast notifications, Media Session (lock-screen/OS media keys)
 - **Settings** — app version, GitHub repo, default volume, and an in-app **updater** that lists every release (pre-releases and older versions too) and downloads + installs the one you pick
 - **Discord presence** (optional) — share what you're listening to as your Discord activity; toggle it on/off and hide individual nasheeds with the eye button
-- **Everything persists locally** — volume, loop/shuffle/sort, recents, library, playlists
+- **Everything persists locally** — volume, loop/shuffle/sort, recents, library, playlists, downloads, and your own files
 
 ## Requirements
 
-- Python 3.11+ with `flask` and `flask-cors`
-  - Arch/Manjaro: `sudo pip install --break-system-packages flask flask-cors`
-  - elsewhere: `pip install flask flask-cors`
+- Python 3.11+ with `flask`, `flask-cors`, and `mutagen` (used to read the length of files you add yourself)
+  - Arch/Manjaro: `sudo pip install --break-system-packages flask flask-cors mutagen`
+  - elsewhere: `pip install flask flask-cors mutagen`
 - [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) on your `PATH`
 - Node.js 18+ (only needed to build the TypeScript frontend)
 
@@ -58,14 +60,14 @@ If the port is busy: `fuser -k 5000/tcp` (Linux) or `lsof -ti:5000 | xargs kill`
 Run it on your own machine (home server, NAS, always-on PC) and open it from any browser — no cloud, no accounts, your server is the whole backend.
 
 **What the server needs:**
-- Python 3.11+ with `flask` + `flask-cors`
+- Python 3.11+ with `flask` + `flask-cors` + `mutagen`
 - `yt-dlp` on the **server's** PATH (all searching/streaming happens there)
 - No Node required — the compiled `web/static/app.js` is committed
 
 ```bash
 git clone git@github.com:goldstac/quran.git
 cd quran
-pip install flask flask-cors        # Arch: add --break-system-packages
+pip install flask flask-cors mutagen        # Arch: add --break-system-packages
 python3 web/app.py
 ```
 

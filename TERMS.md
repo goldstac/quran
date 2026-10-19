@@ -9,7 +9,7 @@ Use the app = you're good with these terms. Not good with them? Simply don't use
 
 ## 2. What the app is
 
-**Quran** (this app) is a free, open source player for the Quran and Islamic **nasheeds** — browse all 114 surahs with reciter choice, search YouTube for nasheeds, and play them through a player you run on your own device, with a personal library, likes, and playlists. No accounts, no subscriptions, no payments, no backend we operate. This is a hobby project, maintained in spare time, with no promise of updates or support.
+**Quran** (this app) is a free, open source player for the Quran and Islamic **nasheeds** — browse all 114 surahs with reciter choice, search YouTube for nasheeds, and play them through a player you run on your own device, with a personal library, likes, playlists, downloads for offline listening, and files you add yourself. No accounts, no subscriptions, no payments, no backend we operate. This is a hobby project, maintained in spare time, with no promise of updates or support.
 
 It's made for the Quran and nasheeds. The YouTube search will match whatever you type, but using it for general music isn't what it's intended for.
 
@@ -31,7 +31,7 @@ Don't use the app to:
 - do anything unlawful or harmful;
 - attack, overload, break, or abuse the app — or reach it on networks you're not welcome on.
 
-The app doesn't download or store media files for offline distribution; if anything gets cached, that's your own browser/OS doing its normal thing.
+Nasheeds you download for offline listening, and any files you add yourself, are stored on your own device and are for your own personal use. Keep them to yourself and don't redistribute them.
 
 ## 6. No uptime promises
 

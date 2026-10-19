@@ -139,7 +139,7 @@ body{
 }
 .lib-heading{display:flex;align-items:center;gap:14px}
 .lib-title{font-size:28px;font-weight:600;letter-spacing:-.3px}
-.lib-del,.lib-rename{
+.lib-del,.lib-rename,.lib-local-add{
   width:34px;height:34px;border:none;border-radius:50%;
   background:rgba(255,255,255,.06);color:#a7a7a7;cursor:pointer;
   display:flex;align-items:center;justify-content:center;font-size:13px;
@@ -147,6 +147,7 @@ body{
 }
 .lib-del:hover{background:#e22134;color:#fff}
 .lib-rename:hover{background:rgba(255,255,255,.16);color:#fff}
+.lib-local-add:hover{background:#1db954;color:#fff}
 .lib-sort{position:relative;margin-left:auto}
 .lib-sort-btn{
   display:flex;align-items:center;gap:8px;background:none;border:none;color:#a7a7a7;
@@ -228,6 +229,8 @@ body{
 .track-act:hover{color:#fff;background:rgba(255,255,255,.1)}
 .track-act.fav-on{color:#1db954}
 .track-act.yt-act:hover{color:#ff0033}
+.track-act.dl-done{color:#1db954}
+.track-act.dl-active{color:#c9a86c}
 
 /* ===== PLAYER BAR ===== */
 .player{
@@ -255,6 +258,9 @@ body{
 }
 .player-fav:hover{color:#fff}
 .player-fav.player-yt:hover{color:#ff0033}
+.player-fav.player-dl:hover{color:#1db954}
+.player-dl.dl-done i{color:#1db954}
+.player-dl.dl-active i{color:#c9a86c}
 
 /* center */
 .player-center{display:flex;flex-direction:column;align-items:center;gap:6px;width:100%}

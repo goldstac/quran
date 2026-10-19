@@ -7,6 +7,8 @@ Plain and simple: here's what the app does.
 ## On your device
 
 - Your library, likes, and playlists are a JSON file: `~/.local/share/quran-app/library.json`
+- Nasheeds you download for offline listening are saved in `~/.local/share/quran-app/downloads/`
+- Files you add yourself ("Your Nasheeds") are copied into `~/.local/share/quran-app/local/` so they keep working even if you move the originals
 - The browser keeps a few settings locally (`ns_` keys): volume, loop/shuffle/sort, recents, last searches
 - There is no server of ours in the picture at all: nothing you play, like, or search for is ever sent to us
 
@@ -24,6 +26,6 @@ That's the full list. No accounts, no analytics, no cookies, no tracking.
 
 ## Deleting everything
 
-Delete playlists/nasheeds in the app, remove `library.json`, and clear site data, or just uninstall. Everything lives on your device, so that's all it takes.
+Delete playlists/nasheeds in the app (removing a downloaded or added one deletes its stored file too), remove the `quran-app` folder, and clear site data, or just uninstall. Everything lives on your device, so that's all it takes.
 
 Our **Terms of Service** are in the separate file `TERMS.md`.

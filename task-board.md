@@ -5,6 +5,20 @@ matching section and note the platform when it is not cross-platform.
 
 ## High priority
 
+- [ ] Verbose terminal startup logging for the desktop app (implemented in the
+  working tree, not committed yet, needs one real AppImage run to verify).
+  Running `./Quran_*.AppImage` from a terminal prints a startup banner
+  (name, version, one-line description, Linux note that GTK/GLib warnings
+  below are harmless), step-by-step progress ("Starting local backend: <path>",
+  "Backend running on http://127.0.0.1:<port>", "Opening the app window. Close
+  it to quit.") and clear errors when the backend binary is missing, fails to
+  spawn, or never answers. The Rust side also forwards the backend's
+  stdout/stderr to the terminal; the backend prints its version and data
+  folder on startup and quiets werkzeug request logs when frozen (dev runs
+  keep them, real errors still show either way). Files: `tauri-app/src-tauri/
+  src/lib.rs`, `web/app.py`. Verified so far: `cargo check` and the Python
+  import/banner; commit and ship with the next tag after a real AppImage run.
+
 - [ ] Working on v1.2.1
 
 ## Medium priority
@@ -48,6 +62,23 @@ matching section and note the platform when it is not cross-platform.
   frontend already surfaces the `play()` rejection as a toast.
 
 ## Done
+
+- [x] Download nasheeds for offline listening. `POST /api/download` fetches the
+  best audio with yt-dlp into `~/.local/share/quran-app/downloads/<id>.<ext>`
+  (m4a preferred) and sets `filepath` + `downloaded: true`; `GET /api/download/
+  status` reports progress; `POST /api/download/remove` cancels an in-flight
+  download or deletes a finished one. `/api/file/<id>` serves stored files with
+  Range support, and `/api/proxy/<id>` serves the local file automatically when
+  one exists, so playback works with no wifi. Download button on track rows and
+  the player bar (spinner while downloading, green check when done), a Downloads
+  nav view, toasts, and AGENTS.md updated (downloads are back on purpose).
+- [x] Add your own nasheeds (local MP3/MP4 import). The + button in the "Your
+  Nasheeds" view uploads through `POST /api/local`, which copies the file into
+  `~/.local/share/quran-app/local/` and adds a `local: true` song with the
+  duration from mutagen when it is installed. Served by `/api/file/<id>` with
+  Range support, played like any nasheed, YouTube button hidden, the Discord
+  presence shows `Local nasheeds` for them, and removing the row deletes the
+  stored copy.
 
 - [x] Removed the install-version picker from Settings: no more version
   dropdown, pre-release/older-version selection, or downgrades. Check for

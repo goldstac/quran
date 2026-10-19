@@ -34,6 +34,12 @@
       <button class="nav-item" data-view="favorites">
         <i class="fa-solid fa-heart"></i><span>Liked Nasheeds</span>
       </button>
+      <button class="nav-item" data-view="downloads">
+        <i class="fa-solid fa-download"></i><span>Downloads</span>
+      </button>
+      <button class="nav-item" data-view="local">
+        <i class="fa-solid fa-folder-open"></i><span>Your Nasheeds</span>
+      </button>
       <button class="nav-item" data-view="quran">
         <i class="fa-solid fa-book-quran"></i><span>Quran</span>
       </button>
@@ -92,6 +98,8 @@
           <h1 id="lib-title" class="lib-title">Your Library</h1>
           <button id="lib-rename" class="lib-rename hidden" title="Rename playlist"><i class="fa-solid fa-pen"></i></button>
           <button id="lib-del" class="lib-del hidden" title="Delete playlist"><i class="fa-solid fa-trash"></i></button>
+          <button id="local-add" class="lib-local-add hidden" title="Add your own nasheeds"><i class="fa-solid fa-plus"></i></button>
+          <input type="file" id="local-file" accept="audio/*,video/*,.mp3,.m4a,.mp4,.webm,.ogg,.oga,.opus,.wav,.flac,.aac" multiple hidden>
           <div class="lib-sort" id="lib-sort">
             <button id="lib-sort-btn" class="lib-sort-btn" title="Sort">
               <i class="fa-solid fa-arrow-down-wide-short"></i>
@@ -278,6 +286,7 @@
     </div>
     <button id="fav-btn" class="player-fav"><i class="fa-regular fa-heart"></i></button>
     <button id="yt-btn" class="player-fav player-yt hidden" title="See on YouTube"><i class="fa-brands fa-youtube"></i></button>
+    <button id="dl-btn" class="player-fav player-dl hidden" title="Download for offline"><i class="fa-solid fa-download"></i></button>
   </div>
 
   <div class="player-center">
