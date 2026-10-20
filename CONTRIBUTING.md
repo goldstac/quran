@@ -10,7 +10,7 @@ Read **[AGENTS.md](AGENTS.md)**, it's the single source of truth for conventions
 
 ```bash
 # backend deps (Arch needs --break-system-packages)
-pip install flask flask-cors
+pip install flask flask-cors mutagen
 
 # yt-dlp must be on PATH
 yt-dlp --version
@@ -49,6 +49,7 @@ Tip: free the port first if an old instance is hanging around: `fuser -k 5000/tc
 - No stock `<input type="range">`, use the custom `Slider` component.
 - UI work should match the existing flat Spotify-dark theme (`#121212` / `#181818` / `#1db954`, Inter font).
 - Keep `PRIVACY.md` and `TERMS.md` honest, if your change alters what data exists or where traffic goes, update them in the same PR.
+- Keep `task-board.md` in sync: add the work at the top of the right section, move it to Done when it lands, and say clearly what you left uncommitted.
 - Docs tone: plain and casual. Please keep heavy legal/rule language out of the docs.
 
 ## Commits & PRs

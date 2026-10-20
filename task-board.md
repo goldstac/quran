@@ -5,7 +5,7 @@ matching section and note the platform when it is not cross-platform.
 
 ## High priority
 
-- [ ] Verbose terminal startup logging for the desktop app (implemented in the
+- [ ] Terminal startup logging for the desktop app (implemented in the
   working tree, not committed yet, needs one real AppImage run to verify).
   Running `./Quran_*.AppImage` from a terminal prints a startup banner
   (name, version, one-line description, Linux note that GTK/GLib warnings
@@ -19,9 +19,40 @@ matching section and note the platform when it is not cross-platform.
   src/lib.rs`, `web/app.py`. Verified so far: `cargo check` and the Python
   import/banner; commit and ship with the next tag after a real AppImage run.
 
+- [ ] Tauri v2 dropped regenerated schemas into the tree:
+  `tauri-app/src-tauri/gen/schemas/` (acl-manifests, android, capabilities,
+  desktop, linux, mobile JSON) is untracked. The Tauri CLI rewrites them on
+  every build, nothing at runtime depends on them, and `gen/android` is already
+  committed, so the tidy answer is to commit them (or gitignore them if you
+  would rather not track generated files). Decide once and do it.
+
 - [ ] Working on v1.2.1
 
 ## Medium priority
+
+- [ ] Bot-side embed restyle is finished but uncommitted. In the `smite-bot`
+  repo at `~/Documents/GitHub/smite-bot`, branch `dev`, uncommitted files
+  `src/commands/quran.ts`, `src/quran.ts`, `README.md`: the `su!track` /
+  `su!fm` embeds were rebuilt on one shared shell so they stop looking thrown
+  together:
+  author line with the app logo icon, title, description, one row of three
+  inline stat fields, then the list fields, one footer hint. Green for nasheeds
+  and confirmations, gold for Quran, amber for off/paused, grey for nothing to
+  show. Emoji came out of titles, field names, and footers (only the
+  `📖`/`📻` type markers remain in the two list bodies); the progress bar is
+  now `█`/`░` instead of an emoji knob; titles link to the YouTube video when
+  the id looks like one; the now-playing card shows per-track plays plus
+  lifetime totals; `su!track off/on` no longer tells an unlinked user it worked
+  (it sends the Not linked card); recent-list numbers are padded so item 10
+  lines up; the dead `songLabel`/`sourceLabel` helpers are gone. Verified by
+  rendering all 21 embed states through a headless harness in
+  `/tmp/opencode/bottest/` (limits, field grid, and plurals all checked), with
+  a browser preview at `/tmp/opencode/embed-preview.html`. Left to do: commit
+  on `dev`, push, open the PR to `main` (would be #18).
+
+- [ ] The APK the user tried to install would not install on a Redmi A5.
+  Reported, no detail captured yet: confirm the exact error, the Android
+  version, and whether it was an APK or AAB before touching the Android job.
 
 - [ ] Android app (mobile build): create an Android version of the app using Tauri
   mobile/Android tooling, planned to run primarily in CI (not built locally).
@@ -63,6 +94,20 @@ matching section and note the platform when it is not cross-platform.
 
 ## Done
 
+- [x] Settings cards on one alignment grid (`4275ff0`). Every settings row is
+  now `label (128px) | control | trailing right-aligned`, so values, status
+  chips, and the button/input columns all end on the same x: the Bot URL `Test`
+  row and the Link code `Link` row share a fixed 104px button with matched
+  input widths, controls are a uniform 34px, the link-code field is monospace,
+  and note/button rows are inset 142px to line up with the control column.
+  Real bug found on the way: the mobile settings overrides were inside the
+  earlier `@media(max-width:768px)` block, but a media query adds no
+  specificity, so the later desktop rules won and the card layout stacked at
+  every width. The overrides now live in their own block at the very end of
+  `style.css`, and it is AGENTS gotcha 8. Layout verified numerically with a
+  headless Firefox probe (desktop 1440px and mobile 414px). Needs one backend
+  restart plus a hard refresh to show in the running app.
+
 - [x] Discord bot integration (`su!track` / `su!fm`). The Settings view has a
   new "Discord bot" card: paste the bot URL (default `http://127.0.0.1:3000`)
   and the 6 character code from `su!track link`, and the app links itself with
@@ -73,10 +118,13 @@ matching section and note the platform when it is not cross-platform.
   progress ping, so the bot can show a live now playing card and count plays,
   top nasheeds, top reciters, and listening time. Nasheeds hidden with the eye
   button are never sent, and `su!track off` pauses recording from Discord. The
-  bot side (`~/Documents/GitHub/smite-bot`, branch `dev`) gained `src/quran.ts`
+  bot side (`~/Documents/GitHub/smite-bot`) gained `src/quran.ts`
   (link codes, now playing, stats in `data/quran.json`) and
   `src/commands/quran.ts`, with the new routes, help/README updates, and a
-  version bump to 3.1.0.
+  version bump to 3.1.0. Shipped: the app side is on `development`
+  (`2481656`) and the bot side is merged into the bot's `main` (PR #17, merge
+  `7bb0733`). One follow-up from the merge is still open above: the bot's
+  embeds were restyled afterwards and that restyle is not committed yet.
 
 - [x] Download nasheeds for offline listening. `POST /api/download` fetches the
   best audio with yt-dlp into `~/.local/share/quran-app/downloads/<id>.<ext>`

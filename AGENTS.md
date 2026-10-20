@@ -16,7 +16,12 @@ Two app versions exist in this repo:
 - Build frontend TS → JS: `npm run build` (from repo root; compiles `web/ts/app.ts` → `web/static/app.js`). Use `npm run watch` during dev.
 - Build the desktop binary: `cargo build --release` (in `tauri-app/src-tauri/`) → `target/release/quran` (gitignored). Run it directly; it spawns the Flask backend itself. If the backend lives elsewhere, set `QURAN_WEB_DIR`. If port 5000 is already held (e.g. `run-web.sh` running), it just connects to the existing server.
 - No test suite, no linter configured. Verify Python loads cleanly before finishing: `python3 -c "from app import app"` (run from `web/`)
+- Keep `task-board.md` in sync with the work you do (see below).
 - CI: every push to `main`/`development` and every PR runs the fast `validate` job (Python import, `npm run build`, and a check that the committed `web/static/app.js` still matches `web/ts/app.ts`). The full pipeline is tag/dispatch only: `build` (three platforms, with pip/npm/Rust caching and the npm Tauri CLI) then `runtime-test` (launches the packaged Windows/macOS apps, checks the backend on `127.0.0.1:5000`, and confirms the backend exits when the app is killed). To validate before releasing: push to `development`, then `gh workflow run release.yml --ref development`. Never release (tag push) until it passes.
+
+## Task board
+
+`task-board.md` is the living list of known issues, in-flight work, and shipped items. Update it in the same change as the work it describes: new items go at the top of the matching section (High / Medium / Low / Done), and anything you finish moves to Done with how it was verified. Be explicit about work left uncommitted (the file paths and the branch), because that is what makes it findable later; right now that means the terminal-logging changes in `tauri-app/src-tauri/src/lib.rs` + `web/app.py`, the regenerated `tauri-app/src-tauri/gen/schemas/`, and the bot-side embed restyle in the `smite-bot` repo.
 
 ## Git & Conventional Commits
 

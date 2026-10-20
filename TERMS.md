@@ -22,7 +22,7 @@ You get a personal, non-exclusive, non-transferable licence to install and use t
 - The nasheeds themselves are hosted by **YouTube/Google** and belong to their writers, performers, labels, and rightsholders. The app is only an organiser and player for them — we claim no rights over the music.
 - Quran audio and reciter listings come from third parties (**Quran.com** / **MP3Quran** and similar CDNs). Those recordings belong to their reciters and rightsholders — again, we claim no rights; we're just pointing the player at them.
 - The app leans on the third-party open-source tool **yt-dlp** and on YouTube continuing to offer its public interfaces. Neither is ours; YouTube's own terms (https://www.youtube.com/t/terms) apply alongside these when you play things.
-- We're **not affiliated with, endorsed by, or sponsored by** YouTube, Google, Cloudflare, Spotify, Quran.com, or MP3Quran. "Spotify-like" only ever meant the visual style.
+- We're **not affiliated with, endorsed by, or sponsored by** YouTube, Google, Cloudflare, Discord, Spotify, Quran.com, or MP3Quran. "Spotify-like" only ever meant the visual style.
 
 ## 5. Playing nice
 

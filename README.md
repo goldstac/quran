@@ -127,13 +127,14 @@ web/            the active Flask + TypeScript/CSS app
   templates/        single-page layout
 tauri-app/      desktop app for testing (Tauri — spawns the web backend itself)
 AGENTS.md       repo conventions — read before making changes
+task-board.md   living list of open issues, in-flight work, and shipped items
 PRIVACY.md      what the app stores and what it connects to
 TERMS.md        terms of service
 ```
 
 ## Privacy
 
-The app runs on your device: your library is a JSON file on disk, and requests go to YouTube (nasheeds), Quran.com + MP3Quran (Quran text and audio), and two CDNs (fonts/icons). Details: [PRIVACY.md](PRIVACY.md). Terms: [TERMS.md](TERMS.md).
+The app runs on your device: your library is a JSON file on disk, and requests go to YouTube (nasheeds), Quran.com + MP3Quran (Quran text and audio), and two CDNs (fonts/icons), plus Discord only if you turn on presence or link your own bot. Details: [PRIVACY.md](PRIVACY.md). Terms: [TERMS.md](TERMS.md).
 
 ## Contributing
 
