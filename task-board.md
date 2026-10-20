@@ -63,6 +63,21 @@ matching section and note the platform when it is not cross-platform.
 
 ## Done
 
+- [x] Discord bot integration (`su!track` / `su!fm`). The Settings view has a
+  new "Discord bot" card: paste the bot URL (default `http://127.0.0.1:3000`)
+  and the 6 character code from `su!track link`, and the app links itself with
+  the bot (`POST /api/bot/link` trades the code for a token, stored in
+  `~/.local/share/quran-app/bot.json`). While linked and enabled, the app
+  reports playback to the bot (`POST /api/report`, forwarded to the bot's
+  `/api/quran/event`) on play, pause, seek, and stop, plus a lightweight 30s
+  progress ping, so the bot can show a live now playing card and count plays,
+  top nasheeds, top reciters, and listening time. Nasheeds hidden with the eye
+  button are never sent, and `su!track off` pauses recording from Discord. The
+  bot side (`~/Documents/GitHub/smite-bot`, branch `dev`) gained `src/quran.ts`
+  (link codes, now playing, stats in `data/quran.json`) and
+  `src/commands/quran.ts`, with the new routes, help/README updates, and a
+  version bump to 3.1.0.
+
 - [x] Download nasheeds for offline listening. `POST /api/download` fetches the
   best audio with yt-dlp into `~/.local/share/quran-app/downloads/<id>.<ext>`
   (m4a preferred) and sets `filepath` + `downloaded: true`; `GET /api/download/

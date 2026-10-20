@@ -10,6 +10,7 @@ Plain and simple: here's what the app does.
 - Nasheeds you download for offline listening are saved in `~/.local/share/quran-app/downloads/`
 - Files you add yourself ("Your Nasheeds") are copied into `~/.local/share/quran-app/local/` so they keep working even if you move the originals
 - The browser keeps a few settings locally (`ns_` keys): volume, loop/shuffle/sort, recents, last searches
+- If you link your own Discord bot, the link token and address are saved in `~/.local/share/quran-app/bot.json`
 - There is no server of ours in the picture at all: nothing you play, like, or search for is ever sent to us
 
 ## Out on the network
@@ -21,6 +22,7 @@ All requests go straight from your machine to:
 - **Google Fonts** and **cdnjs/Cloudflare** — interface fonts and icons
 - **GitHub** (`api.github.com` and release downloads) - only when you use the updater in Settings: it looks up the list of releases and, if you pick one, downloads that file to your machine
 - **Discord (only if you turn on Discord presence in Settings)** — what you play is sent to the Discord app on your own machine so it can show up as your profile activity. Nothing is sent when the feature is off, and you can hide any nasheed with its eye button
+- **Your own Discord bot (only if you link it in Settings)**: if you run a Discord bot that supports it (like the smite-bot setup), you can link this app to it and it sends what you play to that bot's address so commands like `su!track` and `su!fm` work. The address is whatever you type in Settings, nothing goes anywhere else, and the same eye button hides a nasheed from both
 
 That's the full list. No accounts, no analytics, no cookies, no tracking.
 

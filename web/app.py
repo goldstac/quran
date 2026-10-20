@@ -1055,6 +1055,150 @@ def api_discord_status():
     return jsonify({"state": _discord.state(), "enabled": _discord_pref_read()})
 
 
+# --- DISCORD BOT SYNC (drives su!track / su!fm on the user's own bot) ---
+import urllib.error
+
+_BOT_FILE = os.path.join(DATA_DIR, "bot.json")
+_BOT_DEFAULT_URL = "http://127.0.0.1:3000"
+_bot_last = {"at": 0, "ok": None, "error": ""}
+
+
+def _bot_read():
+    try:
+        with open(_BOT_FILE) as f:
+            data = json.load(f)
+            return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def _bot_write(cfg):
+    try:
+        with open(_BOT_FILE, "w") as f:
+            json.dump(cfg, f, indent=2)
+    except Exception:
+        pass
+
+
+def _bot_url(cfg):
+    return (cfg.get("url") or _BOT_DEFAULT_URL).rstrip("/")
+
+
+def _bot_request(url, path, payload, token=None, timeout=8):
+    headers = {"Content-Type": "application/json", "User-Agent": "quran-app"}
+    if token:
+        headers["Authorization"] = token
+    req = urllib.request.Request(
+        url + path, data=json.dumps(payload).encode(), headers=headers, method="POST"
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            return resp.status, json.loads(resp.read().decode() or "{}")
+    except urllib.error.HTTPError as e:
+        try:
+            return e.code, json.loads(e.read().decode() or "{}")
+        except Exception:
+            return e.code, {}
+
+
+def _bot_post_event(url, token, payload):
+    try:
+        status, res = _bot_request(url, "/api/quran/event", payload, token=token)
+        if status < 400:
+            _bot_last.update({"at": time.time(), "ok": True, "error": ""})
+        else:
+            _bot_last.update({
+                "at": time.time(),
+                "ok": False,
+                "error": res.get("error") or f"HTTP {status}",
+            })
+    except Exception as e:
+        _bot_last.update({"at": time.time(), "ok": False, "error": str(e)})
+
+
+@app.route("/api/bot")
+def api_bot_get():
+    cfg = _bot_read()
+    return jsonify({
+        "enabled": bool(cfg.get("enabled")),
+        "url": _bot_url(cfg),
+        "linked": bool(cfg.get("token")),
+        "user": cfg.get("user"),
+        "last": _bot_last,
+    })
+
+
+@app.route("/api/bot", methods=["POST"])
+def api_bot_set():
+    data = request.json or {}
+    cfg = _bot_read()
+    if "enabled" in data:
+        cfg["enabled"] = bool(data["enabled"])
+    if "url" in data:
+        cfg["url"] = str(data["url"]).strip().rstrip("/") or _BOT_DEFAULT_URL
+    _bot_write(cfg)
+    return jsonify({"ok": True, "enabled": bool(cfg.get("enabled")), "url": _bot_url(cfg)})
+
+
+@app.route("/api/bot/link", methods=["POST"])
+def api_bot_link():
+    data = request.json or {}
+    code = str(data.get("code") or "").strip()
+    if not code:
+        return jsonify({"error": "Paste the code from su!track link"}), 400
+    cfg = _bot_read()
+    url = str(data.get("url") or "").strip().rstrip("/") or _bot_url(cfg)
+    try:
+        status, res = _bot_request(url, "/api/quran/link", {"code": code}, timeout=10)
+    except Exception:
+        return jsonify({"error": f"Could not reach your bot at {url}"}), 502
+    if status >= 400 or not res.get("ok"):
+        return jsonify({"error": res.get("error") or "That code did not work"}), 400
+    cfg.update({"url": url, "token": res.get("token"), "user": res.get("user")})
+    cfg.setdefault("enabled", True)
+    _bot_write(cfg)
+    return jsonify({"ok": True, "url": url, "user": res.get("user")})
+
+
+@app.route("/api/bot/unlink", methods=["POST"])
+def api_bot_unlink():
+    cfg = _bot_read()
+    cfg.pop("token", None)
+    cfg.pop("user", None)
+    _bot_write(cfg)
+    return jsonify({"ok": True})
+
+
+@app.route("/api/bot/test", methods=["POST"])
+def api_bot_test():
+    url = _bot_url(_bot_read())
+    try:
+        req = urllib.request.Request(url + "/health", headers={"User-Agent": "quran-app"})
+        with urllib.request.urlopen(req, timeout=6) as resp:
+            d = json.loads(resp.read().decode() or "{}")
+        return jsonify({"ok": True, "version": d.get("version"), "status": d.get("status")})
+    except Exception:
+        return jsonify({"ok": False, "error": f"No response from {url}"}), 502
+
+
+@app.route("/api/report", methods=["POST"])
+def api_report():
+    data = request.json or {}
+    cfg = _bot_read()
+    if not cfg.get("enabled") or not cfg.get("token"):
+        return jsonify({"ok": True, "skipped": True})
+    payload = {
+        "event": str(data.get("event") or ""),
+        "position": data.get("position") or 0,
+        "songId": str(data.get("songId") or ""),
+        "song": data.get("song"),
+    }
+    threading.Thread(
+        target=_bot_post_event, args=(_bot_url(cfg), cfg["token"], payload), daemon=True
+    ).start()
+    return jsonify({"ok": True})
+
+
 _GH_RELEASES_URL = "https://api.github.com/repos/goldstac/quran/releases?per_page=60"
 UPDATE_DIR = os.path.join(DATA_DIR, "updates")
 

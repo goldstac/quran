@@ -991,7 +991,7 @@ function makeRow(song, idx, ctx) {
       <button class="track-act pl-act" title="Add to playlist"><i class="fa-solid fa-plus"></i></button>
       ${isLocal ? '' : '<button class="track-act dl-act" title="Download for offline"><i class="fa-solid fa-download"></i></button>'}
       ${isLocal ? '' : '<button class="track-act yt-act" title="See on YouTube"><i class="fa-brands fa-youtube"></i></button>'}
-      <button class="track-act disc-act" title="Shown in Discord presence"><i class="fa-solid fa-eye"></i></button>`}
+      <button class="track-act disc-act" title="Shown in Discord"><i class="fa-solid fa-eye"></i></button>`}
     </div>`;
     r.addEventListener('dblclick', () => playSong(song, idx, ctx));
     let warmTimer;
@@ -1018,7 +1018,7 @@ function makeRow(song, idx, ctx) {
             if (icon)
                 icon.className = hidden ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
             discBtn.classList.toggle('disc-hide', hidden);
-            discBtn.title = hidden ? 'Hidden from Discord presence' : 'Shown in Discord presence';
+            discBtn.title = hidden ? 'Hidden from Discord' : 'Shown in Discord';
             discBtn.addEventListener('click', (e) => { e.stopPropagation(); discToggleSong(song); });
         }
     }
@@ -1235,6 +1235,8 @@ async function playSong(song, idx, _ctx, keepQueue = false) {
         recordRecent(song);
     updatePlayer();
     pushDiscord(true);
+    botLastRefresh = 0;
+    reportEvent(discIsHidden(song.id) ? 'hidden' : 'start', song);
     $$('.track-row').forEach((r) => r.classList.toggle('playing', r.dataset.id === song.id));
     startingId = song.id;
     setBuffering(true);
@@ -1407,6 +1409,8 @@ audio.addEventListener('play', () => {
     syncIcons();
     dcLastRefresh = 0;
     pushDiscord(true);
+    botLastRefresh = 0;
+    reportEvent('resume');
 });
 audio.addEventListener('loadedmetadata', () => {
     if (!audio.paused) {
@@ -1419,6 +1423,7 @@ audio.addEventListener('pause', () => {
     setBuffering(false);
     if (discordEnabled)
         dcPause();
+    reportEvent('pause');
 });
 audio.addEventListener('playing', () => {
     startingId = null;
@@ -1451,6 +1456,7 @@ function resetPlayer() {
     dcLastRefresh = 0;
     if (discordEnabled)
         dcClear();
+    reportEvent('stop');
     if ('mediaSession' in navigator)
         navigator.mediaSession.metadata = null;
 }
@@ -1521,6 +1527,8 @@ seek.onChange = () => {
     progressDrag = false;
     dcLastRefresh = 0;
     pushDiscord(true);
+    botLastRefresh = 0;
+    reportEvent('progress');
 };
 const seekTip = document.createElement('div');
 seekTip.className = 'seek-tip';
@@ -1546,6 +1554,7 @@ setInterval(() => {
     $('#time-dur').textContent = fmt(audio.duration);
     highlightTransAyah(true);
     pushDiscord();
+    pushBot();
 }, 250);
 // --- VOLUME ---
 const savedVol = load('ns_vol', 70);
@@ -1902,16 +1911,18 @@ function syncDiscBtns(id) {
         if (icon)
             icon.className = hidden ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
         b.classList.toggle('disc-hide', hidden);
-        b.title = hidden ? 'Hidden from Discord presence' : 'Shown in Discord presence';
+        b.title = hidden ? 'Hidden from Discord' : 'Shown in Discord';
     });
 }
 function discToggleSong(song) {
     const hidden = !discIsHidden(song.id);
     discSetHidden(song.id, hidden);
     syncDiscBtns(song.id);
-    toast(hidden ? 'Hidden from Discord presence' : 'Shown in Discord presence');
-    if (currentSong && currentSong.id === song.id)
+    toast(hidden ? 'Hidden from Discord' : 'Shown in Discord');
+    if (currentSong && currentSong.id === song.id) {
         pushDiscord(true);
+        reportEvent(hidden ? 'hidden' : 'resume');
+    }
 }
 function setDiscordStatus(state) {
     const el = $('#set-discord-status');
@@ -2050,6 +2061,155 @@ window.addEventListener('pagehide', () => {
         return;
     const body = new Blob([JSON.stringify({ enabled: false, activity: null })], { type: 'application/json' });
     navigator.sendBeacon(`${API}/api/discord`, body);
+});
+// --- DISCORD BOT SYNC ---
+let botEnabled = false;
+let botLinked = false;
+let botLastRefresh = 0;
+function setBotStatus(text, cls = '') {
+    const el = $('#set-bot-status');
+    el.classList.remove('ok', 'warn', 'err');
+    el.textContent = text;
+    if (cls)
+        el.classList.add(cls);
+}
+function botNote(msg) {
+    $('#bot-note').textContent = msg;
+}
+function botPost(body, path = '/api/bot') {
+    return getJSON(`${API}${path}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+    });
+}
+function syncBotUI(info) {
+    botEnabled = !!info.enabled;
+    botLinked = !!info.linked;
+    $('#set-bot').checked = botEnabled;
+    if (info.url)
+        $('#bot-url').value = info.url;
+    $('#bot-unlink').disabled = !botLinked;
+    if (botLinked) {
+        const name = info.user?.name ? ' as ' + info.user.name : '';
+        if (botEnabled)
+            setBotStatus('Linked' + name, 'ok');
+        else
+            setBotStatus('Paused' + name, 'warn');
+    }
+    else {
+        setBotStatus('Not linked', '');
+    }
+}
+async function loadBot() {
+    try {
+        const info = await getJSON(`${API}/api/bot`);
+        syncBotUI(info);
+        if (botLinked && botEnabled && info.last && info.last.ok === false) {
+            botNote('Last sync failed: ' + (info.last.error || 'bot unreachable'));
+        }
+    }
+    catch {
+        setBotStatus('Status unavailable', 'err');
+    }
+}
+function reportEvent(event, song) {
+    if (!botEnabled || !botLinked)
+        return;
+    const target = song || currentSong;
+    const starting = event === 'start';
+    const body = {
+        event,
+        position: starting ? 0 : Math.round(audio.currentTime || 0),
+        duration: starting
+            ? (target?.duration || 0)
+            : (Number.isFinite(audio.duration) && audio.duration > 0 ? Math.round(audio.duration) : 0),
+        songId: target ? target.id : '',
+    };
+    if (starting && target) {
+        body.song = {
+            id: target.id,
+            title: target.title,
+            channel: target.channel,
+            duration: target.duration || 0,
+            duration_string: target.duration_string || '',
+            kind: target.kind === 'quran' ? 'quran' : 'nasheed',
+            local: !!target.local,
+        };
+    }
+    void botPost(body, '/api/report').catch(() => undefined);
+}
+function pushBot(force = false) {
+    const now = Date.now();
+    if (!botEnabled || !botLinked)
+        return;
+    if (now - botLastRefresh < (force ? 0 : 30000))
+        return;
+    botLastRefresh = now;
+    reportEvent(audio.paused ? 'pause' : 'progress');
+}
+$('#set-bot').addEventListener('change', (e) => {
+    botEnabled = e.target.checked;
+    void botPost({ enabled: botEnabled }).catch(() => undefined);
+    if (botEnabled && botLinked && currentSong) {
+        botLastRefresh = 0;
+        reportEvent(discIsHidden(currentSong.id) ? 'hidden' : 'start', currentSong);
+    }
+    void loadBot();
+});
+$('#bot-url').addEventListener('change', (e) => {
+    const url = e.target.value.trim();
+    void botPost({ url }).catch(() => undefined);
+});
+$('#bot-link').addEventListener('click', () => {
+    const code = $('#bot-code').value.trim();
+    const url = $('#bot-url').value.trim();
+    if (!code) {
+        botNote('Run su!track link in Discord and paste the code here.');
+        return;
+    }
+    botNote('Linking...');
+    void botPost({ code, url }, '/api/bot/link')
+        .then((d) => {
+        if (!d.ok) {
+            botNote(String(d.error || 'That code did not work'));
+            return;
+        }
+        $('#bot-code').value = '';
+        const name = d.user?.name;
+        botNote('Linked' + (name ? ' as ' + name : '') + '. Play something and try su!track');
+        toast('Discord bot linked');
+        void loadBot();
+    })
+        .catch(() => botNote('Could not reach the app backend'));
+});
+$('#bot-unlink').addEventListener('click', () => {
+    void botPost({}, '/api/bot/unlink')
+        .then(() => {
+        botNote('Unlinked. Run su!track link for a fresh code.');
+        toast('Discord bot unlinked');
+        void loadBot();
+    })
+        .catch(() => botNote('Could not reach the app backend'));
+});
+$('#bot-test').addEventListener('click', () => {
+    const url = $('#bot-url').value.trim();
+    botNote('Testing...');
+    void botPost({ url })
+        .then(() => getJSON(`${API}/api/bot/test`, { method: 'POST' }))
+        .then((d) => {
+        if (d.ok)
+            botNote('Bot reachable, running v' + (d.version || 'unknown'));
+        else
+            botNote(String(d.error || 'No response from the bot'));
+    })
+        .catch(() => botNote('No response from the bot'));
+});
+window.addEventListener('pagehide', () => {
+    if (!botEnabled || !botLinked || !navigator.sendBeacon)
+        return;
+    const body = new Blob([JSON.stringify({ event: 'stop' })], { type: 'application/json' });
+    navigator.sendBeacon(`${API}/api/report`, body);
 });
 // --- SETTINGS ---
 let appVersion = '';
@@ -2323,4 +2483,5 @@ void initDownloads();
 void loadQuranReciters();
 syncSettingsVol();
 void initDiscord();
+void loadBot();
 void loadSidebarVersion();

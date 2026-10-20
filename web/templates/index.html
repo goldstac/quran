@@ -251,7 +251,33 @@
             </label>
             <span id="set-discord-status" class="disc-status">Off</span>
           </div>
-          <p class="settings-card-sub">Shows what you are listening to on your Discord profile. Keep Discord desktop running and it connects automatically. Use the eye button on any nasheed to hide or show it from your presence.</p>
+          <p class="settings-card-sub">Shows what you are listening to on your Discord profile. Keep Discord desktop running and it connects automatically. Use the eye button on any nasheed to hide or show it from your presence and your bot.</p>
+        </div>
+        <div class="settings-card">
+          <h2 class="settings-card-title"><i class="fa-solid fa-headphones"></i>Discord bot</h2>
+          <div class="settings-row">
+            <span class="settings-row-label">Send what I play</span>
+            <label class="toggle">
+              <input type="checkbox" id="set-bot">
+              <span class="toggle-slider"></span>
+            </label>
+            <span id="set-bot-status" class="disc-status">Not linked</span>
+          </div>
+          <div class="settings-row">
+            <span class="settings-row-label">Bot URL</span>
+            <input type="text" id="bot-url" class="set-input" placeholder="http://127.0.0.1:3000" spellcheck="false" autocomplete="off">
+          </div>
+          <div class="settings-row">
+            <span class="settings-row-label">Link code</span>
+            <input type="text" id="bot-code" class="set-input set-input-code" placeholder="From su!track link" spellcheck="false" autocomplete="off">
+            <button id="bot-link" class="set-btn" type="button"><i class="fa-solid fa-link"></i><span>Link</span></button>
+          </div>
+          <div class="set-btn-row">
+            <button id="bot-test" class="set-btn ghost" type="button"><i class="fa-solid fa-satellite-dish"></i><span>Test connection</span></button>
+            <button id="bot-unlink" class="set-btn ghost" type="button" disabled><i class="fa-solid fa-plug-circle-xmark"></i><span>Unlink</span></button>
+          </div>
+          <p id="bot-note" class="settings-note"></p>
+          <p class="settings-card-sub">Run <code>su!track link</code> in your own Discord bot, then paste the code here. The bot's <code>su!track</code> shows what you are listening to and <code>su!fm</code> counts your plays. Nasheeds you hide with the eye button are never sent.</p>
         </div>
         <div class="settings-card">
           <h2 class="settings-card-title"><i class="fa-solid fa-volume-high"></i>Sound</h2>
