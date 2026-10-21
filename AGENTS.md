@@ -21,7 +21,11 @@ Two app versions exist in this repo:
 
 ## Task board
 
-`task-board.md` is the living list of known issues, in-flight work, and shipped items. Update it in the same change as the work it describes: new items go at the top of the matching section (High / Medium / Low / Done), and anything you finish moves to Done with how it was verified. Be explicit about work left uncommitted (the file paths and the branch), because that is what makes it findable later; right now that means the terminal-logging changes in `tauri-app/src-tauri/src/lib.rs` + `web/app.py`, the regenerated `tauri-app/src-tauri/gen/schemas/`, and the bot-side embed restyle in the `smite-bot` repo.
+`task-board.md` is the living list of known issues, in-flight work, and shipped items. Update it in the same change as the work it describes: new items go at the top of the matching section (High / Medium / Low / Done), and anything you finish moves to Done with how it was verified. Be explicit about work left uncommitted (the file paths and the branch), because that is what makes it findable later; right now that means the terminal-logging changes in `tauri-app/src-tauri/src/lib.rs` + `web/app.py` and the regenerated `tauri-app/src-tauri/gen/schemas/`.
+
+## Website repo
+
+The public site lives in its own repo: `~/Documents/GitHub/quran-app-website` (slug `quran-app-website`, public, [github.com/goldstac/quran-app-website](https://github.com/goldstac/quran-app-website)), a sibling checkout of this one, not a submodule. It is driven from here: its `AGENTS.md` is a trimmed copy of this one, it has its own `task-board.md`, and the same habits apply over there. When this repo ships something the site should advertise (a release, a new feature), write it into both task boards, and when a claim about the app changes here, the site copy gets fixed with it. No site code or site docs live in this repo.
 
 ## Git & Conventional Commits
 

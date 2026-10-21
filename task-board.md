@@ -30,25 +30,17 @@ matching section and note the platform when it is not cross-platform.
 
 ## Medium priority
 
-- [ ] Bot-side embed restyle is finished but uncommitted. In the `smite-bot`
-  repo at `~/Documents/GitHub/smite-bot`, branch `dev`, uncommitted files
-  `src/commands/quran.ts`, `src/quran.ts`, `README.md`: the `su!track` /
-  `su!fm` embeds were rebuilt on one shared shell so they stop looking thrown
-  together:
-  author line with the app logo icon, title, description, one row of three
-  inline stat fields, then the list fields, one footer hint. Green for nasheeds
-  and confirmations, gold for Quran, amber for off/paused, grey for nothing to
-  show. Emoji came out of titles, field names, and footers (only the
-  `📖`/`📻` type markers remain in the two list bodies); the progress bar is
-  now `█`/`░` instead of an emoji knob; titles link to the YouTube video when
-  the id looks like one; the now-playing card shows per-track plays plus
-  lifetime totals; `su!track off/on` no longer tells an unlinked user it worked
-  (it sends the Not linked card); recent-list numbers are padded so item 10
-  lines up; the dead `songLabel`/`sourceLabel` helpers are gone. Verified by
-  rendering all 21 embed states through a headless harness in
-  `/tmp/opencode/bottest/` (limits, field grid, and plurals all checked), with
-  a browser preview at `/tmp/opencode/embed-preview.html`. Left to do: commit
-  on `dev`, push, open the PR to `main` (would be #18).
+- [ ] The app's website lives in its own repo: `~/Documents/GitHub/quran-app-website`
+  (public, `main`, pushed), a sibling of this repo rather than a submodule. The
+  landing page is built and pushed (commit `b400880`): Vite + React 19 +
+  TypeScript + Tailwind v4 + shadcn, with the real gradients.sh
+  `MeshGradient` component behind a quran.org-style editorial page (warm cream
+  canvas, serif display type, an Arabic + Tamil + English ayah hero, a
+  3-column feature grid, a dark mission band, and download cards). What is
+  still open on that board is hosting (GitHub Pages is the obvious fit) and
+  the later pages (downloads, links). It is driven from this repo: when
+  something here ships that the site should advertise, or a claim about the
+  app changes, both boards get updated together.
 
 - [ ] The APK the user tried to install would not install on a Redmi A5.
   Reported, no detail captured yet: confirm the exact error, the Android
@@ -93,6 +85,23 @@ matching section and note the platform when it is not cross-platform.
   frontend already surfaces the `play()` rejection as a toast.
 
 ## Done
+
+- [x] Bot-side embed restyle, committed and pushed on the bot's `dev`
+  (`33ab5e6`, in `~/Documents/GitHub/smite-bot`: `src/commands/quran.ts`,
+  `src/quran.ts`, `README.md`). The `su!track` / `su!fm` embeds now share one
+  shell: author line with the app logo, title, description, a row of three
+  inline stat fields, then the list fields, one footer hint. Green for
+  nasheeds and confirmations, gold for Quran, amber for off/paused, grey for
+  nothing to show. Emoji came out of titles, field names and footers (only the
+  type markers inside the two lists remain); the progress bar is block
+  characters instead of an emoji knob; now playing titles link to the YouTube
+  video when the id looks like one; the card shows per-track plays beside the
+  lifetime totals; `su!track off/on` sends the Not linked card instead of
+  claiming success; recent list numbers are padded so item 10 lines up. All 21
+  embed states rendered through a headless harness in `/tmp/opencode/bottest/`
+  (limits, field grid, plurals checked), preview at
+  `/tmp/opencode/embed-preview.html`. Still to do there: open the PR to `main`
+  (would be #18).
 
 - [x] Settings cards on one alignment grid (`4275ff0`). Every settings row is
   now `label (128px) | control | trailing right-aligned`, so values, status
