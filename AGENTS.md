@@ -21,11 +21,13 @@ Two app versions exist in this repo:
 
 ## Task board
 
-`task-board.md` is the living list of known issues, in-flight work, and shipped items. Update it in the same change as the work it describes: new items go at the top of the matching section (High / Medium / Low / Done), and anything you finish moves to Done with how it was verified. Be explicit about work left uncommitted (the file paths and the branch), because that is what makes it findable later; right now that means the terminal-logging changes in `tauri-app/src-tauri/src/lib.rs` + `web/app.py` and the regenerated `tauri-app/src-tauri/gen/schemas/`.
+`task-board.md` is the living list of known issues, in-flight work, and shipped items. Update it in the same change as the work it describes: new items go at the top of the matching section (High / Medium / Low / Done), and anything you finish moves to Done with how it was verified. Be explicit about work left uncommitted (the file paths and the branch), because that is what makes it findable later; right now that means the terminal-logging changes in `tauri-app/src-tauri/src/lib.rs` + `web/app.py`, the local-nasheed null-guard in `web/ts/app.ts` + the rebuilt `web/static/app.js`, and the regenerated `tauri-app/src-tauri/gen/schemas/`, all on `development`.
 
 ## Website repo
 
-The public site lives in its own repo: `~/Documents/GitHub/quran-app-website` (slug `quran-app-website`, public, [github.com/goldstac/quran-app-website](https://github.com/goldstac/quran-app-website)), a sibling checkout of this one, not a submodule. It is driven from here: its `AGENTS.md` is a trimmed copy of this one, it has its own `task-board.md`, and the same habits apply over there. When this repo ships something the site should advertise (a release, a new feature), write it into both task boards, and when a claim about the app changes here, the site copy gets fixed with it. No site code or site docs live in this repo.
+The public site lives in its own repo: `~/Documents/GitHub/quran-app-website` (slug `quran-app-website`, public, [github.com/goldstac/quran-app-website](https://github.com/goldstac/quran-app-website)), a sibling checkout of this one, not a submodule. Its landing page is built and pushed: Vite + React 19 + TypeScript + Tailwind v4, a warm editorial design modeled on quran.org, with the gradients.sh `MeshGradient` component behind the hero.
+
+Work is split by session: this repo's sessions own the app, a separate session owns the website, and each repo has its own `task-board.md`. When this repo ships something the site should advertise (a release, a new feature), or a claim about the app changes here, say it in both task boards so the other session can pick it up, and fix the site copy with it. No site code or site docs live in this repo.
 
 ## Git & Conventional Commits
 

@@ -18,7 +18,6 @@ matching section and note the platform when it is not cross-platform.
   keep them, real errors still show either way). Files: `tauri-app/src-tauri/
   src/lib.rs`, `web/app.py`. Verified so far: `cargo check` and the Python
   import/banner; commit and ship with the next tag after a real AppImage run.
-
 - [ ] Tauri v2 dropped regenerated schemas into the tree:
   `tauri-app/src-tauri/gen/schemas/` (acl-manifests, android, capabilities,
   desktop, linux, mobile JSON) is untracked. The Tauri CLI rewrites them on
@@ -28,19 +27,34 @@ matching section and note the platform when it is not cross-platform.
 
 - [ ] Working on v1.2.1
 
+- [x] Fix imported local nasheeds never appearing in "Your Nasheeds". The upload
+  itself worked (`POST /api/local` saved the file and the `local: true` song, the
+  library JSON was correct), but the list never rendered: `makeRow` renders the
+  YouTube button only for non-local songs, then attached a listener to
+  `r.querySelector('.yt-act')!` unconditionally, so a local row threw
+  `TypeError: Cannot read properties of null (reading 'addEventListener')` inside
+  `renderList`'s `forEach` and no rows were appended. The handler is now guarded
+  like the neighbouring `.dl-act` one. Fixed in `web/ts/app.ts`, rebuilt into
+  `web/static/app.js`. Verified: `npm run build` clean, `python3 -c "from app
+  import app"` fine, and a DOM stub running the compiled `makeRow` renders a
+  local song (and still throws on the pre-fix bundle, so the check is real).
+  The fix itself is still uncommitted in the working tree (`web/ts/app.ts` +
+  `web/static/app.js`), so fold it into the next commit.
+
 ## Medium priority
 
 - [ ] The app's website lives in its own repo: `~/Documents/GitHub/quran-app-website`
-  (public, `main`, pushed), a sibling of this repo rather than a submodule. The
-  landing page is built and pushed (commit `b400880`): Vite + React 19 +
+  (public, `main`, pushed), a sibling of this repo rather than a submodule, and
+  it gets its own chat session (this one owns the app, that one owns the site).
+  The landing page is built and pushed (commit `b400880`): Vite + React 19 +
   TypeScript + Tailwind v4 + shadcn, with the real gradients.sh
   `MeshGradient` component behind a quran.org-style editorial page (warm cream
   canvas, serif display type, an Arabic + Tamil + English ayah hero, a
   3-column feature grid, a dark mission band, and download cards). What is
   still open on that board is hosting (GitHub Pages is the obvious fit) and
-  the later pages (downloads, links). It is driven from this repo: when
-  something here ships that the site should advertise, or a claim about the
-  app changes, both boards get updated together.
+  the later pages (downloads, links). When something here ships that the site
+  should advertise, or a claim about the app changes, both boards get updated
+  together so the website session can pick it up.
 
 - [ ] The APK the user tried to install would not install on a Redmi A5.
   Reported, no detail captured yet: confirm the exact error, the Android
@@ -150,7 +164,7 @@ matching section and note the platform when it is not cross-platform.
   duration from mutagen when it is installed. Served by `/api/file/<id>` with
   Range support, played like any nasheed, YouTube button hidden, the Discord
   presence shows `Local nasheeds` for them, and removing the row deletes the
-  stored copy.
+  stored copy. Rows did not render at first, see the fix in High priority.
 
 - [x] Removed the install-version picker from Settings: no more version
   dropdown, pre-release/older-version selection, or downgrades. Check for
