@@ -56,9 +56,43 @@ matching section and note the platform when it is not cross-platform.
   should advertise, or a claim about the app changes, both boards get updated
   together so the website session can pick it up.
 
-- [ ] The APK the user tried to install would not install on a Redmi A5.
-  Reported, no detail captured yet: confirm the exact error, the Android
-  version, and whether it was an APK or AAB before touching the Android job.
+- [ ] The APK the user tried to install would not install on a Redmi A5
+  (Android 15). Source is `v1.2.1-pre-alpha.1`
+  (`app-universal-release.apk`, 45MB, CI run 39145235450).
+
+  Ruled out by inspecting the downloaded APK directly (analysis in
+  `/tmp/opencode/apkcheck/`: `axml.py` parses the binary manifest, plus zip
+  offset and signing-block checks):
+
+  - It is a real `.apk`, not an `.aab` (45721573 bytes, `file` reports a
+    valid Android package).
+  - Universal build with all four ABIs present, including
+    `lib/arm64-v8a/libquran_player_lib.so`, so the A5's ABI is covered.
+  - Genuinely signed: the CI keystore secret was present and decoded in run
+    39145235450 (so it did not fall back to the "APK will be unsigned"
+    warning or the debug signing config), and the APK carries an APK Signing
+    Block (`APK Sig Block 42`, v2/v3). No v1 files, which is correct because
+    minSdk is 24.
+  - Manifest: package `com.goldstac.quran`, versionCode 1002001, versionName
+    1.2.1, minSdkVersion 24, targetSdkVersion 36, only `INTERNET` permission,
+    `android.software.leanback` marked `required=0`. None of that blocks an
+    Android 15 (API 35) install.
+  - Native libs are stored uncompressed (`extractNativeLibs=0`) and all four
+    `.so` entries sit on a 16384-byte boundary, so the Android 15 16 KB page
+    size rejection does not apply either.
+
+  The artifact is clean, so the refusal is phone-side. Still needed from the
+  user, in order of usefulness: the exact error text or a screenshot (the
+  paraphrase so far is "you can't install this app on your device", tapped
+  from Google Files, which is not the standard unknown-sources prompt);
+  whether an older Quran install is already on the phone (a leftover build
+  signed with the ephemeral CI debug keystore from before the 16:29 keystore
+  fix would give a signature conflict); and, if a PC is available,
+  `adb install -r app-universal-release.apk`, whose `Failure [...]` line names
+  the exact reason. The one manifest oddity worth stripping if a new build is
+  cut anyway: the AndroidTV `LEANBACK_LAUNCHER` category and leanback
+  feature the Tauri template injects. Do not touch the Android job until one
+  of the three details above is captured.
 
 - [ ] Android app (mobile build): create an Android version of the app using Tauri
   mobile/Android tooling, planned to run primarily in CI (not built locally).
