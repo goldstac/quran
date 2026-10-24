@@ -5,6 +5,49 @@ matching section and note the platform when it is not cross-platform.
 
 ## High priority
 
+- [ ] Uploading an mp3 in "Your Nasheeds" did nothing (user report, Oct 24).
+  ROOT CAUSE FOUND AND FIXED: the system's flatpak document portal was
+  broken, not the app. The user's Brave is the flatpak `com.brave.Browser`,
+  and flatpak file pickers hand the chosen file to the app through
+  `org.freedesktop.portal.Documents`. That service's database
+  `~/.local/share/flatpak/db/documents` had been truncated to 0 bytes on
+  Oct 21 18:33 (during the disk-full episode; disk is still at 97%), so
+  `xdg-document-portal.service` crash-looped with "invalid gvdb header"
+  (exit status 2) every time it was activated. Result: the picker opened and
+  the user picked the file (journal proves it, twice: 22:33:34 and 23:02:06,
+  `Failed to register file:///home/admin/Downloads/have-you-really-departed
+  -oh-our-sheykh.mp3`), the export into the sandbox failed, the page's
+  `#local-file` ended up with zero files, and `addLocalFiles` returned
+  silently at `if (files.length)`: no toast, no POST, nothing in `local/`.
+  Fixed by deleting the 0-byte corrupt DB and starting the unit: it is now
+  active and owns `org.freedesktop.portal.Documents` (bus owner `:1.438`),
+  clean journal since. Needs one user retry in Brave to confirm; if the
+  first pick still misbehaves, restart Brave (the portal lookup happens per
+  pick, so a restart should not be needed).
+
+  Everything else was verified working along the way: the current code
+  passes a full end-to-end test (jsdom harness in `/tmp/opencode/domtest/`
+  runs the real `web/static/app.js` against the live server: nav, change
+  event, POST lands, toast "Added to Your Nasheeds", row renders, no JS
+  errors), the backend route answers (direct test, then cleaned up), only
+  one server exists (port 5000, restarted 22:33 and 23:01 with current
+  code), and `local/` stayed empty through both failed attempts, proving the
+  request was never sent. Improvement shipped while investigating: the old
+  blanket `.catch(() => ({ error: 'failed' }))` hid every failure behind a
+  useless "Could not add x.mp3: failed", so `web/ts/app.ts` now surfaces the
+  real reason - HTTP 404 says "backend is out of date, restart the app",
+  other HTTP errors show the backend's own `error` field or the status
+  number, and a dead connection says "can't reach the backend". All three
+  error branches plus the happy path are covered by the harness.
+  Uncommitted: `web/ts/app.ts` + `web/static/app.js` (this plus the local
+  row null-guard fix below).
+
+  Follow-up worth considering: the disk was at 100% recently and is still
+  at 97% (2.0G free of 53G), and that ENOSPC event is what corrupted the
+  portal DB in the first place. `tauri-app/src-tauri/target/` (1.6G) is
+  regenerable build output; user's call whether to `cargo clean`.
+
+
 - [ ] Terminal startup logging for the desktop app (implemented in the
   working tree, not committed yet, needs one real AppImage run to verify).
   Running `./Quran_*.AppImage` from a terminal prints a startup banner
@@ -58,41 +101,62 @@ matching section and note the platform when it is not cross-platform.
 
 - [ ] The APK the user tried to install would not install on a Redmi A5
   (Android 15). Source is `v1.2.1-pre-alpha.1`
-  (`app-universal-release.apk`, 45MB, CI run 39145235450).
+  (`app-universal-release.apk`, 45721573 bytes, CI run 39145235450). User
+  has since confirmed two things: the paraphrased error is "you can't
+  install this app on your device" tapped from Google Files, and
+  "Install unknown apps" was ALREADY enabled for Files by Google, so the
+  unknown-sources gate is ruled out and the package installer itself is
+  refusing.
 
-  Ruled out by inspecting the downloaded APK directly (analysis in
-  `/tmp/opencode/apkcheck/`: `axml.py` parses the binary manifest, plus zip
-  offset and signing-block checks):
+  Ruled out by inspecting the downloaded APK directly (results recorded
+  here; analysis dir `/tmp/opencode/apkcheck/` holds the re-downloaded APK
+  and `signer.txt`, the first pass's `axml.py` was lost when /tmp got wiped
+  by a restart, its output is quoted below):
 
-  - It is a real `.apk`, not an `.aab` (45721573 bytes, `file` reports a
-    valid Android package).
+  - It is a real `.apk`, not an `.aab` (45721573 bytes).
   - Universal build with all four ABIs present, including
     `lib/arm64-v8a/libquran_player_lib.so`, so the A5's ABI is covered.
-  - Genuinely signed: the CI keystore secret was present and decoded in run
-    39145235450 (so it did not fall back to the "APK will be unsigned"
-    warning or the debug signing config), and the APK carries an APK Signing
-    Block (`APK Sig Block 42`, v2/v3). No v1 files, which is correct because
-    minSdk is 24.
+  - Signed with the REAL release keystore: the APK Signing Block (pairs
+    0x7109871a = v2, plus 0x504b4453 and 0x42726577) contains a v2 signature
+    whose certificate is issued to goldstac / Quran, created 2026-10-18
+    16:28:17 UTC, valid until 2054-03-05 (matching when the CI secrets were
+    added at 16:29), not an Android Debug fallback. No v1 files, correct
+    for minSdk 24.
   - Manifest: package `com.goldstac.quran`, versionCode 1002001, versionName
     1.2.1, minSdkVersion 24, targetSdkVersion 36, only `INTERNET` permission,
     `android.software.leanback` marked `required=0`. None of that blocks an
     Android 15 (API 35) install.
   - Native libs are stored uncompressed (`extractNativeLibs=0`) and all four
     `.so` entries sit on a 16384-byte boundary, so the Android 15 16 KB page
-    size rejection does not apply either.
+    size rejection for libraries does not apply either.
+  - NO older release ever shipped an APK (every release's assets listed via
+    `gh api`; only v1.2.1-pre-alpha.1 has one), so no earlier Quran build
+    can be squatting on the package name and a signature conflict with a
+    leftover install is impossible.
 
-  The artifact is clean, so the refusal is phone-side. Still needed from the
-  user, in order of usefulness: the exact error text or a screenshot (the
-  paraphrase so far is "you can't install this app on your device", tapped
-  from Google Files, which is not the standard unknown-sources prompt);
-  whether an older Quran install is already on the phone (a leftover build
-  signed with the ephemeral CI debug keystore from before the 16:29 keystore
-  fix would give a signature conflict); and, if a PC is available,
-  `adb install -r app-universal-release.apk`, whose `Failure [...]` line names
-  the exact reason. The one manifest oddity worth stripping if a new build is
-  cut anyway: the AndroidTV `LEANBACK_LAUNCHER` category and leanback
-  feature the Tauri template injects. Do not touch the Android job until one
-  of the three details above is captured.
+  First real artifact-side suspect found: `resources.arsc` is stored
+  uncompressed (correct) but only 4-byte aligned, NOT page-aligned (data
+  offset 44637848, i.e. 3736 bytes into a 4 KB page). Harmless on
+  4 KB-page phones, but on an Android 15 device running with 16 KB pages
+  the resource table must be page-mmapable and the install gets rejected,
+  which matches the exact wording of the error with permission already
+  granted.
+
+  Next step needs the device. This machine already has `adb`
+  (v37.0.0-android-tools at /usr/bin/adb) and the APK sits ready in
+  `/tmp/opencode/apkcheck/`. Have the user enable Developer options (tap
+  "MIUI version" 7 times) then USB debugging and plug the phone in, then:
+  - `adb install -r app-universal-release.apk` for the exact
+    `Failure [INSTALL_FAILED_...]` line,
+  - `adb shell getconf PAGE_SIZE` (4096 vs 16384 decides the alignment
+    theory),
+  - `adb shell getprop ro.product.cpu.abilist` (confirm device ABIs).
+  If it is the page size, the fix is mechanical: page-align `resources.arsc`
+  in the Android build (newer AGP does it automatically, or a
+  `zipalign -P 16` pass) and cut a new pre-alpha. The other candidate if
+  the failure line says "incompatible": strip the AndroidTV
+  `LEANBACK_LAUNCHER` category and leanback feature the Tauri template
+  injects. Do not touch the Android job until the adb output is captured.
 
 - [ ] Android app (mobile build): create an Android version of the app using Tauri
   mobile/Android tooling, planned to run primarily in CI (not built locally).

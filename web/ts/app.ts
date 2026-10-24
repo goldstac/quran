@@ -1074,7 +1074,10 @@ function makeRow(song: Song, idx: number, ctx: string): HTMLElement {
   if (!isQuran) {
     r.querySelector('.fav-act')!.addEventListener('click', (e) => { e.stopPropagation(); toggleFav(song); });
     r.querySelector('.pl-act')!.addEventListener('click', (e) => { e.stopPropagation(); addToPl(song); });
-    r.querySelector('.yt-act')!.addEventListener('click', (e) => { e.stopPropagation(); seeOnYouTube(song); });
+    const ytBtn = r.querySelector<HTMLElement>('.yt-act');
+    if (ytBtn) {
+      ytBtn.addEventListener('click', (e) => { e.stopPropagation(); seeOnYouTube(song); });
+    }
     const dlBtn = r.querySelector<HTMLElement>('.dl-act');
     if (dlBtn) {
       dlBtnUi(dlBtn, song.id);
@@ -1689,12 +1692,29 @@ async function addLocalFiles(files: File[]) {
   for (const f of files) {
     const fd = new FormData();
     fd.append('file', f, f.name);
-    const r = await getJSON<{ ok?: boolean; error?: string }>(`${API}/api/local`, {
-      method: 'POST',
-      body: fd,
-    }).catch(() => ({ error: 'failed' }) as { ok?: boolean; error?: string });
-    if (r.ok) added++;
-    else toast(`Could not add ${f.name}${r.error ? `: ${r.error}` : ''}`);
+    let fail = '';
+    try {
+      const resp = await fetch(`${API}/api/local`, { method: 'POST', body: fd });
+      if (resp.ok) {
+        const r = (await resp.json()) as { ok?: boolean; error?: string };
+        if (r.ok) {
+          added++;
+          continue;
+        }
+        fail = r.error || 'upload rejected';
+      } else if (resp.status === 404) {
+        fail = 'backend is out of date, restart the app';
+      } else {
+        try {
+          const body = (await resp.json()) as { error?: string };
+          fail = body.error || '';
+        } catch {}
+        if (!fail) fail = `server error (HTTP ${resp.status})`;
+      }
+    } catch {
+      fail = "can't reach the backend";
+    }
+    toast(`Could not add ${f.name}: ${fail}`);
   }
   if (added) {
     toast(added === 1 ? 'Added to Your Nasheeds' : `Added ${added} nasheeds to Your Nasheeds`);
