@@ -5,49 +5,6 @@ matching section and note the platform when it is not cross-platform.
 
 ## High priority
 
-- [ ] Uploading an mp3 in "Your Nasheeds" did nothing (user report, Oct 24).
-  ROOT CAUSE FOUND AND FIXED: the system's flatpak document portal was
-  broken, not the app. The user's Brave is the flatpak `com.brave.Browser`,
-  and flatpak file pickers hand the chosen file to the app through
-  `org.freedesktop.portal.Documents`. That service's database
-  `~/.local/share/flatpak/db/documents` had been truncated to 0 bytes on
-  Oct 21 18:33 (during the disk-full episode; disk is still at 97%), so
-  `xdg-document-portal.service` crash-looped with "invalid gvdb header"
-  (exit status 2) every time it was activated. Result: the picker opened and
-  the user picked the file (journal proves it, twice: 22:33:34 and 23:02:06,
-  `Failed to register file:///home/admin/Downloads/have-you-really-departed
-  -oh-our-sheykh.mp3`), the export into the sandbox failed, the page's
-  `#local-file` ended up with zero files, and `addLocalFiles` returned
-  silently at `if (files.length)`: no toast, no POST, nothing in `local/`.
-  Fixed by deleting the 0-byte corrupt DB and starting the unit: it is now
-  active and owns `org.freedesktop.portal.Documents` (bus owner `:1.438`),
-  clean journal since. Needs one user retry in Brave to confirm; if the
-  first pick still misbehaves, restart Brave (the portal lookup happens per
-  pick, so a restart should not be needed).
-
-  Everything else was verified working along the way: the current code
-  passes a full end-to-end test (jsdom harness in `/tmp/opencode/domtest/`
-  runs the real `web/static/app.js` against the live server: nav, change
-  event, POST lands, toast "Added to Your Nasheeds", row renders, no JS
-  errors), the backend route answers (direct test, then cleaned up), only
-  one server exists (port 5000, restarted 22:33 and 23:01 with current
-  code), and `local/` stayed empty through both failed attempts, proving the
-  request was never sent. Improvement shipped while investigating: the old
-  blanket `.catch(() => ({ error: 'failed' }))` hid every failure behind a
-  useless "Could not add x.mp3: failed", so `web/ts/app.ts` now surfaces the
-  real reason - HTTP 404 says "backend is out of date, restart the app",
-  other HTTP errors show the backend's own `error` field or the status
-  number, and a dead connection says "can't reach the backend". All three
-  error branches plus the happy path are covered by the harness.
-  Uncommitted: `web/ts/app.ts` + `web/static/app.js` (this plus the local
-  row null-guard fix below).
-
-  Follow-up worth considering: the disk was at 100% recently and is still
-  at 97% (2.0G free of 53G), and that ENOSPC event is what corrupted the
-  portal DB in the first place. `tauri-app/src-tauri/target/` (1.6G) is
-  regenerable build output; user's call whether to `cargo clean`.
-
-
 - [ ] Terminal startup logging for the desktop app (implemented in the
   working tree, not committed yet, needs one real AppImage run to verify).
   Running `./Quran_*.AppImage` from a terminal prints a startup banner
@@ -197,6 +154,50 @@ matching section and note the platform when it is not cross-platform.
   frontend already surfaces the `play()` rejection as a toast.
 
 ## Done
+
+- [x] Embedded cover art for imported nasheeds. If an uploaded file carries
+  cover art in its tags (ID3 APIC, FLAC pictures, MP4 covr, ogg/opus
+  metadata_block_picture), `POST /api/local` extracts it, shrinks it to a
+  max 512px JPEG with Pillow (a 900x700 source came out 512x398, 8.5KB) and
+  stores it as `local/<sid>.art.jpg`; the song's `thumbnail` points at the
+  new route `/api/local-thumb/<sid>` (path-checked inside LOCAL_DIR, 404
+  for unknown ids). `api_remove` deletes the art file with the song;
+  `delete_song_file` stays untouched because download-remove keeps the
+  song. No frontend work was needed: rows, `#player-thumb`, and the
+  media-session artwork already render `song.thumbnail` and fall back to
+  the music-note placeholder when it is empty. A `backfill_local_art()`
+  pass at import fills art and duration (mutagen now installed, also gives
+  local songs their `duration_string`) for songs added before this; the
+  user's existing nasheed now reads `2:40` and has its art. Verified with
+  `/tmp/opencode/domtest/arttest.py` (upload with embedded 900x700 art,
+  endpoint serves image/jpeg, removal deletes the file) and `artrun.js`
+  (jsdom against a throwaway server on port 5077: the row is an IMG with
+  the right src, fetch 200, art file gone after delete, zero JS errors).
+  Still open: restart the backend to serve the new route (the running
+  server is from 23:01), and commit `web/app.py`.
+
+- [x] "Your Nasheeds" upload did nothing (user report, Oct 24; app-side
+  part committed as `8d30b16`). Root cause was system-level, not the app:
+  the user's Brave is the `com.brave.Browser` flatpak, and flatpak picks
+  are handed into the sandbox by `org.freedesktop.portal.Documents`, whose
+  database `~/.local/share/flatpak/db/documents` had been truncated to 0
+  bytes on Oct 21 18:33 (the disk-full episode; disk still at 97%), so
+  `xdg-document-portal.service` crash-looped with "invalid gvdb header" on
+  every activation. The journal caught both attempts (22:33:34 and
+  23:02:06, `Failed to register .../have-you-really-departed-oh-our-sheykh.mp3`):
+  the picker opened and the file was chosen, the sandbox export failed, the
+  input ended up with zero files, and `addLocalFiles` returned silently at
+  `if (files.length)` - no toast, no POST, nothing in `local/`. Fixed by
+  deleting the 0-byte DB and starting the unit (now active, owns its bus
+  name `:1.438`); the user retried and confirmed the upload works. App-side
+  hardening shipped in the same window: real error toasts (404 = backend
+  out of date, the backend's own error text, or "can't reach the backend")
+  instead of a blanket "failed", plus the guarded `.yt-act` listener so
+  local rows render. Full end-to-end proven with a jsdom harness running
+  the real `web/static/app.js` against the live server. Follow-up: the disk
+  at 97% (2.0G of 53G) is what corrupted the portal DB;
+  `tauri-app/src-tauri/target/` (1.6G) is regenerable build output if
+  `cargo clean` is ever wanted.
 
 - [x] Bot-side embed restyle, committed and pushed on the bot's `dev`
   (`33ab5e6`, in `~/Documents/GitHub/smite-bot`: `src/commands/quran.ts`,

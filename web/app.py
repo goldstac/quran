@@ -481,6 +481,112 @@ def fmt_duration(sec):
     return f"{h}:{m:02d}:{s:02d}" if h else f"{m}:{s:02d}"
 
 
+def embedded_art(path):
+    try:
+        import mutagen
+        f = mutagen.File(path)
+    except Exception:
+        return None
+    if f is None:
+        return None
+    data = None
+    try:
+        tags = f.tags
+        if tags is not None:
+            if hasattr(tags, "getall"):
+                apics = tags.getall("APIC")
+                if apics:
+                    data = apics[0].data
+            if data is None:
+                pics = getattr(f, "pictures", None)
+                if pics:
+                    data = pics[0].data
+            if data is None:
+                try:
+                    covr = tags.get("covr")
+                except Exception:
+                    covr = None
+                if covr:
+                    data = bytes(covr[0])
+            if data is None:
+                try:
+                    import base64
+                    from mutagen.flac import Picture
+                    blk = tags.get("metadata_block_picture")
+                    if blk:
+                        data = Picture(base64.b64decode(blk[0])).data
+                except Exception:
+                    data = None
+    except Exception:
+        return None
+    return data or None
+
+
+def shrink_art(data):
+    try:
+        import io
+        from PIL import Image
+        im = Image.open(io.BytesIO(data))
+        if im.mode not in ("RGB", "L"):
+            im = im.convert("RGB")
+        im.thumbnail((512, 512))
+        out = io.BytesIO()
+        im.save(out, "JPEG", quality=85)
+        return out.getvalue()
+    except Exception:
+        return None
+
+
+def store_local_art(sid, raw):
+    data = shrink_art(raw)
+    if not data:
+        return ""
+    path = os.path.join(LOCAL_DIR, sid + ".art.jpg")
+    try:
+        with open(path, "wb") as h:
+            h.write(data)
+    except OSError:
+        return ""
+    return path
+
+
+def attach_local_art(song):
+    fp = song.get("filepath") or ""
+    song["artfile"] = ""
+    if not fp or not os.path.isfile(fp):
+        return False
+    raw = embedded_art(fp)
+    if not raw:
+        return False
+    ap = store_local_art(song["id"], raw)
+    if not ap:
+        return False
+    song["artfile"] = ap
+    song["thumbnail"] = "/api/local-thumb/" + song["id"]
+    return True
+
+
+def backfill_local_art():
+    lib = load_lib()
+    changed = False
+    for s in lib.get("songs", []):
+        if not s.get("local") or "artfile" in s:
+            continue
+        attach_local_art(s)
+        fp = s.get("filepath") or ""
+        if fp and os.path.isfile(fp) and not s.get("duration"):
+            d = file_duration(fp)
+            if d:
+                s["duration"] = d
+                s["duration_string"] = fmt_duration(d)
+        changed = True
+    if changed:
+        save_lib(lib)
+
+
+backfill_local_art()
+
+
 @app.route("/api/local", methods=["POST"])
 def api_local():
     f = request.files.get("file")
@@ -510,10 +616,20 @@ def api_local():
         "local": True,
         "filepath": path,
     }
+    attach_local_art(song)
     lib = load_lib()
     lib["songs"].append(song)
     save_lib(lib)
     return jsonify({"ok": True, "song": song})
+
+
+@app.route("/api/local-thumb/<sid>")
+def api_local_thumb(sid):
+    s = find_lib_song(sid)
+    p = (s or {}).get("artfile") or ""
+    if not s or not s.get("local") or not p or not in_dir(p, LOCAL_DIR) or not os.path.isfile(p):
+        return "", 404
+    return send_file(p)
 
 
 @app.route("/api/library/remove/<sid>", methods=["POST"])
@@ -526,6 +642,12 @@ def api_remove(sid):
     save_lib(lib)
     for s in removed:
         delete_song_file(s)
+        ap = s.get("artfile") or ""
+        if ap and in_dir(ap, LOCAL_DIR) and os.path.isfile(ap):
+            try:
+                os.remove(ap)
+            except OSError:
+                pass
     with _dl_lock:
         _downloads.pop(sid, None)
     return jsonify({"ok": True})
