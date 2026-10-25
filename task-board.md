@@ -5,6 +5,21 @@ matching section and note the platform when it is not cross-platform.
 
 ## High priority
 
+- [ ] Cut `v1.2.1-pre-alpha.2` (user request, Oct 25). The AGENTS pre-check
+  dispatch (`release.yml` on `development`, run 40151908008) failed on one
+  job: `Build android` rejected `tauri.android.conf.json`, because b14e29c
+  added top-level `"android": {"autoIncrementVersionCode": true}` and the
+  config schema only accepts it at `bundle.android` (the key needs CLI
+  >= 2.9.0 / tauri-utils >= 2.8.0; repo pins CLI 2.11.5 and tauri-utils
+  2.9.3, so only the path was wrong). Fixed by nesting it under `bundle`
+  beside `externalBin`; desktop builds and both runtime tests were green in
+  that same run, so the re-dispatch should pass. This touches android
+  config despite the "don't touch the android build job until adb output"
+  rule, but it only moves a key to its schema-valid place: no packaging,
+  alignment, manifest, or signing change, so the Redmi A5 investigation is
+  unaffected. Tag goes on `development` (pre-alpha.1 did the same), no
+  version file bumps (the stamp step writes the prerelease string).
+
 - [ ] Terminal startup logging for the desktop app (implemented in the
   working tree, not committed yet, needs one real AppImage run to verify).
   Running `./Quran_*.AppImage` from a terminal prints a startup banner
