@@ -68,7 +68,7 @@ function $$<T extends HTMLElement = HTMLElement>(s: string): T[] {
 function esc(s?: string): string {
   const d = document.createElement('div');
   d.textContent = s || '';
-  return d.innerHTML;
+  return d.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 function fmt(s: number): string {
   const m = Math.floor(s / 60);
@@ -710,7 +710,7 @@ function syncQuranTranslation() {
       const row = document.createElement('div');
       row.className = 'quran-ayah';
       row.innerHTML = `
-        <div class="quran-ayah-ar" dir="rtl">${esc(v.arabic)}<span class="quran-ayah-badge">${v.num}</span></div>
+        <div class="quran-ayah-ar" dir="rtl">${esc(v.arabic)}<span class="quran-ayah-badge">${esc(String(v.num))}</span></div>
         <div class="quran-ayah-text">${esc(v.text)}</div>`;
       row.addEventListener('click', () => seekToAyah(v.num));
       body.appendChild(row);
@@ -1026,6 +1026,12 @@ function renderList(containerId: string, songs: Song[], ctx: string) {
   songs.forEach((s, i) => c.appendChild(makeRow(s, i, ctx)));
 }
 
+function thumbSrc(song: Song): string {
+  const t = song.thumbnail || '';
+  if (t.startsWith('/') || t.startsWith('https://') || t.startsWith('http://')) return esc(t);
+  return '';
+}
+
 function makeRow(song: Song, idx: number, ctx: string): HTMLElement {
   const r = document.createElement('div');
   r.className = 'track-row';
@@ -1036,22 +1042,22 @@ function makeRow(song: Song, idx: number, ctx: string): HTMLElement {
   const canRemove = ctx !== 'search' && !isQuran;
   const heart = song.favorite ? 'fa-solid fa-heart fav-on' : 'fa-regular fa-heart';
   const sub = isQuran
-    ? `<span class="track-ar">${esc(song.arabic || '')}</span><span class="track-ayahs">${song.verses_count ? `${song.verses_count} ayahs` : ''}</span>`
+    ? `<span class="track-ar">${esc(song.arabic || '')}</span><span class="track-ayahs">${song.verses_count ? `${esc(String(song.verses_count))} ayahs` : ''}</span>`
     : esc(song.channel);
 
   if (isQuran) r.classList.add('quran-row');
 
   r.innerHTML = `
     ${isQuran
-      ? `<div class="track-num">${(song.chapter_id ?? idx + 1)}</div>`
+      ? `<div class="track-num">${esc(String(song.chapter_id ?? idx + 1))}</div>`
       : song.local && !song.thumbnail
         ? `<div class="track-thumb track-thumb-ph"><i class="fa-solid fa-music"></i></div>`
-        : `<img class="track-thumb" src="${song.thumbnail || ''}" onerror="this.style.display='none'" loading="lazy" alt="">`}
+        : `<img class="track-thumb" src="${thumbSrc(song)}" loading="lazy" alt="">`}
     <div class="track-info">
       <div class="track-name">${esc(song.title)}</div>
       <div class="track-channel">${sub}</div>
     </div>
-    ${song.duration_string ? `<span class="track-dur">${song.duration_string}</span>` : ''}
+    ${song.duration_string ? `<span class="track-dur">${esc(song.duration_string)}</span>` : ''}
     <div class="track-actions">
       <button class="track-act play-act" title="Play"><i class="fa-solid fa-play"></i></button>
       ${canRemove ? '<button class="track-act rem-act" title="Remove"><i class="fa-solid fa-trash"></i></button>' : ''}
@@ -1061,6 +1067,13 @@ function makeRow(song: Song, idx: number, ctx: string): HTMLElement {
       ${isLocal ? '' : '<button class="track-act yt-act" title="See on YouTube"><i class="fa-brands fa-youtube"></i></button>'}
       <button class="track-act disc-act" title="Shown in Discord"><i class="fa-solid fa-eye"></i></button>`}
     </div>`;
+
+  const rowImg = r.querySelector<HTMLImageElement>('img.track-thumb');
+  if (rowImg) {
+    const hideImg = () => { rowImg.style.display = 'none'; };
+    rowImg.addEventListener('error', hideImg);
+    if (rowImg.complete && rowImg.naturalWidth === 0) hideImg();
+  }
 
   r.addEventListener('dblclick', () => playSong(song, idx, ctx));
   let warmTimer: number | undefined;
@@ -1106,7 +1119,7 @@ function warm(id: string) {
   if (id.startsWith('local-') || downloadedIds.has(id)) return;
   if (warmed.has(id)) return;
   warmed.add(id);
-  fetch(`${API}/api/warm/${id}`).then((r) => {
+  fetch(`${API}/api/warm/${encodeURIComponent(id)}`).then((r) => {
     if (!r.ok) warmed.delete(id);
   }).catch(() => warmed.delete(id));
 }
@@ -1129,7 +1142,7 @@ function dlBtnUi(btn: HTMLElement, id: string) {
 }
 
 function refreshDl(id: string) {
-  $$<HTMLElement>(`.track-row[data-id="${id}"] .dl-act`).forEach((b) => dlBtnUi(b, id));
+  $$<HTMLElement>(`.track-row[data-id="${CSS.escape(id)}"] .dl-act`).forEach((b) => dlBtnUi(b, id));
   if (currentSong && currentSong.id === id) dlBtnUi($('#dl-btn'), id);
 }
 
@@ -1253,8 +1266,8 @@ function songSrc(song: Song): string {
     const chapter = song.chapter_id ?? 1;
     return `${API}/api/quran/chapter_audio/${reciter}/${chapter}`;
   }
-  if (song.local) return `${API}/api/file/${song.id}`;
-  return `${API}/api/proxy/${song.id}`;
+  if (song.local) return `${API}/api/file/${encodeURIComponent(song.id)}`;
+  return `${API}/api/proxy/${encodeURIComponent(song.id)}`;
 }
 
 async function ensureQuranSrc(song: Song): Promise<string> {
@@ -1735,13 +1748,13 @@ async function removeFromList(song: Song) {
     const plName = currentPlaylistName;
     const ok = await confirmDialog('Remove from playlist', `Remove "${song.title}" from ${plName}?`);
     if (!ok) return;
-    await getJSON<{ ok: boolean }>(`${API}/api/playlists/${encodeURIComponent(plName)}/remove/${song.id}`, { method: 'POST' });
+    await getJSON<{ ok: boolean }>(`${API}/api/playlists/${encodeURIComponent(plName)}/remove/${encodeURIComponent(song.id)}`, { method: 'POST' });
     toast('Removed from ' + plName);
     loadLib('playlist:' + plName);
   } else {
     const ok = await confirmDialog('Remove from library', `Remove "${song.title}" from Your Library?`);
     if (!ok) return;
-    await getJSON<{ ok: boolean }>(`${API}/api/library/remove/${song.id}`, { method: 'POST' });
+    await getJSON<{ ok: boolean }>(`${API}/api/library/remove/${encodeURIComponent(song.id)}`, { method: 'POST' });
     toast('Removed from Your Library');
     loadLib(currentLibMode ?? 'library');
   }
@@ -1757,8 +1770,8 @@ async function toggleFav(song: Song) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(song),
   });
-  const d = await getJSON<{ favorite: boolean }>(`${API}/api/library/fav/${song.id}`, { method: 'POST' });
-  $$<HTMLElement>(`.track-row[data-id="${song.id}"] .fav-act i`).forEach((i) => {
+  const d = await getJSON<{ favorite: boolean }>(`${API}/api/library/fav/${encodeURIComponent(song.id)}`, { method: 'POST' });
+  $$<HTMLElement>(`.track-row[data-id="${CSS.escape(song.id)}"] .fav-act i`).forEach((i) => {
     i.className = d.favorite ? 'fa-solid fa-heart fav-on' : 'fa-regular fa-heart';
   });
   if (currentSong && currentSong.id === song.id) {
@@ -1947,7 +1960,7 @@ function discSetHidden(id: string, hidden: boolean) {
 }
 function syncDiscBtns(id: string) {
   const hidden = discIsHidden(id);
-  $$<HTMLElement>(`.track-row[data-id="${id}"] .disc-act`).forEach((b) => {
+  $$<HTMLElement>(`.track-row[data-id="${CSS.escape(id)}"] .disc-act`).forEach((b) => {
     const icon = b.querySelector('i');
     if (icon) icon.className = hidden ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
     b.classList.toggle('disc-hide', hidden);
