@@ -4,6 +4,7 @@ from flask import Flask, render_template, jsonify, request, send_file
 
 app = Flask(__name__)
 app.config["TEMPLATES_AUTO_RELOAD"] = True
+app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024 * 1024
 
 _BIND = os.environ.get("QURAN_BIND", "127.0.0.1")
 _ALLOWED_ORIGIN = re.compile(r"^(?:https?://(?:127\.0\.0\.1|localhost|\[::1\])(?::\d+)?|tauri://localhost|http://tauri\.localhost)$")
@@ -161,6 +162,7 @@ def find_ytdlp():
 
 
 YTDLP_PATH = find_ytdlp()
+_yt_sem = threading.Semaphore(4)
 
 
 def load_lib():
@@ -191,6 +193,8 @@ def api_search():
         return jsonify({"error": "yt-dlp not found"}), 500
     cmd = [YTDLP_PATH, f"ytsearch15:{q}", "--flat-playlist", "--dump-json",
            "--no-warnings", "--ignore-errors", "--no-playlist"]
+    if not _yt_sem.acquire(timeout=8):
+        return jsonify({"error": "search busy, try again"}), 429
     try:
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
         results = []
@@ -214,6 +218,8 @@ def api_search():
         return jsonify(results)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    finally:
+        _yt_sem.release()
 
 
 @app.route("/api/stream/<video_id>")
@@ -223,6 +229,8 @@ def api_stream(video_id):
     cmd = [YTDLP_PATH, "-f", "bestaudio[ext=m4a]/bestaudio/best", "-g",
            "--no-warnings", "--no-playlist", "--user-agent", UA,
            f"https://www.youtube.com/watch?v={video_id}"]
+    if not _yt_sem.acquire(timeout=8):
+        return jsonify({"error": "stream busy, try again"}), 429
     try:
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
         url = r.stdout.strip().split("\n")[0]
@@ -231,6 +239,8 @@ def api_stream(video_id):
         return jsonify({"error": "no stream"}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    finally:
+        _yt_sem.release()
 
 
 @app.route("/api/library")
@@ -398,11 +408,20 @@ def api_file(sid):
 
 
 _dl_lock = threading.Lock()
+_dl_sem = threading.Semaphore(2)
 _downloads = {}
 DL_FORMATS = "bestaudio[ext=m4a]/bestaudio[ext=mp3]/bestaudio"
 
 
 def _run_download(sid):
+    _dl_sem.acquire()
+    try:
+        _download_worker(sid)
+    finally:
+        _dl_sem.release()
+
+
+def _download_worker(sid):
     if not YTDLP_PATH:
         _downloads[sid] = {"state": "error", "error": "yt-dlp not found"}
         return
@@ -805,17 +824,25 @@ _stream_cache = {}
 
 def resolve_stream(video_id):
     if video_id in _stream_cache:
+        _stream_cache[video_id] = _stream_cache.pop(video_id)
         return _stream_cache[video_id]
     if not YTDLP_PATH:
         raise ValueError("yt-dlp not found")
     cmd = [YTDLP_PATH, "-f", "bestaudio[ext=m4a]/bestaudio/best", "-g",
            "--no-warnings", "--no-playlist", "--user-agent", UA,
            f"https://www.youtube.com/watch?v={video_id}"]
-    r = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+    if not _yt_sem.acquire(timeout=15):
+        raise ValueError("Stream lookup busy, try again")
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+    finally:
+        _yt_sem.release()
     url = r.stdout.strip().split("\n")[0]
     if not url.startswith("http"):
         raise ValueError("No stream")
     _stream_cache[video_id] = url
+    while len(_stream_cache) > 64:
+        _stream_cache.pop(next(iter(_stream_cache)))
     return url
 
 
@@ -877,13 +904,19 @@ def api_proxy(video_id):
 _quran_cache = {}
 
 
+def _cache_put(key, value):
+    _quran_cache[key] = value
+    while len(_quran_cache) > 96:
+        _quran_cache.pop(next(iter(_quran_cache)))
+
+
 def _quran_get(url, key, timeout=20):
     if key in _quran_cache:
         return _quran_cache[key]
     req = _urllib.Request(url, headers={"User-Agent": UA})
     with _urllib.urlopen(req, timeout=timeout) as resp:
         data = json.loads(resp.read().decode("utf-8"))
-    _quran_cache[key] = data
+    _cache_put(key, data)
     return data
 
 
@@ -965,7 +998,7 @@ def api_quran_chapter_audio(moshaf_id, chapter_id):
             return jsonify({"error": "reciter not found"}), 404
         url = f"{server}{chapter_id:03d}.mp3"
         payload = {"url": url, "format": "mp3"}
-        _quran_cache[key] = payload
+        _cache_put(key, payload)
         return jsonify(payload)
     except Exception as e:
         _quran_cache.pop(key, None)
