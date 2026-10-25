@@ -240,12 +240,47 @@ def api_open():
         return jsonify({"ok": False, "error": str(e)}), 500
 
 
+def _clean_song(raw):
+    if not isinstance(raw, dict):
+        return None
+    sid = str(raw.get("id") or "")
+    if not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", sid):
+        return None
+
+    def text(key, cap):
+        v = raw.get(key)
+        return v.strip()[:cap] if isinstance(v, str) else ""
+
+    thumb = text("thumbnail", 1024)
+    if thumb and not thumb.startswith(("/", "http://", "https://")):
+        thumb = ""
+    url = text("url", 512)
+    if url and not url.startswith(("http://", "https://")):
+        url = ""
+    duration = raw.get("duration")
+    if isinstance(duration, bool) or not isinstance(duration, (int, float)):
+        duration = None
+    return {
+        "id": sid,
+        "title": text("title", 300) or sid,
+        "channel": text("channel", 200),
+        "thumbnail": thumb,
+        "duration": duration,
+        "duration_string": text("duration_string", 32),
+        "url": url,
+        "favorite": raw.get("favorite") is True,
+        "local": raw.get("local") is True,
+        "downloaded": raw.get("downloaded") is True,
+    }
+
+
 @app.route("/api/library/add", methods=["POST"])
 def api_add():
-    song = request.json
+    song = _clean_song(request.json)
+    if not song:
+        return jsonify({"error": "invalid song"}), 400
     lib = load_lib()
     if not any(s["id"] == song["id"] for s in lib["songs"]):
-        song.setdefault("favorite", False)
         lib["songs"].append(song)
         save_lib(lib)
     return jsonify({"ok": True})
@@ -291,7 +326,7 @@ def song_file_path(song):
     if not song:
         return None
     p = song.get("filepath") or ""
-    if p and os.path.isfile(p) and in_dir(p, DATA_DIR):
+    if p and os.path.isfile(p) and (in_dir(p, DOWNLOAD_DIR) or in_dir(p, LOCAL_DIR)):
         return p
     return None
 
@@ -686,7 +721,9 @@ def api_pl_create():
 
 @app.route("/api/playlists/<name>/add", methods=["POST"])
 def api_pl_add(name):
-    song = request.json
+    song = _clean_song(request.json)
+    if not song:
+        return jsonify({"error": "invalid song"}), 400
     lib = load_lib()
     for pl in lib["playlists"]:
         if pl["name"] == name:
