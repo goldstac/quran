@@ -1,4 +1,4 @@
-import os, json, subprocess, re, threading, sys, socket, argparse, time, uuid, shutil, webbrowser, urllib.request, urllib.parse, mimetypes
+import os, json, hashlib, subprocess, re, threading, sys, socket, argparse, time, uuid, shutil, webbrowser, urllib.request, urllib.parse, mimetypes
 from pathlib import Path
 from flask import Flask, render_template, jsonify, request, send_file
 
@@ -1514,6 +1514,7 @@ def _releases(force=False):
                 "name": best.get("name", ""),
                 "size": best.get("size", 0),
                 "url": best.get("browser_download_url", ""),
+                "digest": best.get("digest") or "",
             },
         })
     with _update_lock:
@@ -1554,13 +1555,13 @@ def api_update():
         return jsonify({"ok": False, "error": f"{tag} has no installer for this platform"}), 400
     threading.Thread(
         target=_run_update,
-        args=(rel["tag"], asset["url"], asset["name"], asset["size"]),
+        args=(rel["tag"], asset["url"], asset["name"], asset["size"], asset.get("digest", "")),
         daemon=True,
     ).start()
     return jsonify({"ok": True, "tag": tag, "asset": asset["name"]})
 
 
-def _run_update(tag, url, name, size):
+def _run_update(tag, url, name, size, digest=""):
     with _update_lock:
         _update_state.update(
             state="downloading", tag=tag, asset=name, downloaded=0,
@@ -1593,6 +1594,26 @@ def _run_update(tag, url, name, size):
         with _update_lock:
             _update_state.update(state="error", error=str(e))
         return
+    if digest.startswith("sha256:"):
+        want = digest.split(":", 1)[1].lower()
+        try:
+            h = hashlib.sha256()
+            with open(dest, "rb") as f:
+                for blk in iter(lambda: f.read(1 << 20), b""):
+                    h.update(blk)
+            ok = h.hexdigest() == want
+        except Exception as e:
+            with _update_lock:
+                _update_state.update(state="error", error=str(e))
+            return
+        if not ok:
+            try:
+                os.remove(dest)
+            except OSError:
+                pass
+            with _update_lock:
+                _update_state.update(state="error", error="The download did not match the expected checksum")
+            return
     try:
         _apply_update(dest, tag)
     except Exception as e:
