@@ -21,6 +21,23 @@ def _same_origin_guard():
         return jsonify({"error": "forbidden"}), 403
     return None
 
+
+_CSP = (
+    "default-src 'self'; script-src 'self'; "
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; "
+    "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; "
+    "img-src 'self' data: https://*.ytimg.com https://img.youtube.com https://*.ggpht.com; "
+    "media-src 'self' http: https:; connect-src 'self'; object-src 'none'; "
+    "base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
+)
+
+
+@app.after_request
+def _set_csp(resp):
+    if resp.mimetype == "text/html":
+        resp.headers["Content-Security-Policy"] = _CSP
+    return resp
+
 # Determine data directory (cross-platform)
 if sys.platform == "win32":
     base_data_dir = os.path.expanduser("~/AppData/Local/quran-app")
