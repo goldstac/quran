@@ -5,34 +5,6 @@ matching section and note the platform when it is not cross-platform.
 
 ## High priority
 
-- [ ] Cut `v1.2.1-pre-alpha.2` (user request, Oct 25). The AGENTS pre-check
-  dispatch (`release.yml` on `development`, run 40151908008) failed on one
-  job: `Build android` rejected `tauri.android.conf.json`, because b14e29c
-  added top-level `"android": {"autoIncrementVersionCode": true}` and the
-  config schema only accepts it at `bundle.android` (the key needs CLI
-  >= 2.9.0 / tauri-utils >= 2.8.0; repo pins CLI 2.11.5 and tauri-utils
-  2.9.3, so only the path was wrong). Fixed by nesting it under `bundle`
-  beside `externalBin`; desktop builds and both runtime tests were green in
-  that same run, so the re-dispatch should pass. This touches android
-  config despite the "don't touch the android build job until adb output"
-  rule, but it only moves a key to its schema-valid place: no packaging,
-  alignment, manifest, or signing change, so the Redmi A5 investigation is
-  unaffected. Tag goes on `development` (pre-alpha.1 did the same), no
-  version file bumps (the stamp step writes the prerelease string).
-
-  Tag run 40210649027 then failed on the Android job alone: b14e29c's
-  android-only `Stamp prerelease version` step imports `os, re, sys` but
-  calls `json.load`, so it died with NameError. That step only runs on
-  refs containing a dash, i.e. tags, which is exactly why the dispatch
-  pre-check never exercised it (`development` has no dash). Fixed in
-  `release.yml` (`import json, os, re, sys`). Everything else in the tag
-  run was green, and the APK build itself already passed in the
-  pre-check run, so this one line is the last blocker. The release job
-  was skipped, so nothing was published: the open call is whether to
-  re-cut `v1.2.1-pre-alpha.2` onto the fix commit (the tag is minutes old
-  and never released, but moving it means deleting and re-pushing a tag)
-  or to ship `v1.2.1-pre-alpha.3` instead. Pending user decision.
-
 - [ ] Terminal startup logging for the desktop app (implemented in the
   working tree, not committed yet, needs one real AppImage run to verify).
   Running `./Quran_*.AppImage` from a terminal prints a startup banner
@@ -182,6 +154,30 @@ matching section and note the platform when it is not cross-platform.
   frontend already surfaces the `play()` rejection as a toast.
 
 ## Done
+
+- [x] `v1.2.1-pre-alpha.2` released (Oct 25, marked pre-release, run
+  40212285551 green on validate, all three desktop builds, both runtime
+  tests, android, and the release job). Assets: universal APK (45.8M),
+  AppImage (149.6M), x64 setup.exe, amd64 deb, aarch64 dmg; installers
+  are named `Quran_1.2.1_*` (the stamp touches package.json/Cargo.toml,
+  not tauri.conf.json, same as pre-alpha.1) while the binaries report the
+  full `1.2.1-pre-alpha.2` via `QURAN_VERSION`. Two CI bugs from b14e29c
+  were caught and fixed on the way: (1) `tauri.android.conf.json` had a
+  top-level `"android"` block, but the schema only accepts
+  `bundle.android` (key needs CLI >= 2.9.0; repo pins 2.11.5), so Build
+  android died at config validation on every dispatch and tag - nested it
+  under `bundle` in `5987606`, no packaging/manifest/signing change, so
+  the Redmi A5 investigation was untouched; (2) the android-only
+  `Stamp prerelease version` step imported `os, re, sys` but called
+  `json.load`, dying with NameError - it only runs on refs containing a
+  dash, which is exactly why the `development` pre-check never exercised
+  it, fixed as `import json, os, re, sys` in `fb64198`. Release
+  discipline held: dispatch pre-check first (green after fix 1), tag
+  second; the first tag run (40210649027) failed only on bug 2 and
+  published nothing (release job skipped), so with user go-ahead the
+  minutes-old tag was deleted and re-cut onto `fb64198`. Remember: the
+  pre-check on `development` cannot test tag-only (`contains(github.ref_name,
+  '-')`) steps, so stamping logic stays unproven until a tag run.
 
 - [x] Embedded cover art for imported nasheeds. If an uploaded file carries
   cover art in its tags (ID3 APIC, FLAC pictures, MP4 covr, ogg/opus
