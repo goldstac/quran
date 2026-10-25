@@ -154,8 +154,10 @@ def load_lib():
 
 
 def save_lib(data):
-    with open(LIB_FILE, "w") as f:
+    tmp = LIB_FILE + ".tmp"
+    with open(tmp, "w") as f:
         json.dump(data, f, indent=2)
+    os.replace(tmp, LIB_FILE)
 
 
 @app.route("/")
