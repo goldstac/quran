@@ -38,8 +38,6 @@ matching section and note the platform when it is not cross-platform.
   `web/static/app.js`. Verified: `npm run build` clean, `python3 -c "from app
   import app"` fine, and a DOM stub running the compiled `makeRow` renders a
   local song (and still throws on the pre-fix bundle, so the check is real).
-  The fix itself is still uncommitted in the working tree (`web/ts/app.ts` +
-  `web/static/app.js`), so fold it into the next commit.
 
 ## Medium priority
 
@@ -154,6 +152,67 @@ matching section and note the platform when it is not cross-platform.
   frontend already surfaces the `play()` rejection as a toast.
 
 ## Done
+
+- [x] Security audit of the whole stack, then every finding fixed in its own
+  commit (user's call, Oct 26). The root cause behind most of it: `CORS(app)`
+  wildcard plus zero authentication on a server that also bound `0.0.0.0`, so
+  any page the user visited (or any device on the LAN) could drive every API.
+  Twelve commits on `development`:
+  - `3f4a69a` wildcard CORS removed (the frontend is same-origin), a
+    before_request guard rejects non-loopback Host and non-app Origin (tauri
+    origins allowed), the server binds 127.0.0.1 unless `QURAN_BIND` says
+    otherwise (that opt-in disables the guard and is documented as a
+    trusted-network mode), and flask_cors left requirements, the sidecar
+    build, and the docs.
+  - `e35ced9` `/api/library/add` and playlist add rebuild a fresh object
+    from an allowlist (strict `[A-Za-z0-9_-]{1,64}` id, typed and capped
+    strings, http(s)/local-path thumbnail and url, no filepath/artfile/
+    kind/stream_url passthrough), and `song_file_path` only honours paths
+    inside `downloads/` or `local/`, never elsewhere in the data dir.
+  - `9e9df67` `library.json` is written to a temp file and renamed over, so
+    a crash mid-write cannot truncate it.
+  - `bfb181c` frontend escaping: `esc()` now escapes quotes too, row
+    `duration_string`, ayah counts, chapter numbers and badges go through
+    it, thumbnails load only from a local path or http(s) via `thumbSrc()`,
+    the inline `onerror` became a listener (a strict CSP would have blocked
+    it), selectors use `CSS.escape`, and ids are url-encoded in api paths;
+    `app.js` rebuilt.
+  - `ef4708c` Flask serves a CSP on html responses: `script-src 'self'`
+    (no inline), `connect-src 'self'`, images limited to local art plus the
+    youtube thumbnail hosts, styles/fonts from the two cdns already in use,
+    frames/objects/base/forms locked down.
+  - `1abea5f` yt-dlp concurrency capped (4 interactive with a busy
+    response, downloads queued 2 at a time), stream cache lru-capped at 64
+    and the quran api cache at 96, request bodies limited to 2 GB.
+  - `c94f8e5` the bot url must be http(s) with a real hostname and no
+    userinfo, is revalidated before test/link/report use, bot responses
+    are read with a 64 KB cap, and the link error string is truncated.
+  - `6971bc4` the updater carries the sha256 digest GitHub publishes per
+    release asset and refuses to apply (and deletes) a download that does
+    not match it.
+  - `1e4bd3e` every `uses:` line in release.yml pinned to a full commit
+    sha (10 unique actions, original tag kept as a comment).
+  - `a8ead7f` build-android runs behind `environment: android-signing`;
+    add required reviewers under Settings > Environments so the gate
+    actually asks a human before the keystore is exposed.
+  - `30ad505` the wrapper only navigates to a port whose `/api/version`
+    returns a json string version, and its ureq probes have a 2s timeout
+    (they had none, so a silent squatter could hang startup).
+  - `951e632` sidecar discovery no longer checks `./dist` in the current
+    working directory (exe_dir plus the compile-time repo paths cover
+    every real layout), so running the binary from an untrusted folder
+    cannot load a planted backend.
+  Verified: `python3 -c "from app import app"` after every backend commit,
+  `npm run build` with a clean `git diff` on `app.js`, `cargo check` green
+  (re-run incrementally after the last edit), python json parse of
+  tauri.conf.json, and the local cargo `target/` was cleared (1.6G freed;
+  it came back briefly for the cargo check). Judged acceptable as-is: the
+  `starts_with` prefix match in `find_candidate_binary` (externalBin names
+  the binary `quran-backend-<triple>`, so prefix matching is required) and
+  the QURAN_BIND mode (explicit opt-in, guard off by design). Not yet run:
+  the full release workflow; dispatch it on `development` before the next
+  tag so the pinned actions and the new environment are exercised for
+  real.
 
 - [x] `v1.2.1-pre-alpha.2` released (Oct 25, marked pre-release, run
   40212285551 green on validate, all three desktop builds, both runtime
