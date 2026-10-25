@@ -25,7 +25,6 @@ fn find_candidate_binary(prefix: &str) -> Option<PathBuf> {
         exe_dir,
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../dist"),
         PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../dist"),
-        PathBuf::from("./dist"),
     ];
 
     for dir in candidates {
