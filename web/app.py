@@ -1318,15 +1318,17 @@ def _bot_request(url, path, payload, token=None, timeout=8):
     )
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return resp.status, json.loads(resp.read().decode() or "{}")
+            return resp.status, json.loads(resp.read(65536).decode() or "{}")
     except urllib.error.HTTPError as e:
         try:
-            return e.code, json.loads(e.read().decode() or "{}")
+            return e.code, json.loads(e.read(65536).decode() or "{}")
         except Exception:
             return e.code, {}
 
 
 def _bot_post_event(url, token, payload):
+    if _clean_bot_url(url) is None:
+        return
     try:
         status, res = _bot_request(url, "/api/quran/event", payload, token=token)
         if status < 400:
@@ -1353,6 +1355,16 @@ def api_bot_get():
     })
 
 
+def _clean_bot_url(raw):
+    u = str(raw or "").strip().rstrip("/")
+    if not u or len(u) > 300:
+        return None
+    p = urllib.parse.urlparse(u)
+    if p.scheme not in ("http", "https") or not p.hostname or p.username is not None:
+        return None
+    return u
+
+
 @app.route("/api/bot", methods=["POST"])
 def api_bot_set():
     data = request.json or {}
@@ -1360,7 +1372,10 @@ def api_bot_set():
     if "enabled" in data:
         cfg["enabled"] = bool(data["enabled"])
     if "url" in data:
-        cfg["url"] = str(data["url"]).strip().rstrip("/") or _BOT_DEFAULT_URL
+        cleaned = _clean_bot_url(data["url"])
+        if cleaned is None and data["url"] not in ("", None):
+            return jsonify({"error": "Enter an http address like http://127.0.0.1:3000"}), 400
+        cfg["url"] = cleaned or _BOT_DEFAULT_URL
     _bot_write(cfg)
     return jsonify({"ok": True, "enabled": bool(cfg.get("enabled")), "url": _bot_url(cfg)})
 
@@ -1372,13 +1387,15 @@ def api_bot_link():
     if not code:
         return jsonify({"error": "Paste the code from su!track link"}), 400
     cfg = _bot_read()
-    url = str(data.get("url") or "").strip().rstrip("/") or _bot_url(cfg)
+    url = _clean_bot_url(data.get("url")) or _bot_url(cfg)
+    if _clean_bot_url(url) is None:
+        return jsonify({"error": "That does not look like an http(s) bot address"}), 400
     try:
         status, res = _bot_request(url, "/api/quran/link", {"code": code}, timeout=10)
     except Exception:
         return jsonify({"error": f"Could not reach your bot at {url}"}), 502
     if status >= 400 or not res.get("ok"):
-        return jsonify({"error": res.get("error") or "That code did not work"}), 400
+        return jsonify({"error": str(res.get("error") or "That code did not work")[:300]}), 400
     cfg.update({"url": url, "token": res.get("token"), "user": res.get("user")})
     cfg.setdefault("enabled", True)
     _bot_write(cfg)
@@ -1396,11 +1413,13 @@ def api_bot_unlink():
 
 @app.route("/api/bot/test", methods=["POST"])
 def api_bot_test():
-    url = _bot_url(_bot_read())
+    url = _clean_bot_url(_bot_url(_bot_read()))
+    if url is None:
+        return jsonify({"error": "Set an http(s) bot address first"}), 400
     try:
         req = urllib.request.Request(url + "/health", headers={"User-Agent": "quran-app"})
         with urllib.request.urlopen(req, timeout=6) as resp:
-            d = json.loads(resp.read().decode() or "{}")
+            d = json.loads(resp.read(65536).decode() or "{}")
         return jsonify({"ok": True, "version": d.get("version"), "status": d.get("status")})
     except Exception:
         return jsonify({"ok": False, "error": f"No response from {url}"}), 502
