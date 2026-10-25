@@ -469,7 +469,7 @@ jobs:
           TAG="${GITHUB_REF_NAME#v}"
           echo "stamping prerelease version ${TAG}"
           python3 - "$TAG" <<'PY'
-          import os, re, sys
+          import json, os, re, sys
           ver = sys.argv[1]
           with open('package.json') as f:
               pkg = json.load(f)

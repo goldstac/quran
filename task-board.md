@@ -20,6 +20,19 @@ matching section and note the platform when it is not cross-platform.
   unaffected. Tag goes on `development` (pre-alpha.1 did the same), no
   version file bumps (the stamp step writes the prerelease string).
 
+  Tag run 40210649027 then failed on the Android job alone: b14e29c's
+  android-only `Stamp prerelease version` step imports `os, re, sys` but
+  calls `json.load`, so it died with NameError. That step only runs on
+  refs containing a dash, i.e. tags, which is exactly why the dispatch
+  pre-check never exercised it (`development` has no dash). Fixed in
+  `release.yml` (`import json, os, re, sys`). Everything else in the tag
+  run was green, and the APK build itself already passed in the
+  pre-check run, so this one line is the last blocker. The release job
+  was skipped, so nothing was published: the open call is whether to
+  re-cut `v1.2.1-pre-alpha.2` onto the fix commit (the tag is minutes old
+  and never released, but moving it means deleting and re-pushing a tag)
+  or to ship `v1.2.1-pre-alpha.3` instead. Pending user decision.
+
 - [ ] Terminal startup logging for the desktop app (implemented in the
   working tree, not committed yet, needs one real AppImage run to verify).
   Running `./Quran_*.AppImage` from a terminal prints a startup banner
