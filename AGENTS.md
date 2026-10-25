@@ -105,7 +105,7 @@ Work is split by session: this repo's sessions own the app, a separate session o
 
 ## Backend Conventions
 
-- Python 3.11+, Flask + `flask_cors`. Installed with pip via `--break-system-packages` (Arch).
+- Python 3.11+, Flask. Installed with pip via `--break-system-packages` (Arch).
 - `yt-dlp` binary is at `/home/admin/.local/bin/yt-dlp` (on PATH).
 - Subprocess calls to yt-dlp must include `--no-warnings --no-playlist` and a timeout.
 - Library is JSON at `~/.local/share/quran-app/library.json` with shape `{"songs":[...], "playlists":[{"name","songs":[]}]}`. Songs have `id`, `title`, `channel`, `thumbnail`, `duration`, `duration_string`, `url`, `favorite` (bool), `filepath`, plus `downloaded` (bool, offline copy in `downloads/`) and `local` (bool, user-imported file in `local/`; `channel` is `Local nasheeds`). Removing a song from the library deletes its stored file (only inside the data dir).

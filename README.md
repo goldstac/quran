@@ -34,9 +34,9 @@ This app is made for the **Quran** and Islamic **nasheeds**. The YouTube search 
 
 ## Requirements
 
-- Python 3.11+ with `flask`, `flask-cors`, and `mutagen` (used to read the length of files you add yourself)
-  - Arch/Manjaro: `sudo pip install --break-system-packages flask flask-cors mutagen`
-  - elsewhere: `pip install flask flask-cors mutagen`
+- Python 3.11+ with `flask` and `mutagen` (used to read the length of files you add yourself)
+  - Arch/Manjaro: `sudo pip install --break-system-packages flask mutagen`
+  - elsewhere: `pip install flask mutagen`
 - [`yt-dlp`](https://github.com/yt-dlp/yt-dlp) on your `PATH`
 - Node.js 18+ (only needed to build the TypeScript frontend)
 
@@ -61,14 +61,14 @@ If the port is busy: `fuser -k 5000/tcp` (Linux) or `lsof -ti:5000 | xargs kill`
 Run it on your own machine (home server, NAS, always-on PC) and open it from any browser — no cloud, no accounts, your server is the whole backend.
 
 **What the server needs:**
-- Python 3.11+ with `flask` + `flask-cors` + `mutagen`
+- Python 3.11+ with `flask` + `mutagen`
 - `yt-dlp` on the **server's** PATH (all searching/streaming happens there)
 - No Node required — the compiled `web/static/app.js` is committed
 
 ```bash
 git clone git@github.com:goldstac/quran.git
 cd quran
-pip install flask flask-cors mutagen        # Arch: add --break-system-packages
+pip install flask mutagen        # Arch: add --break-system-packages
 python3 web/app.py
 ```
 

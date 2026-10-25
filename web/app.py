@@ -1,11 +1,25 @@
 import os, json, subprocess, re, threading, sys, socket, argparse, time, uuid, shutil, webbrowser, urllib.request, urllib.parse, mimetypes
 from pathlib import Path
 from flask import Flask, render_template, jsonify, request, send_file
-from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app)
 app.config["TEMPLATES_AUTO_RELOAD"] = True
+
+_BIND = os.environ.get("QURAN_BIND", "127.0.0.1")
+_ALLOWED_ORIGIN = re.compile(r"^(?:https?://(?:127\.0\.0\.1|localhost|\[::1\])(?::\d+)?|tauri://localhost|http://tauri\.localhost)$")
+
+
+@app.before_request
+def _same_origin_guard():
+    if _BIND != "127.0.0.1":
+        return None
+    hostname = request.host.split(":")[0].strip("[]")
+    if hostname not in ("127.0.0.1", "localhost", "::1"):
+        return jsonify({"error": "forbidden"}), 403
+    origin = request.headers.get("Origin")
+    if origin is not None and not _ALLOWED_ORIGIN.match(origin):
+        return jsonify({"error": "forbidden"}), 403
+    return None
 
 # Determine data directory (cross-platform)
 if sys.platform == "win32":
@@ -1533,7 +1547,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     port = args.port if args.port else find_free_port()
-    host = "127.0.0.1" if getattr(sys, "frozen", False) else "0.0.0.0"
+    host = _BIND
     print(f"PORT={port}")
     sys.stdout.flush()
 

@@ -10,7 +10,7 @@ Read **[AGENTS.md](AGENTS.md)**, it's the single source of truth for conventions
 
 ```bash
 # backend deps (Arch needs --break-system-packages)
-pip install flask flask-cors mutagen
+pip install flask mutagen
 
 # yt-dlp must be on PATH
 yt-dlp --version

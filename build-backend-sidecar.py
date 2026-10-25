@@ -50,8 +50,6 @@ def pyinstaller_args() -> list[str]:
         str(ROOT / ".pyinstaller-build"),
         "--collect-all",
         "flask",
-        "--collect-all",
-        "flask_cors",
         "--add-data",
         f"{TEMPLATES_DIR}{os.pathsep}templates",
         "--add-data",
