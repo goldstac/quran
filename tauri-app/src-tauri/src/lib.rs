@@ -50,13 +50,30 @@ fn find_candidate_binary(prefix: &str) -> Option<PathBuf> {
 }
 
 #[cfg(not(target_os = "android"))]
-fn wait_for_http_ok(port: u16) -> bool {
-    for _ in 0..100 {
-        let url = format!("http://127.0.0.1:{port}/");
-        match ureq::get(&url).call() {
-            Ok(response) if response.status() < 500 => return true,
-            _ => std::thread::sleep(Duration::from_millis(100)),
+fn is_our_backend(port: u16) -> bool {
+    let agent = ureq::AgentBuilder::new()
+        .timeout(Duration::from_secs(2))
+        .build();
+    let url = format!("http://127.0.0.1:{port}/api/version");
+    match agent.get(&url).call() {
+        Ok(response) => match response.into_string() {
+            Ok(body) => serde_json::from_str::<serde_json::Value>(&body)
+                .ok()
+                .and_then(|v| v.get("version").map(|x| x.is_string()))
+                .unwrap_or(false),
+            Err(_) => false,
+        },
+        Err(_) => false,
+    }
+}
+
+#[cfg(not(target_os = "android"))]
+fn wait_for_backend(port: u16) -> bool {
+    for _ in 0..50 {
+        if is_our_backend(port) {
+            return true;
         }
+        std::thread::sleep(Duration::from_millis(200));
     }
     false
 }
@@ -64,10 +81,8 @@ fn wait_for_http_ok(port: u16) -> bool {
 #[cfg(not(target_os = "android"))]
 fn try_find_backend_port() -> Option<u16> {
     for port in 5000..=5100 {
-        let url = format!("http://127.0.0.1:{port}/");
-        match ureq::get(&url).call() {
-            Ok(response) if response.status() < 500 => return Some(port),
-            _ => {}
+        if is_our_backend(port) {
+            return Some(port);
         }
         std::thread::sleep(Duration::from_millis(50));
     }
@@ -124,7 +139,7 @@ fn start_backend(app: &tauri::AppHandle) -> Option<(Child, ChildStdin)> {
         .or_else(|| try_find_backend_port())
         .unwrap_or(5000);
 
-    if wait_for_http_ok(port) {
+    if wait_for_backend(port) {
         if let Some(window) = app.get_webview_window("main") {
             let _ = window.eval(&format!("window.location.href = 'http://127.0.0.1:{port}/';"));
         }
