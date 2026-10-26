@@ -5,19 +5,6 @@ matching section and note the platform when it is not cross-platform.
 
 ## High priority
 
-- [ ] Terminal startup logging for the desktop app (implemented in the
-  working tree, not committed yet, needs one real AppImage run to verify).
-  Running `./Quran_*.AppImage` from a terminal prints a startup banner
-  (name, version, one-line description, Linux note that GTK/GLib warnings
-  below are harmless), step-by-step progress ("Starting local backend: <path>",
-  "Backend running on http://127.0.0.1:<port>", "Opening the app window. Close
-  it to quit.") and clear errors when the backend binary is missing, fails to
-  spawn, or never answers. The Rust side also forwards the backend's
-  stdout/stderr to the terminal; the backend prints its version and data
-  folder on startup and quiets werkzeug request logs when frozen (dev runs
-  keep them, real errors still show either way). Files: `tauri-app/src-tauri/
-  src/lib.rs`, `web/app.py`. Verified so far: `cargo check` and the Python
-  import/banner; commit and ship with the next tag after a real AppImage run.
 - [ ] Tauri v2 dropped regenerated schemas into the tree:
   `tauri-app/src-tauri/gen/schemas/` (acl-manifests, android, capabilities,
   desktop, linux, mobile JSON) is untracked. The Tauri CLI rewrites them on
@@ -153,6 +140,38 @@ matching section and note the platform when it is not cross-platform.
 
 ## Done
 
+- [x] Hidden-from-Discord nasheeds now persist across reloads (`5408ab5` on
+  `development`, `AGENTS.md` updated with it). The eye button's id list only
+  lived in localStorage `ns_discord_hidden`, so a webview site-data reset (the
+  same failure that made the presence toggle forget itself, fixed in `3cb16a4`)
+  or a switch between the app window and the browser (separate origins, so
+  separate storage) threw the hides away. The list now also lives in
+  `~/.local/share/quran-app/discord.json` next to `enabled`: `POST
+  /api/discord/hidden {ids}` writes it (strings, max 64 chars, 500 entries,
+  400 on a non-list), `GET /api/discord/status` returns `hidden`, and
+  `initDiscord` adopts the server list on load (or seeds the server from
+  localStorage when the file has no list yet), guarded by a `discTouched` flag
+  so a click during startup is not clobbered, with rows repainting their eye
+  icons once the list arrives. `pagehide` still never touches the file.
+  Verified: `python3 -c "from app import app"`, `npm run build`, a Flask
+  test-client script covering merge/400/cap/malformed-file cases, and a jsdom
+  harness running the real compiled `app.js` against a live backend on port
+  5001: 12/12 checks twice in a row, including "wipe localStorage, reload, eye
+  is hidden again". Not in the release yet: dispatch `release.yml` on
+  `development` before the next tag.
+- [x] Terminal startup logging for the desktop app (`823f0ac` on
+  `development`). Running `./Quran_*.AppImage` from a terminal prints a
+  startup banner (name, version, one-line description, Linux note that
+  GTK/GLib warnings below are harmless), step-by-step progress ("Starting
+  local backend: <path>", "Backend running on http://127.0.0.1:<port>",
+  "Opening the app window. Close it to quit.") and clear errors when the
+  backend binary is missing, fails to spawn, or never answers. The Rust side
+  also forwards the backend's stdout/stderr to the terminal; the backend
+  prints its version and data folder on startup and quiets werkzeug request
+  logs when frozen (dev runs keep them, real errors still show either way).
+  Files: `tauri-app/src-tauri/src/lib.rs`, `web/app.py`. Verified: `cargo
+  check` and the Python import/banner. Still worth one real
+  `./Quran_*.AppImage` run to eyeball the banner before the next tag ships it.
 - [x] Security audit of the whole stack, then every finding fixed in its own
   commit (user's call, Oct 26). The root cause behind most of it: `CORS(app)`
   wildcard plus zero authentication on a server that also bound `0.0.0.0`, so
