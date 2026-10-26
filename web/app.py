@@ -1,4 +1,4 @@
-import os, json, hashlib, subprocess, re, threading, sys, socket, argparse, time, uuid, shutil, webbrowser, urllib.request, urllib.parse, mimetypes
+import os, json, hashlib, subprocess, re, threading, sys, socket, argparse, time, uuid, shutil, webbrowser, urllib.request, urllib.parse, logging, mimetypes
 from pathlib import Path
 from flask import Flask, render_template, jsonify, request, send_file
 
@@ -1676,7 +1676,14 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     port = args.port if args.port else find_free_port()
+    frozen = bool(getattr(sys, "frozen", False))
     host = _BIND
+
+    if frozen:
+        logging.getLogger("werkzeug").setLevel(logging.ERROR)
+
+    print(f"Quran backend {app_version()}")
+    print(f"Data folder: {DATA_DIR}")
     print(f"PORT={port}")
     sys.stdout.flush()
 

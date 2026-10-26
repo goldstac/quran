@@ -90,7 +90,15 @@ fn try_find_backend_port() -> Option<u16> {
 
 #[cfg(not(target_os = "android"))]
 fn start_backend(app: &tauri::AppHandle) -> Option<(Child, ChildStdin)> {
-    let backend_path = find_candidate_binary("quran-backend")?;
+    let backend_path = match find_candidate_binary("quran-backend") {
+        Some(path) => path,
+        None => {
+            eprintln!("error: bundled backend 'quran-backend' was not found.");
+            eprintln!("It should sit next to the app. The window cannot load without it.");
+            return None;
+        }
+    };
+    println!("Starting local backend: {}", backend_path.display());
 
     let mut command = Command::new(&backend_path);
     command.env("QURAN_VERSION", env!("CARGO_PKG_VERSION"));
@@ -99,12 +107,18 @@ fn start_backend(app: &tauri::AppHandle) -> Option<(Child, ChildStdin)> {
         command.env("YTDLP_PATH", &ytdlp_path);
     }
 
-    let mut child = command
+    let mut child = match command
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
-        .ok()?;
+    {
+        Ok(child) => child,
+        Err(err) => {
+            eprintln!("error: failed to start the backend: {err}");
+            return None;
+        }
+    };
 
     let stdin = child.stdin.take()?;
     let stdout = child.stdout.take()?;
@@ -120,6 +134,8 @@ fn start_backend(app: &tauri::AppHandle) -> Option<(Child, ChildStdin)> {
                 if let Ok(port) = port.trim().parse::<u16>() {
                     let _ = tx.send(port);
                 }
+            } else if !line.trim().is_empty() {
+                println!("{line}");
             }
         }
     });
@@ -128,7 +144,10 @@ fn start_backend(app: &tauri::AppHandle) -> Option<(Child, ChildStdin)> {
         use std::io::BufRead;
         let reader = std::io::BufReader::new(stderr);
         for line in reader.lines() {
-            let Ok(_) = line else { break };
+            let Ok(line) = line else { break };
+            if !line.trim().is_empty() {
+                eprintln!("{line}");
+            }
         }
     });
 
@@ -139,9 +158,14 @@ fn start_backend(app: &tauri::AppHandle) -> Option<(Child, ChildStdin)> {
         .unwrap_or(5000);
 
     if wait_for_backend(port) {
+        println!("Backend running on http://127.0.0.1:{port}");
         if let Some(window) = app.get_webview_window("main") {
             let _ = window.eval(&format!("window.location.href = 'http://127.0.0.1:{port}/';"));
+            println!("Opening the app window. Close it to quit.");
         }
+    } else {
+        eprintln!("error: the backend did not answer on port {port}.");
+        eprintln!("The window will keep waiting. Check the messages above for the cause.");
     }
 
     Some((child, stdin))
@@ -149,6 +173,15 @@ fn start_backend(app: &tauri::AppHandle) -> Option<(Child, ChildStdin)> {
 
 #[cfg_attr(any(target_os = "android", target_os = "ios"), tauri::mobile_entry_point)]
 pub fn run() {
+    #[cfg(not(target_os = "android"))]
+    {
+        println!("Quran {}", env!("CARGO_PKG_VERSION"));
+        println!("An all-in-one Islamic app for Quran and nasheeds.");
+        println!("Everything runs on this machine: a local server powers the app window.");
+        #[cfg(target_os = "linux")]
+        println!("Note: any GTK or GLib warnings below are harmless.");
+        println!();
+    }
     let builder = tauri::Builder::default();
     #[cfg(not(target_os = "android"))]
     let builder = builder.manage(Backend {
