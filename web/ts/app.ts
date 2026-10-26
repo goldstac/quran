@@ -1945,6 +1945,7 @@ $('#add-pl-btn').addEventListener('click', async () => {
 
 // --- DISCORD PRESENCE ---
 let discordEnabled = load<boolean>('ns_discord', false);
+let discTouched = false;
 let dcLastRefresh = 0;
 
 function discHiddenIds(): string[] {
@@ -1953,10 +1954,19 @@ function discHiddenIds(): string[] {
 function discIsHidden(id: string): boolean {
   return discHiddenIds().includes(id);
 }
+function discPushHidden() {
+  void getJSON<{ ok?: boolean }>(`${API}/api/discord/hidden`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids: discHiddenIds() }),
+  }).catch(() => undefined);
+}
 function discSetHidden(id: string, hidden: boolean) {
   const set = discHiddenIds().filter((x) => x !== id);
   if (hidden) set.push(id);
   store('ns_discord_hidden', set);
+  discTouched = true;
+  discPushHidden();
 }
 function syncDiscBtns(id: string) {
   const hidden = discIsHidden(id);
@@ -1965,6 +1975,11 @@ function syncDiscBtns(id: string) {
     if (icon) icon.className = hidden ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
     b.classList.toggle('disc-hide', hidden);
     b.title = hidden ? 'Hidden from Discord' : 'Shown in Discord';
+  });
+}
+function syncAllDiscBtns() {
+  $$<HTMLElement>('.track-row[data-id]').forEach((r) => {
+    if (r.dataset.id) syncDiscBtns(r.dataset.id);
   });
 }
 function discToggleSong(song: Song) {
@@ -2085,10 +2100,20 @@ $('#set-discord').addEventListener('change', (e) => {
 
 async function initDiscord() {
   let remote: boolean | null = null;
+  let remoteHidden: string[] | null = null;
   try {
-    const d = await getJSON<{ enabled?: boolean | null }>(`${API}/api/discord/status`);
+    const d = await getJSON<{ enabled?: boolean | null; hidden?: string[] | null }>(`${API}/api/discord/status`);
     if (typeof d.enabled === 'boolean') remote = d.enabled;
+    if (Array.isArray(d.hidden)) remoteHidden = d.hidden.filter((x) => typeof x === 'string');
   } catch {}
+  if (discTouched) {
+    discPushHidden();
+  } else if (remoteHidden !== null) {
+    store('ns_discord_hidden', remoteHidden);
+    syncAllDiscBtns();
+  } else if (discHiddenIds().length) {
+    discPushHidden();
+  }
   if (remote !== null) {
     discordEnabled = remote;
     store('ns_discord', discordEnabled);

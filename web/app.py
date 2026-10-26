@@ -1248,20 +1248,39 @@ _discord = DiscordBridge()
 _DISCORD_PREF_FILE = os.path.join(DATA_DIR, "discord.json")
 
 
-def _discord_pref_read():
+def _discord_prefs():
     try:
         with open(_DISCORD_PREF_FILE) as f:
-            return bool(json.load(f).get("enabled"))
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
     except Exception:
-        return None
+        return {}
 
 
-def _discord_pref_write(enabled):
+def _discord_pref_save(changes):
+    data = _discord_prefs()
+    data.update(changes)
     try:
         with open(_DISCORD_PREF_FILE, "w") as f:
-            json.dump({"enabled": bool(enabled)}, f)
+            json.dump(data, f)
+        return True
     except Exception:
-        pass
+        return False
+
+
+def _discord_clean_hidden(raw):
+    if not isinstance(raw, list):
+        return None
+    out = []
+    seen = set()
+    for item in raw:
+        if not isinstance(item, str) or not 0 < len(item) <= 64 or item in seen:
+            continue
+        seen.add(item)
+        out.append(item)
+        if len(out) >= 500:
+            break
+    return out
 
 
 @app.route("/api/discord", methods=["POST"])
@@ -1269,15 +1288,28 @@ def api_discord():
     data = request.json or {}
     _discord.set(bool(data.get("enabled")), data.get("activity"))
     if data.get("remember"):
-        _discord_pref_write(bool(data.get("enabled")))
+        _discord_pref_save({"enabled": bool(data.get("enabled"))})
     return jsonify({"ok": True})
+
+
+@app.route("/api/discord/hidden", methods=["POST"])
+def api_discord_hidden():
+    hidden = _discord_clean_hidden((request.json or {}).get("ids"))
+    if hidden is None:
+        return jsonify({"ok": False, "error": "ids must be a list"}), 400
+    if not _discord_pref_save({"hidden": hidden}):
+        return jsonify({"ok": False, "error": "could not save"}), 500
+    return jsonify({"ok": True, "hidden": hidden})
 
 
 @app.route("/api/discord/status")
 def api_discord_status():
     if request.args.get("alive") == "1":
         _discord.touch()
-    return jsonify({"state": _discord.state(), "enabled": _discord_pref_read()})
+    prefs = _discord_prefs()
+    enabled = bool(prefs["enabled"]) if "enabled" in prefs else None
+    hidden = _discord_clean_hidden(prefs.get("hidden")) if "hidden" in prefs else None
+    return jsonify({"state": _discord.state(), "enabled": enabled, "hidden": hidden})
 
 
 # --- DISCORD BOT SYNC (drives su!track / su!fm on the user's own bot) ---
