@@ -18,7 +18,9 @@ matching section and note the platform when it is not cross-platform.
   `## Changes` with the verbatim commit subjects and `## Downloads` with the
   four fixed installer lines, so those two sections are exact whatever the
   model does, and the sanitizer truncates anything it writes at those two
-  headings. Checkout switched to `fetch-depth: 0` for the tag diff. Verified by
+  headings. Checkout switched to `fetch-depth: 0` for the tag diff. The
+  description shows on the GitHub Releases page only: an in-app card was built
+  and then removed on request (see Done). Verified by
   running the extracted step script locally four ways: no key, a stubbed Groq
   200, a disobedient response (em dash plus its own Downloads block plus a
   code fence) and an empty response, all ending with the right structure.
@@ -166,21 +168,15 @@ matching section and note the platform when it is not cross-platform.
 
 ## Done
 
-- [x] The settings Updates card now shows the release description
-  (`#set-notes` / `.rel-notes`): `/api/updates` passes each release's `body`
-  through (capped at 6000 chars, a GitHub `null` becomes `""`),
-  `UpdateRelease` gained `body`, and `renderReleaseNotes` renders it with a
-  markdown-lite pass that escapes first and then handles `## headings`,
-  `- bullets`, `**bold**` and `*italic*`. The box hides when the release has
-  no body, and its mobile override sits in the last media block so the desktop
-  indent (`margin-left:142px`) still wins above 768px. Verified:
-  `npm run build` clean, `python3 -c "from app import app"` fine, a Flask test
-  client checking the body passthrough (including `null` -> `""`), and a
-  14-check jsdom run of the real `app.js` against a fixture backend: box
-  hidden at start, heading and bullets rendered, bold/italic turned into
-  `strong`/`em`, an `<img src=x onerror=alert(1)>` payload surviving only as
-  escaped text with no element created, and the box hiding again once the body
-  went empty.
+- [x] Release notes are GitHub-only, the in-app card is gone: a `#set-notes`
+  block in the Updates card (backend `body` passthrough, `renderReleaseNotes`
+  markdown-lite renderer, `.rel-notes` styling) was built and verified, then
+  removed at the user's request in the same session. `/api/updates` no longer
+  returns `body` and `UpdateRelease` has no body field. Do not rebuild it
+  without asking; the description belongs on the GitHub Releases page.
+  Removed cleanly with `git revert --no-commit 2029bbe`, rebuilt `app.js` (no
+  drift) and confirmed no `set-notes` / `rel-notes` / `renderReleaseNotes`
+  references remain.
 - [x] Android runtime test in `release.yml`, green in run 40440166178
   (job added in `884b39c`, test body moved to
   `.github/scripts/android-runtime-test.sh` in `c286c72`). The
