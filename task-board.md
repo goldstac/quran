@@ -24,21 +24,6 @@ matching section and note the platform when it is not cross-platform.
   response all behave. **Left to do: add `GROQ_API_KEY` under Settings ->
   Secrets and variables -> Actions**, optionally set a `GROQ_MODEL` variable,
   and read the description on the next real tag.
-- [ ] Android runtime test added to `release.yml` (dispatching now, run id
-  TBD): new `android-runtime-test` job that `needs: build-android`, runs only
-  on tag/dispatch like the rest of the pipeline, and gates `release`. It
-  enables KVM, sets up Java 17 + the Android SDK, downloads the `android-apk`
-  artifact, then boots an API 34 x86_64 `google_apis` emulator with
-  `reactivecircus/android-emulator-runner@a421e438` (v2.38.0, SHA-pinned like
-  every other action) and runs one POSIX script: pick the x86_64 (else
-  universal) APK, `adb install -r`, start `com.goldstac.quran/.MainActivity`,
-  `adb forward tcp:5000 tcp:5000` and poll `/` plus `/api/library` for up to
-  90s, then `uiautomator dump` for up to 90s to prove the WebView left the
-  loading page (fails if it still says "Starting Quran" or "Could not reach
-  the local server", warns if the tree cannot be read), fails on a
-  `logcat -b crash` hit for the app, and finally `am force-stop` plus a check
-  that the in-process Rust server stopped answering. No signing secrets, so no
-  `android-signing` environment gate on this one.
 - [ ] Tauri v2 dropped regenerated schemas into the tree:
   `tauri-app/src-tauri/gen/schemas/` (acl-manifests, android, capabilities,
   desktop, linux, mobile JSON) is untracked. The Tauri CLI rewrites them on
@@ -162,6 +147,12 @@ matching section and note the platform when it is not cross-platform.
 
 ## Low priority / notes
 
+- [ ] Every run now prints a Node 20 deprecation warning: GitHub is forcing
+  Node 24 onto the SHA-pinned `actions/checkout` (v4), `actions/download-artifact`
+  (v4), `actions/setup-java` (v4) and `android-actions/setup-android` (v3).
+  Harmless today, but those pins want bumping to a Node 24 native version
+  before GitHub stops running Node 20 actions at all. Keep the SHA pinning when
+  you do.
 - [ ] AppImage requires the host GStreamer (with mp3/aac/opus plugins) for
   audio. Documented in the README Requirements note; fine on typical desktops,
   silent on a GStreamer-less system.
@@ -174,6 +165,27 @@ matching section and note the platform when it is not cross-platform.
 
 ## Done
 
+- [x] Android runtime test in `release.yml`, green in run 40440166178
+  (job added in `884b39c`, test body moved to
+  `.github/scripts/android-runtime-test.sh` in `c286c72`). The
+  `android-runtime-test` job needs `build-android`, runs only on tag/dispatch
+  like the rest of the pipeline, gates `release`, needs no signing secrets and
+  so stays out of the `android-signing` environment. It enables KVM, sets up
+  Java 17 plus platform-tools, downloads the `android-apk` artifact and runs an
+  API 34 x86_64 emulator with
+  `reactivecircus/android-emulator-runner@a421e438` (v2.38.0, SHA-pinned like
+  every other action). All checks passed on the run: the universal APK
+  installs with `adb install -r`, `com.goldstac.quran/.MainActivity` starts and
+  the process stays alive, the in-app Rust server answers `/` and
+  `/api/library` on `127.0.0.1:5000` through `adb forward` about 5s after
+  launch, `uiautomator dump` sees real app text so the WebView really left the
+  loading page (it fails if the tree still says "Starting Quran" or "Could not
+  reach the local server", warns if the tree cannot be read), `logcat -b crash`
+  has nothing for the package, and after `am force-stop` the server stops
+  answering. The first attempt failed for a workflow reason, not an app one:
+  `android-emulator-runner` runs its `script` input line by line as separate
+  `sh -c` shells, so inline functions and shell variables never survived, hence
+  the script file. The whole test takes about 30s once the emulator is up.
 - [x] Hidden-from-Discord nasheeds now persist across reloads (`5408ab5` on
   `development`, `AGENTS.md` updated with it). The eye button's id list only
   lived in localStorage `ns_discord_hidden`, so a webview site-data reset (the
