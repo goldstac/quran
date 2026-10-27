@@ -5,6 +5,21 @@ matching section and note the platform when it is not cross-platform.
 
 ## High priority
 
+- [ ] Android runtime test added to `release.yml` (dispatching now, run id
+  TBD): new `android-runtime-test` job that `needs: build-android`, runs only
+  on tag/dispatch like the rest of the pipeline, and gates `release`. It
+  enables KVM, sets up Java 17 + the Android SDK, downloads the `android-apk`
+  artifact, then boots an API 34 x86_64 `google_apis` emulator with
+  `reactivecircus/android-emulator-runner@a421e438` (v2.38.0, SHA-pinned like
+  every other action) and runs one POSIX script: pick the x86_64 (else
+  universal) APK, `adb install -r`, start `com.goldstac.quran/.MainActivity`,
+  `adb forward tcp:5000 tcp:5000` and poll `/` plus `/api/library` for up to
+  90s, then `uiautomator dump` for up to 90s to prove the WebView left the
+  loading page (fails if it still says "Starting Quran" or "Could not reach
+  the local server", warns if the tree cannot be read), fails on a
+  `logcat -b crash` hit for the app, and finally `am force-stop` plus a check
+  that the in-process Rust server stopped answering. No signing secrets, so no
+  `android-signing` environment gate on this one.
 - [ ] Tauri v2 dropped regenerated schemas into the tree:
   `tauri-app/src-tauri/gen/schemas/` (acl-manifests, android, capabilities,
   desktop, linux, mobile JSON) is untracked. The Tauri CLI rewrites them on
