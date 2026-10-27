@@ -10,8 +10,9 @@ matching section and note the platform when it is not cross-platform.
   `Write release notes` step diffs the new tag against the previous `v*` tag
   (`git describe`), keeps `feat`/`fix`/`perf`/`revert` subjects (falls back to
   everything if a release is all plumbing) and sends version + changes to
-  Groq (`GROQ_API_KEY` secret, model via the `GROQ_MODEL` Actions variable,
-  default `llama-3.3-70b-versatile`, 700 max tokens). The model only writes a
+  Groq (`GROQ_API_KEY` secret, both set on 2026-10-27, model via `GROQ_MODEL`
+  as an Actions variable or secret, default `llama-3.3-70b-versatile`, 700 max
+  tokens). The model only writes a
   TL;DR plus a `## What's new` list (prompt rules: nasheeds never songs, no em
   dashes, casual tone, call out pre-releases like `v1.2.1-pre-alpha.3`, no
   invented features, no links, under 160 words). The step then appends
@@ -24,9 +25,9 @@ matching section and note the platform when it is not cross-platform.
   running the extracted step script locally four ways: no key, a stubbed Groq
   200, a disobedient response (em dash plus its own Downloads block plus a
   code fence) and an empty response, all ending with the right structure.
-  **Left to do: add `GROQ_API_KEY` under Settings -> Secrets and variables ->
-  Actions**, optionally set a `GROQ_MODEL` variable, and read the description
-  on the next real tag.
+  **Left to do: read the description on the next real tag.** `GROQ_API_KEY`
+  and `GROQ_MODEL` are both in place now; the release job is the only thing
+  that reads them.
 - [ ] Tauri v2 dropped regenerated schemas into the tree:
   `tauri-app/src-tauri/gen/schemas/` (acl-manifests, android, capabilities,
   desktop, linux, mobile JSON) is untracked. The Tauri CLI rewrites them on
