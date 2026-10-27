@@ -2303,7 +2303,6 @@ type UpdateRelease = {
   prerelease: boolean;
   published_at: string | null;
   asset: UpdateAsset | null;
-  body?: string | null;
 };
 type UpdateStatus = {
   state: string;
@@ -2412,50 +2411,6 @@ function cmpSemver(a: string, b: string): number {
   return 0;
 }
 
-function renderReleaseNotes(md?: string | null): void {
-  const box = $('#set-notes');
-  const text = (md || '').trim();
-  if (!text) {
-    box.innerHTML = '';
-    box.hidden = true;
-    return;
-  }
-  const inline = (s: string): string =>
-    esc(s)
-      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-      .replace(/(^|[^*])\*([^*\n]+)\*/g, '$1<em>$2</em>');
-  const html: string[] = [];
-  let bullets: string[] = [];
-  const flush = (): void => {
-    if (!bullets.length) return;
-    html.push('<ul>' + bullets.map((b) => `<li>${inline(b)}</li>`).join('') + '</ul>');
-    bullets = [];
-  };
-  for (const raw of text.split(/\r?\n/)) {
-    const line = raw.trim();
-    if (!line) {
-      flush();
-      continue;
-    }
-    const head = /^#{1,6}\s+(.*)$/.exec(line);
-    if (head) {
-      flush();
-      html.push(`<h4>${inline(head[1])}</h4>`);
-      continue;
-    }
-    const item = /^[-*+]\s+(.*)$/.exec(line);
-    if (item) {
-      bullets.push(item[1]);
-      continue;
-    }
-    flush();
-    html.push(`<p>${inline(line)}</p>`);
-  }
-  flush();
-  box.innerHTML = html.join('');
-  box.hidden = false;
-}
-
 async function loadReleases(refresh: boolean) {
   const note = $('#set-check-note');
   note.textContent = 'Checking GitHub...';
@@ -2472,11 +2427,9 @@ async function loadReleases(refresh: boolean) {
       latestTag = '';
       note.textContent = 'No installer available for this platform yet.';
       $('#set-update').setAttribute('disabled', '');
-      renderReleaseNotes('');
       return;
     }
     latestTag = installable.tag;
-    renderReleaseNotes(installable.body);
     if (cmpSemver(installable.tag, cur) <= 0) {
       note.textContent = 'You are on the newest release.';
       $('#set-update').setAttribute('disabled', '');

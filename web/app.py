@@ -1542,7 +1542,6 @@ def _releases(force=False):
             "name": rel.get("name") or rel.get("tag_name", ""),
             "prerelease": bool(rel.get("prerelease")),
             "published_at": rel.get("published_at"),
-            "body": (rel.get("body") or "")[:6000],
             "asset": None if best is None else {
                 "name": best.get("name", ""),
                 "size": best.get("size", 0),
