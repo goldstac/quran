@@ -419,11 +419,98 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           path: dist
           merge-multiple: true
+
+      - name: Write the release notes
+        shell: bash
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GROQ_MODEL: ${{ vars.GROQ_MODEL || 'llama-3.3-70b-versatile' }}
+        run: |
+          set -uo pipefail
+
+          TAG="$GITHUB_REF_NAME"
+          PREV=$(git describe --tags --abbrev=0 --match 'v*' "${TAG}^" 2>/dev/null || true)
+          if [ -n "$PREV" ]; then RANGE="$PREV..$TAG"; else RANGE="$TAG"; fi
+
+          ALL=$(git log --no-merges --max-count=150 --pretty=format:'- %s' "$RANGE" | head -c 8000)
+          CHANGES=$(printf '%s\n' "$ALL" | grep -E '^- (feat|fix|perf|revert)' || true)
+          if [ -z "$CHANGES" ]; then CHANGES="$ALL"; fi
+          if [ -z "$CHANGES" ]; then CHANGES="- nothing user facing in this one"; fi
+
+          cat > "$RUNNER_TEMP/notes-fallback.md" <<EOF
+          ## Quran $TAG
+
+          $CHANGES
+
+          ## Downloads
+
+          - Linux: AppImage and Debian package
+          - macOS: DMG
+          - Windows: EXE
+          - Android: APK (arm64 + armeabi-v7a + x86 + x86_64 universal, signed)
+          EOF
+
+          SYS='You write the release description for Quran, an open source Islamic app: a Quran reader with recitations, translations and reading, plus a nasheeds player that searches YouTube, streams audio through a local proxy, keeps a library with favorites and playlists, downloads nasheeds for offline listening, imports local files, and offers Discord presence and bot sync. It ships as a desktop app for Linux, macOS and Windows and as an Android APK.
+          You get the version and the list of changes since the previous release. Write the whole release description in markdown.
+          Rules:
+          - Say nasheeds and never songs.
+          - Never use an em dash. Use commas, periods, semicolons or " - " instead.
+          - Plain, casual, short. No marketing or legal fluff.
+          - Only describe what is in the change list, never invent features.
+          - Translate commit types into user language: chore, ci, build, style and docs commits can be dropped unless they matter to users.
+          - Open with one headline line for the version, then a handful of short bullets of what changed.
+          - If the version contains a hyphen, for example v1.2.1-pre-alpha.3, say up front that it is a pre-release.
+          - Close with a "## Downloads" section that lists exactly these four lines: " - Linux: AppImage and Debian package", " - macOS: DMG", " - Windows: EXE", " - Android: APK (arm64 + armeabi-v7a + x86 + x86_64 universal, signed)".
+          - Stay under 200 words. Headings and bullets only, no code blocks, no quotes around the whole text.'
+
+          USR=$(cat <<EOF
+          Version: $TAG
+          Previous release: ${PREV:-none, this is the first release}
+          Changes since then:
+          $CHANGES
+          EOF
+          )
+
+          NOTES=""
+          if [ -n "${GROQ_API_KEY:-}" ]; then
+            REQ=$(jq -n --arg model "$GROQ_MODEL" --arg sys "$SYS" --arg usr "$USR" \
+              '{model: $model, messages: [{role: "system", content: $sys}, {role: "user", content: $usr}], temperature: 0.5, max_tokens: 700}')
+            CODE=$(curl -sS -m 60 -o "$RUNNER_TEMP/groq.json" -w '%{http_code}' \
+              -X POST https://api.groq.com/openai/v1/chat/completions \
+              -H "Authorization: Bearer $GROQ_API_KEY" -H 'Content-Type: application/json' \
+              -d "$REQ" || echo 000)
+            if [ "$CODE" = "200" ]; then
+              NOTES=$(jq -r '.choices[0].message.content // empty' "$RUNNER_TEMP/groq.json" 2>/dev/null || true)
+            else
+              echo "::warning::groq answered $CODE, falling back to the static description"
+              cat "$RUNNER_TEMP/groq.json" 2>/dev/null | head -c 500
+              echo
+            fi
+          else
+            echo "::notice::GROQ_API_KEY is not set, falling back to the static description"
+          fi
+
+          if [ -n "$NOTES" ]; then
+            NOTES=$(printf '%s' "$NOTES" | sed -e '1{/^```/d}' -e '${/^```/d}')
+            NOTES=$(printf '%s' "$NOTES" | sed -e '1s/^"//' -e '$s/"$//' -e 's/—/-/g' -e 's/–/-/g')
+            NOTES=$(printf '%s' "$NOTES" | sed -e '/./,$!d')
+            if ! printf '%s' "$NOTES" | grep -q '[^[:space:]]'; then NOTES=""; fi
+          fi
+
+          if [ -n "$NOTES" ]; then
+            printf '%s\n' "$NOTES" > release-notes.md
+          else
+            cp "$RUNNER_TEMP/notes-fallback.md" release-notes.md
+          fi
+          echo "release notes:"
+          cat release-notes.md
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
@@ -437,17 +524,7 @@ jobs:
             dist/**/*.msi
             dist/**/*.exe
             dist/**/*.apk
-          body: |
-            ## Quran release
-
-            Desktop installers are bundled with the Python backend and yt-dlp sidecars, so you install nothing else.
-
-            - Linux: AppImage and Debian package
-            - macOS: DMG
-            - Windows: EXE
-            - Android: APK (arm64 + armeabi-v7a + x86 + x86_64 universal, signed)
-
-            The Flask self-hosting setup remains available as an optional source install for advanced users.
+          body_path: release-notes.md
 
   build-android:
     name: Build android

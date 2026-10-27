@@ -5,6 +5,25 @@ matching section and note the platform when it is not cross-platform.
 
 ## High priority
 
+- [ ] AI release notes for every tag (added, needs the secret + the first tag to
+  prove it): the `release` job no longer hardcodes the description. A
+  `Write release notes` step diffs the new tag against the previous `v*` tag
+  (`git describe`), keeps `feat`/`fix`/`perf`/`revert` subjects (falls back to
+  everything if a release is all plumbing), sends version + changes to Groq
+  (`GROQ_API_KEY` secret, model via the `GROQ_MODEL` Actions variable,
+  default `llama-3.3-70b-versatile`, 700 max tokens) and writes
+  `release-notes.md` for `body_path`. The prompt enforces the house rules:
+  nasheeds never songs, no em dashes, casual tone, call out pre-releases like
+  `v1.2.1-pre-alpha.3`, no invented features, fixed Downloads block at the end.
+  Output is post-processed (code fences, wrapping quotes, blank leading lines,
+  em dashes) so the rules hold even if the model disobeys, and it falls back
+  to the plain change list plus the Downloads block when the secret is absent,
+  Groq answers non-200, or the text is empty, so a release can never be blocked
+  by AI. Checkout switched to `fetch-depth: 0` for the tag diff. Local test:
+  no-key fallback, stubbed Groq 200 (sanitizing), and whitespace-only
+  response all behave. **Left to do: add `GROQ_API_KEY` under Settings ->
+  Secrets and variables -> Actions**, optionally set a `GROQ_MODEL` variable,
+  and read the description on the next real tag.
 - [ ] Android runtime test added to `release.yml` (dispatching now, run id
   TBD): new `android-runtime-test` job that `needs: build-android`, runs only
   on tag/dispatch like the rest of the pipeline, and gates `release`. It
