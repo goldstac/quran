@@ -444,31 +444,22 @@ jobs:
           if [ -z "$CHANGES" ]; then CHANGES="$ALL"; fi
           if [ -z "$CHANGES" ]; then CHANGES="- nothing user facing in this one"; fi
 
-          cat > "$RUNNER_TEMP/notes-fallback.md" <<EOF
-          ## Quran $TAG
-
-          $CHANGES
-
-          ## Downloads
-
-          - Linux: AppImage and Debian package
-          - macOS: DMG
-          - Windows: EXE
-          - Android: APK (arm64 + armeabi-v7a + x86 + x86_64 universal, signed)
-          EOF
-
-          SYS='You write the release description for Quran, an open source Islamic app: a Quran reader with recitations, translations and reading, plus a nasheeds player that searches YouTube, streams audio through a local proxy, keeps a library with favorites and playlists, downloads nasheeds for offline listening, imports local files, and offers Discord presence and bot sync. It ships as a desktop app for Linux, macOS and Windows and as an Android APK.
-          You get the version and the list of changes since the previous release. Write the whole release description in markdown.
+          SYS=$(cat <<'EOF'
+          You write the top of the release description for Quran, an open source Islamic app: a Quran reader with recitations, translations and reading, plus a nasheeds player that searches YouTube, streams audio through a local proxy, keeps a library with favorites and playlists, downloads nasheeds for offline listening, imports local files, and offers Discord presence and bot sync. It ships as a desktop app for Linux, macOS and Windows and as an Android APK.
+          You get the version and the list of changes since the previous release. Write exactly two parts and nothing else:
+          1. A TL;DR: one or two plain sentences, no heading in front of them, in user language, saying what this release is mostly about.
+          2. Then a "## What's new" heading with 3 to 6 short bullets of the changes users will care about.
+          Both sections after yours are appended by the pipeline: a "## Changes" section holding the verbatim commit list, and a "## Downloads" section with the installer lines. Never write those two headings yourself, never repeat the Downloads lines, never link anywhere.
           Rules:
           - Say nasheeds and never songs.
           - Never use an em dash. Use commas, periods, semicolons or " - " instead.
           - Plain, casual, short. No marketing or legal fluff.
           - Only describe what is in the change list, never invent features.
           - Translate commit types into user language: chore, ci, build, style and docs commits can be dropped unless they matter to users.
-          - Open with one headline line for the version, then a handful of short bullets of what changed.
-          - If the version contains a hyphen, for example v1.2.1-pre-alpha.3, say up front that it is a pre-release.
-          - Close with a "## Downloads" section that lists exactly these four lines: " - Linux: AppImage and Debian package", " - macOS: DMG", " - Windows: EXE", " - Android: APK (arm64 + armeabi-v7a + x86 + x86_64 universal, signed)".
-          - Stay under 200 words. Headings and bullets only, no code blocks, no quotes around the whole text.'
+          - If the version contains a hyphen, for example v1.2.1-pre-alpha.3, say in the TL;DR that it is a pre-release.
+          - Under 160 words in total. Headings and bullets only, no code blocks, no quotes around the whole text.
+          EOF
+          )
 
           USR=$(cat <<EOF
           Version: $TAG
@@ -489,26 +480,29 @@ jobs:
             if [ "$CODE" = "200" ]; then
               NOTES=$(jq -r '.choices[0].message.content // empty' "$RUNNER_TEMP/groq.json" 2>/dev/null || true)
             else
-              echo "::warning::groq answered $CODE, falling back to the static description"
+              echo "::warning::groq answered $CODE, falling back to the plain change list"
               cat "$RUNNER_TEMP/groq.json" 2>/dev/null | head -c 500
               echo
             fi
           else
-            echo "::notice::GROQ_API_KEY is not set, falling back to the static description"
+            echo "::notice::GROQ_API_KEY is not set, falling back to the plain change list"
           fi
 
           if [ -n "$NOTES" ]; then
             NOTES=$(printf '%s' "$NOTES" | sed -e '1{/^```/d}' -e '${/^```/d}')
             NOTES=$(printf '%s' "$NOTES" | sed -e '1s/^"//' -e '$s/"$//' -e 's/—/-/g' -e 's/–/-/g')
+            NOTES=$(printf '%s\n' "$NOTES" | awk '/^##[ \t]+(Changes|Downloads)/{exit} {print}')
             NOTES=$(printf '%s' "$NOTES" | sed -e '/./,$!d')
             if ! printf '%s' "$NOTES" | grep -q '[^[:space:]]'; then NOTES=""; fi
           fi
 
-          if [ -n "$NOTES" ]; then
-            printf '%s\n' "$NOTES" > release-notes.md
-          else
-            cp "$RUNNER_TEMP/notes-fallback.md" release-notes.md
-          fi
+          {
+            if [ -n "$NOTES" ]; then
+              printf '%s\n\n' "$NOTES"
+            fi
+            printf '## Changes\n\n%s\n\n' "$CHANGES"
+            printf '## Downloads\n\n- Linux: AppImage and Debian package\n- macOS: DMG\n- Windows: EXE\n- Android: APK (arm64 + armeabi-v7a + x86 + x86_64 universal, signed)\n'
+          } > release-notes.md
           echo "release notes:"
           cat release-notes.md
 
