@@ -9,21 +9,22 @@ matching section and note the platform when it is not cross-platform.
   prove it): the `release` job no longer hardcodes the description. A
   `Write release notes` step diffs the new tag against the previous `v*` tag
   (`git describe`), keeps `feat`/`fix`/`perf`/`revert` subjects (falls back to
-  everything if a release is all plumbing), sends version + changes to Groq
-  (`GROQ_API_KEY` secret, model via the `GROQ_MODEL` Actions variable,
-  default `llama-3.3-70b-versatile`, 700 max tokens) and writes
-  `release-notes.md` for `body_path`. The prompt enforces the house rules:
-  nasheeds never songs, no em dashes, casual tone, call out pre-releases like
-  `v1.2.1-pre-alpha.3`, no invented features, fixed Downloads block at the end.
-  Output is post-processed (code fences, wrapping quotes, blank leading lines,
-  em dashes) so the rules hold even if the model disobeys, and it falls back
-  to the plain change list plus the Downloads block when the secret is absent,
-  Groq answers non-200, or the text is empty, so a release can never be blocked
-  by AI. Checkout switched to `fetch-depth: 0` for the tag diff. Local test:
-  no-key fallback, stubbed Groq 200 (sanitizing), and whitespace-only
-  response all behave. **Left to do: add `GROQ_API_KEY` under Settings ->
-  Secrets and variables -> Actions**, optionally set a `GROQ_MODEL` variable,
-  and read the description on the next real tag.
+  everything if a release is all plumbing) and sends version + changes to
+  Groq (`GROQ_API_KEY` secret, model via the `GROQ_MODEL` Actions variable,
+  default `llama-3.3-70b-versatile`, 700 max tokens). The model only writes a
+  TL;DR plus a `## What's new` list (prompt rules: nasheeds never songs, no em
+  dashes, casual tone, call out pre-releases like `v1.2.1-pre-alpha.3`, no
+  invented features, no links, under 160 words). The step then appends
+  `## Changes` with the verbatim commit subjects and `## Downloads` with the
+  four fixed installer lines, so those two sections are exact whatever the
+  model does, and the sanitizer truncates anything it writes at those two
+  headings. Checkout switched to `fetch-depth: 0` for the tag diff. Verified by
+  running the extracted step script locally four ways: no key, a stubbed Groq
+  200, a disobedient response (em dash plus its own Downloads block plus a
+  code fence) and an empty response, all ending with the right structure.
+  **Left to do: add `GROQ_API_KEY` under Settings -> Secrets and variables ->
+  Actions**, optionally set a `GROQ_MODEL` variable, and read the description
+  on the next real tag.
 - [ ] Tauri v2 dropped regenerated schemas into the tree:
   `tauri-app/src-tauri/gen/schemas/` (acl-manifests, android, capabilities,
   desktop, linux, mobile JSON) is untracked. The Tauri CLI rewrites them on
@@ -165,6 +166,21 @@ matching section and note the platform when it is not cross-platform.
 
 ## Done
 
+- [x] The settings Updates card now shows the release description
+  (`#set-notes` / `.rel-notes`): `/api/updates` passes each release's `body`
+  through (capped at 6000 chars, a GitHub `null` becomes `""`),
+  `UpdateRelease` gained `body`, and `renderReleaseNotes` renders it with a
+  markdown-lite pass that escapes first and then handles `## headings`,
+  `- bullets`, `**bold**` and `*italic*`. The box hides when the release has
+  no body, and its mobile override sits in the last media block so the desktop
+  indent (`margin-left:142px`) still wins above 768px. Verified:
+  `npm run build` clean, `python3 -c "from app import app"` fine, a Flask test
+  client checking the body passthrough (including `null` -> `""`), and a
+  14-check jsdom run of the real `app.js` against a fixture backend: box
+  hidden at start, heading and bullets rendered, bold/italic turned into
+  `strong`/`em`, an `<img src=x onerror=alert(1)>` payload surviving only as
+  escaped text with no element created, and the box hiding again once the body
+  went empty.
 - [x] Android runtime test in `release.yml`, green in run 40440166178
   (job added in `884b39c`, test body moved to
   `.github/scripts/android-runtime-test.sh` in `c286c72`). The
