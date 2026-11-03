@@ -21,13 +21,24 @@ matching section and note the platform when it is not cross-platform.
   model does, and the sanitizer truncates anything it writes at those two
   headings. Checkout switched to `fetch-depth: 0` for the tag diff. The
   description shows on the GitHub Releases page only: an in-app card was built
-  and then removed on request (see Done). Verified by
-  running the extracted step script locally four ways: no key, a stubbed Groq
-  200, a disobedient response (em dash plus its own Downloads block plus a
-  code fence) and an empty response, all ending with the right structure.
-  **Left to do: read the description on the next real tag.** `GROQ_API_KEY`
-  and `GROQ_MODEL` are both in place now; the release job is the only thing
-  that reads them.
+  and then removed on request (see Done). The logic moved into
+  `.github/scripts/write-release-notes.sh`, called both by the `release` step
+  and by a dispatch-only `release-notes-test` job, so the test exercises
+  byte-identical code to what ships. That job runs
+  `.github/scripts/release-notes-smoke-test.sh`, which writes the notes twice
+  (once with Groq, once with `GROQ_API_KEY` blanked out to prove the fallback),
+  prints both in the run log, and fails unless the structure holds: exactly one
+  `## Changes` and one `## Downloads`, the four installer lines, no em dash, a
+  TL;DR as the first line rather than a heading, a `## What's new` with 3 to 6
+  bullets under 160 words, no "songs", and byte-identical pipeline-written
+  sections across the two runs. It also fails when the key is missing or Groq
+  contributes nothing, so a broken key shows up before release day. Local runs
+  of the smoke script: no key, a well-behaved stub 200, a disobedient stub 200
+  (em dash, its own Downloads block, a code fence, "songs") and a stub 401, all
+  behaving, and the disobedient case caught a bug in my own first-line heading
+  check. **Left to do: dispatch `release.yml` on `development` to read the real
+  Groq output, then read the description on the next real tag.**
+  `GROQ_API_KEY` and `GROQ_MODEL` are both in place.
 - [ ] Tauri v2 dropped regenerated schemas into the tree:
   `tauri-app/src-tauri/gen/schemas/` (acl-manifests, android, capabilities,
   desktop, linux, mobile JSON) is untracked. The Tauri CLI rewrites them on
@@ -151,6 +162,16 @@ matching section and note the platform when it is not cross-platform.
 
 ## Low priority / notes
 
+- [ ] The root disk (`/dev/sda7`) hit 100% on 2026-11-03 and took tooling down
+  with it (file writes and shell output both failed with "No space left on
+  device"). Freed about 830M by clearing `~/.cache` (kept `ms-playwright`), the
+  repo's `dist/` and `.pyinstaller-build`, and `portfolio/.next`. Still eating
+  the disk: `~/.local/share/opencode` at 4.2G (`opencode.db` 1.4G plus
+  snapshots 2.8G), Discord at 1.6G (it runs from `app-1.0.166` with
+  `app-1.0.168` as its pending update, so only `Cache`/`logs` are droppable,
+  and only once Discord is closed), and `/var` at 7.2G (journal 1.6G, flatpak
+  5G including a stale `.removed` Brave, pacman cache 630M) which all need
+  sudo. Reclaim before the next big build.
 - [ ] Every run now prints a Node 20 deprecation warning: GitHub is forcing
   Node 24 onto the SHA-pinned `actions/checkout` (v4), `actions/download-artifact`
   (v4), `actions/setup-java` (v4) and `android-actions/setup-android` (v3).
