@@ -41,7 +41,7 @@ check_structure() {
   grep -q '^- macOS: DMG$' "$f" || problem "$label: missing the macOS download line"
   grep -q '^- Windows: EXE$' "$f" || problem "$label: missing the Windows download line"
   grep -q '^- Android: APK (arm64 + armeabi-v7a + x86 + x86_64 universal, signed)$' "$f" || problem "$label: missing the Android download line"
-  if grep -qE '—|–' "$f"; then problem "$label: contains an em dash"; fi
+  if grep -qE '[‐‑‒–—―−]' "$f"; then problem "$label: contains a dash that is not an ascii hyphen"; fi
 }
 
 check_structure "$AI" "groq notes"

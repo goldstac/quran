@@ -18,7 +18,7 @@ OUT="${1:-release-notes.md}"
 TMP="${RUNNER_TEMP:-${TMPDIR:-/tmp}}"
 
 ALL=$(git log --no-merges --max-count=150 --pretty=format:'- %s' "$RANGE" | head -c 8000)
-CHANGES=$(printf '%s\n' "$ALL" | grep -E '^- (feat|fix|perf|revert)' || true)
+CHANGES=$(printf '%s\n' "$ALL" | grep -E '^- (feat|fix|perf|revert|refactor)' || true)
 if [ -z "$CHANGES" ]; then CHANGES="$ALL"; fi
 if [ -z "$CHANGES" ]; then CHANGES="- nothing user facing in this one"; fi
 
@@ -33,7 +33,8 @@ Rules:
 - Never use an em dash. Use commas, periods, semicolons or " - " instead.
 - Plain, casual, short. No marketing or legal fluff.
 - Only describe what is in the change list, never invent features.
-- Translate commit types into user language: chore, ci, build, style and docs commits can be dropped unless they matter to users.
+- The list is newest first. When an entry takes back something an entry further down added, leave the undone change out of What's new.
+- Translate commit types into user language: chore, ci, build, style, docs and refactor commits can be dropped unless they matter to users.
 - If the version contains a hyphen, for example v1.2.1-pre-alpha.3, say in the TL;DR that it is a pre-release.
 - Under 160 words in total. Headings and bullets only, no code blocks, no quotes around the whole text.
 EOF
@@ -69,7 +70,7 @@ fi
 
 if [ -n "$NOTES" ]; then
   NOTES=$(printf '%s' "$NOTES" | sed -e '1{/^```/d}' -e '${/^```/d}')
-  NOTES=$(printf '%s' "$NOTES" | sed -e '1s/^"//' -e '$s/"$//' -e 's/—/-/g' -e 's/–/-/g')
+  NOTES=$(printf '%s' "$NOTES" | sed -e '1s/^"//' -e '$s/"$//' -e 's/[‐‑‒–—―−]/-/g')
   NOTES=$(printf '%s\n' "$NOTES" | awk '/^##[ \t]+(Changes|Downloads)/{exit} {print}')
   NOTES=$(printf '%s' "$NOTES" | sed -e '/./,$!d')
   if ! printf '%s' "$NOTES" | grep -q '[^[:space:]]'; then NOTES=""; fi
