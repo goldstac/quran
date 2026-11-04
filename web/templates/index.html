@@ -69,15 +69,29 @@
 
     <div id="search-view" class="view active">
       <div class="search-sticky">
-        <div class="search-bar">
-          <i class="fa-solid fa-magnifying-glass"></i>
-          <input type="text" id="search-input" placeholder="What do you want to listen to?">
-          <button id="search-clear" class="search-clear hidden" title="Clear search"><i class="fa-solid fa-xmark"></i></button>
+        <div class="psearch" id="search-card">
+          <div class="psearch__card" id="sc-card">
+            <div class="psearch__bar">
+              <span class="psearch__glass"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 21-4.34-4.34"></path><circle cx="11" cy="11" r="8"></circle></svg></span>
+              <input type="text" id="search-input" class="psearch__input" placeholder="Search" aria-label="Search nasheeds">
+              <button type="button" id="sc-close" class="psearch__close" aria-label="Close search"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
+              <kbd class="psearch__kbd" id="sc-kbd">Ctrl K</kbd>
+            </div>
+            <div class="psearch__body" id="sc-body">
+              <div class="psearch__panel">
+                <div class="psearch__head">
+                  <span class="psearch__head-label">Recent searches</span>
+                  <button type="button" class="psearch__action" id="sc-action">Clear all</button>
+                </div>
+                <ul class="psearch__list" id="sc-list"></ul>
+                <div class="psearch__foot"></div>
+              </div>
+            </div>
+          </div>
         </div>
         <div id="search-status" class="search-status"></div>
       </div>
       <div class="search-body">
-        <div id="recent-q" class="recent-q hidden"></div>
         <div id="search-empty" class="empty">
           <div class="empty-icon"><i class="fa-solid fa-music"></i></div>
           <p class="empty-title">Search for nasheeds</p>
@@ -370,6 +384,6 @@
     </div>
 </div>
 
-<script src="/static/app.js"></script>
+<script src="/static/app.js?v=search-close-2"></script>
 </body>
 </html>

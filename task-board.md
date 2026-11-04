@@ -190,6 +190,80 @@ matching section and note the platform when it is not cross-platform.
 
 ## Done
 
+- [x] The Search view runs on the Pin UI "Search Card"
+  (https://www.pinui.xyz/components/search-card), ported from its React +
+  framer-motion source (630 lines TSX + 562 lines CSS, pulled out of the page
+  payload) into this app's vanilla TS/CSS, then restyled to belong to this app.
+  The plain `.search-bar` input and the old `#recent-q` chip row are gone: the
+  sticky header's search bar is now a 300px rounded field (magnifier, "Search"
+  placeholder, a Ctrl K hint) that morphs in place into a 420px card on focus,
+  with a "Recent searches" panel underneath. The suggestion chip row was ported
+  first and then cut on request, so the card holds only recent searches now:
+  `#sc-chips`, `SC_SUGGESTIONS`, `scChips`, `scRenderChips` and the
+  `.psearch__chip*` / `.psearch__count` CSS are gone from HTML, TS and CSS.
+
+  Behaviour: rows are the real recent searches (localStorage `ns_recentq`, now
+  `{q, t}` objects, the old `string[]` read as `t: 0`), each with a neutral
+  letter tile, a relative-time sub ("Just now", "2 hr ago", "Yesterday"), and a
+  trash button with a "Remove" tooltip that only shows on the row under the
+  pointer. One highlight sheet glides between rows, dividers hide around the
+  active row, and a removed row collapses out over 340ms. The list filters as
+  you type (`No results for "..."` when nothing matches), `Clear all` empties it
+  and `Restore` brings it back (the button hides when there is nothing to
+  restore). Typing still debounces into the same `doSearch`, so results render
+  below exactly as before, and `/` or `S` still jumps to the view and focuses
+  the input. Ctrl K / Cmd K opens it from anywhere and closes it when it is
+  open, Escape clears the query first then folds the card, and a press outside
+  folds it too. The kbd hint swaps to ⌘K on Mac and is hidden on mobile.
+
+  Matched to the app instead of the demo: 12px radius with the site's input
+  treatment (`rgba(255,255,255,.05)` field, hairline border) instead of a
+  sharp-cornered box under a 60px drop shadow, opening switches to the opaque
+  card colour with the exact green focus ring `.set-input:focus` uses
+  (`border-color: rgba(29,185,84,.55)` plus `0 0 0 3px rgba(29,185,84,.14)`),
+  panel radius 20px -> 8px, the "Recent searches" label is the uppercase
+  11px/700 tracked label the sidebar uses, rows follow the track-row recipe
+  (40px radius-4 tile on `#282828`, 14px/500 title, 12px `#a7a7a7` sub, 12px
+  gap) instead of 44px gradient tiles, the hover sheet is the flat
+  `rgba(255,255,255,.06)` of `.track-row:hover` instead of a shadowed slab,
+  the trash is a 28px radius-4 action going site-red `#e22134` on hover like
+  `.lib-del`, and the close button matches the app's circular
+  `rgba(255,255,255,.06)` icon buttons.
+
+  Adapted rather than copied: the demo reserves about 418px of stage so opening
+  never moves the page, which would leave a permanent hole in this sticky
+  header, so here the card grows downward and pushes the results instead (no
+  "rise"); motion is CSS transitions on the same curves (.56s morph,
+  ease-out tweens) instead of framer-motion; the four demo items are replaced
+  by real recents.
+
+  The X button folds the card back to the compact search field on pointer down
+  and keeps the current query/results; its click handler also supports keyboard
+  activation. Closing is idempotent and always removes the expanded classes.
+  Escape still clears a non-empty query first, then folds the card on the next
+  press. The compiled script URL is versioned so browsers load the updated
+  handler.
+
+  Uncommitted on `development`: `web/templates/index.html`,
+  `web/static/style.css`, `web/ts/app.ts`, plus the rebuilt
+  `web/static/app.js`. Verified with `npm run build`, `python3 -c "from app
+  import app"`, and headless Firefox screenshots of the real markup running the
+  real compiled `app.js`: the closed field, the open card with 5 rows plus the
+  hover sheet and trash on row 2, the empty state (no recents, action button
+  hidden), the two filter states (`zzz` hides every row and shows
+  `No results for "zzz"`, `ad` leaves only `adhan` and the card shrinks to fit),
+  and the mobile layout (kbd hidden, full-width card). No console errors in any
+  of them. The preview harness was also fixed along the way: it appended a
+  second `<script src="/static/app.js">`, so every page threw
+  `SyntaxError: redeclaration of let discordEnabled` on load; the generator
+  (`/tmp/opencode/gen_preview.py`) now inserts its seed before the app's own
+  tag. Screenshot round one caught a real bug: `scSetBody` measured with
+  `scrollHeight` and only released to `auto` after 460ms, so shrinking the list
+  inside that window (typing immediately after focusing) left the card at its
+  old height with a dead band under the chips. It now measures the body's
+  children directly and re-syncs the height whenever the list changes while the
+  explicit height is still set, so the card stays snug.
+
 - [x] Release notes are GitHub-only, the in-app card is gone: a `#set-notes`
   block in the Updates card (backend `body` passthrough, `renderReleaseNotes`
   markdown-lite renderer, `.rel-notes` styling) was built and verified, then

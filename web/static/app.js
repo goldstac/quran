@@ -847,74 +847,352 @@ $('#quran-shuffle').addEventListener('click', () => {
 });
 // --- SEARCH ---
 let searchTimer;
-function syncSearchUI() {
-    const hasQ = !!($('#search-input').value.trim());
-    $('#search-clear').classList.toggle('hidden', !hasQ);
-    const box = $('#recent-q');
-    if (hasQ || !box.children.length)
-        box.classList.add('hidden');
-    else
-        box.classList.remove('hidden');
+const scRoot = $('#search-card');
+const scCard = $('#sc-card');
+const scBody = $('#sc-body');
+const scList = $('#sc-list');
+const scAction = $('#sc-action');
+const scCloseBtn = $('#sc-close');
+const scKbd = $('#sc-kbd');
+const scInput = $('#search-input');
+const SC_TRASH = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path><path d="M3 6h18"></path><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>';
+const SC_RESTORE = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>';
+let scOpen = false;
+let scItems = [];
+let scCleared = [];
+let scActiveId = null;
+let scSheetShown = false;
+function scLoadRecents() {
+    const raw = load('ns_recentq', []);
+    if (!Array.isArray(raw))
+        return [];
+    return raw
+        .map((x) => typeof x === 'string'
+        ? { q: x, t: 0 }
+        : { q: String(x.q || ''), t: Number(x.t) || 0 })
+        .filter((x) => x.q);
 }
 function saveRecentQ(q) {
-    const list = load('ns_recentq', []).filter((x) => x !== q);
-    list.unshift(q);
+    const list = scLoadRecents().filter((x) => x.q !== q);
+    list.unshift({ q, t: Date.now() });
     store('ns_recentq', list.slice(0, 8));
 }
-function renderRecentQ() {
-    const qs = load('ns_recentq', []);
-    const box = $('#recent-q');
-    box.innerHTML = '';
-    if (!qs.length) {
-        box.classList.add('hidden');
-        return;
+function scAgo(t) {
+    if (!t)
+        return 'Recent search';
+    const d = Date.now() - t;
+    if (d < 60000)
+        return 'Just now';
+    if (d < 3600000)
+        return Math.max(1, Math.floor(d / 60000)) + ' min ago';
+    if (d < 86400000)
+        return Math.floor(d / 3600000) + ' hr ago';
+    if (d < 172800000)
+        return 'Yesterday';
+    return Math.floor(d / 86400000) + ' days ago';
+}
+function scTile(q) {
+    const ch = (q.trim().charAt(0) || '#').toUpperCase();
+    return ('<div class="psearch__tile"><div class="psearch__tile-art">' +
+        `<span class="psearch__tile-letter">${esc(ch)}</span></div></div>`);
+}
+function scSyncAction() {
+    scAction.classList.toggle('hidden', !scItems.length && !scCleared.length);
+    if (scItems.length) {
+        scAction.textContent = 'Clear all';
+        scAction.setAttribute('aria-label', 'Clear all recent searches');
     }
-    const label = document.createElement('div');
-    label.className = 'recent-q-label';
-    label.textContent = 'Recent searches';
-    box.appendChild(label);
-    qs.forEach((q) => {
-        const chip = document.createElement('button');
-        chip.className = 'q-chip';
-        chip.innerHTML = `<i class="fa-solid fa-magnifying-glass"></i>${esc(q)}`;
-        chip.addEventListener('click', () => {
-            $('#search-input').value = q;
-            syncSearchUI();
-            doSearch(q);
-        });
-        box.appendChild(chip);
+    else {
+        scAction.innerHTML = `${SC_RESTORE} Restore`;
+        scAction.setAttribute('aria-label', 'Restore recent searches');
+    }
+}
+function scApplyFilter() {
+    const q = scInput.value.trim().toLowerCase();
+    let n = 0;
+    scList.querySelectorAll('.psearch__row').forEach((r) => {
+        const hit = !q || (r.dataset.q || '').includes(q);
+        r.classList.toggle('hidden', !hit);
+        if (hit)
+            n++;
+    });
+    const empty = scList.querySelector('.psearch__empty');
+    if (empty) {
+        empty.classList.toggle('hidden', n > 0);
+        const d = empty.firstElementChild;
+        if (d)
+            d.textContent = scItems.length ? `No results for "${scInput.value.trim()}"` : 'No recent searches';
+    }
+    scSyncBodyHeight();
+}
+function scRenderRows(animate) {
+    const keep = scActiveId;
+    scActiveId = null;
+    scSheetShown = false;
+    let html = '<div class="psearch__sheet" aria-hidden="true"></div>';
+    scItems.forEach((it, i) => {
+        const delay = animate ? ` style="animation-delay:${(0.1 + i * 0.045).toFixed(3)}s"` : ' style="animation:none"';
+        html +=
+            `<li class="psearch__row" data-id="${esc(it.q)}" data-q="${esc(it.q.toLowerCase())}">` +
+                '<div class="psearch__divider"></div>' +
+                `<div class="psearch__row-body"${delay}>` +
+                scTile(it.q) +
+                '<div class="psearch__row-text">' +
+                `<div class="psearch__row-title">${esc(it.q)}</div>` +
+                `<div class="psearch__row-sub">${esc(scAgo(it.t))}</div>` +
+                '</div>' +
+                '<div class="psearch__remove-slot">' +
+                `<button type="button" class="psearch__remove" aria-label="Remove ${esc(it.q)}">${SC_TRASH}` +
+                `<span class="psearch__tip" role="tooltip">Remove<span class="psearch__tip-arrow"></span></span></button>` +
+                '</div></div></li>';
+    });
+    html += '<li class="psearch__empty hidden"><div></div></li>';
+    scList.innerHTML = html;
+    scApplyFilter();
+    scSyncAction();
+    if (keep) {
+        for (const r of Array.from(scList.querySelectorAll('.psearch__row'))) {
+            if (r.dataset.id === keep && !r.classList.contains('hidden')) {
+                scSetActive(r);
+                break;
+            }
+        }
+    }
+    scSyncBodyHeight();
+}
+function scSheetShow(row) {
+    const s = scList.querySelector('.psearch__sheet');
+    if (!s)
+        return;
+    const jump = !scSheetShown;
+    if (jump)
+        s.classList.add('psearch__sheet--jump');
+    s.style.transform = `translateY(${row.offsetTop}px)`;
+    s.style.height = row.offsetHeight + 'px';
+    s.style.opacity = '1';
+    if (jump) {
+        scSheetShown = true;
+        requestAnimationFrame(() => s.classList.remove('psearch__sheet--jump'));
+    }
+}
+function scSheetHide() {
+    scSheetShown = false;
+    scActiveId = null;
+    const s = scList.querySelector('.psearch__sheet');
+    if (s)
+        s.style.opacity = '0';
+    scList.querySelectorAll('.psearch__row').forEach((r) => {
+        r.classList.remove('psearch__row--active', 'psearch__row--no-div');
     });
 }
-$('#search-input').addEventListener('input', (e) => {
-    syncSearchUI();
+function scSetActive(row) {
+    const id = row.dataset.id || '';
+    if (scActiveId === id)
+        return;
+    scActiveId = id;
+    scList.querySelectorAll('.psearch__row').forEach((r) => {
+        const on = r === row;
+        r.classList.toggle('psearch__row--active', on);
+        r.classList.toggle('psearch__row--no-div', on || r.nextElementSibling === row);
+    });
+    scSheetShow(row);
+}
+function scBodyContentHeight() {
+    let h = 0;
+    for (const c of Array.from(scBody.children))
+        h += c.offsetHeight;
+    return h;
+}
+function scSyncBodyHeight() {
+    if (!scOpen)
+        return;
+    const cur = scBody.style.height;
+    if (!cur || cur === 'auto')
+        return;
+    scBody.style.height = scBodyContentHeight() + 'px';
+}
+function scSetBody(open) {
+    if (open) {
+        scBody.style.height = scBodyContentHeight() + 'px';
+        window.setTimeout(() => {
+            if (scOpen)
+                scBody.style.height = 'auto';
+        }, 460);
+    }
+    else {
+        scBody.style.height = scBodyContentHeight() + 'px';
+        void scBody.offsetHeight;
+        scBody.style.height = '0px';
+    }
+}
+function scOpenCard() {
+    if (scOpen)
+        return;
+    scOpen = true;
+    scCard.classList.add('psearch__card--open');
+    scRoot.classList.add('psearch--open');
+    scInput.placeholder = 'What do you want to listen to?';
+    scRenderRows(true);
+    scSetBody(true);
+}
+function scCloseCard() {
+    const wasOpen = scOpen || scCard.classList.contains('psearch__card--open');
+    scOpen = false;
+    scCard.classList.remove('psearch__card--open');
+    scRoot.classList.remove('psearch--open');
+    scInput.placeholder = 'Search';
+    scSheetHide();
+    if (wasOpen)
+        scSetBody(false);
+    else
+        scBody.style.height = '0px';
+    const a = document.activeElement;
+    if (a && scRoot.contains(a))
+        a.blur();
+}
+function scPick(q) {
+    if (!q)
+        return;
+    scInput.value = q;
+    scApplyFilter();
     clearTimeout(searchTimer);
-    const q = e.target.value.trim();
+    scCloseCard();
+    void doSearch(q);
+}
+function scRemove(q) {
+    let row = null;
+    for (const r of Array.from(scList.querySelectorAll('.psearch__row'))) {
+        if (r.dataset.id === q) {
+            row = r;
+            break;
+        }
+    }
+    if (!row)
+        return;
+    scSheetHide();
+    row.classList.add('psearch__row--leaving');
+    row.style.height = row.offsetHeight + 'px';
+    void row.offsetHeight;
+    row.style.transition = 'height .32s cubic-bezier(.65,0,.35,1),opacity .16s ease';
+    row.style.height = '0px';
+    row.style.opacity = '0';
+    window.setTimeout(() => {
+        scItems = scItems.filter((x) => x.q !== q);
+        store('ns_recentq', scItems);
+        scRenderRows(false);
+    }, 340);
+}
+function goSearchView() {
+    if ($('nav .nav-item.active')?.dataset.view === 'search')
+        return;
+    $$('.nav-item').forEach((b) => b.classList.remove('active'));
+    $('[data-view="search"]').classList.add('active');
+    $$('.view').forEach((el) => el.classList.remove('active'));
+    $('#search-view').classList.add('active');
+}
+scInput.addEventListener('focus', () => scOpenCard());
+scCard.addEventListener('click', (e) => {
+    if (scOpen)
+        return;
+    if (e.target.closest('input'))
+        return;
+    scInput.focus();
+});
+document.addEventListener('pointerdown', (e) => {
+    if (!scOpen)
+        return;
+    const t = e.target;
+    if (t && scRoot.contains(t))
+        return;
+    scCloseCard();
+});
+window.addEventListener('keydown', (e) => {
+    if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== 'k')
+        return;
+    e.preventDefault();
+    if (scOpen)
+        scCloseCard();
+    else {
+        goSearchView();
+        scInput.focus();
+    }
+});
+scList.addEventListener('pointerover', (e) => {
+    const row = e.target.closest('.psearch__row');
+    if (row && !row.classList.contains('hidden'))
+        scSetActive(row);
+});
+scList.addEventListener('pointerleave', () => scSheetHide());
+scList.addEventListener('focusin', (e) => {
+    const row = e.target.closest('.psearch__row');
+    if (row)
+        scSetActive(row);
+});
+scList.addEventListener('click', (e) => {
+    const t = e.target;
+    const row = t.closest('.psearch__row');
+    if (!row)
+        return;
+    if (t.closest('.psearch__remove')) {
+        e.stopPropagation();
+        scRemove(row.dataset.id || '');
+        return;
+    }
+    if (t.closest('.psearch__row-body'))
+        scPick(row.dataset.id || '');
+});
+scAction.addEventListener('click', () => {
+    if (scItems.length) {
+        scCleared = scItems;
+        scItems = [];
+    }
+    else {
+        scItems = scCleared;
+        scCleared = [];
+        scInput.value = '';
+    }
+    store('ns_recentq', scItems);
+    scRenderRows(true);
+});
+scInput.addEventListener('input', () => {
+    scApplyFilter();
+    clearTimeout(searchTimer);
+    const q = scInput.value.trim();
     if (!q) {
         showEmpty();
         return;
     }
     searchTimer = window.setTimeout(() => doSearch(q), 350);
 });
-$('#search-input').addEventListener('keydown', (e) => {
+scInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
         clearTimeout(searchTimer);
-        const q = e.target.value.trim();
+        const q = scInput.value.trim();
         if (q)
             doSearch(q);
     }
-    else if (e.key === 'Escape') {
-        e.target.value = '';
+});
+scRoot.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape')
+        return;
+    if (scInput.value) {
+        scInput.value = '';
         clearTimeout(searchTimer);
         showEmpty();
-        syncSearchUI();
+        scApplyFilter();
+        return;
     }
+    scCloseCard();
 });
-$('#search-clear').addEventListener('click', () => {
-    $('#search-input').value = '';
-    clearTimeout(searchTimer);
-    showEmpty();
-    syncSearchUI();
-    $('#search-input').focus();
+scCloseBtn.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    scCloseCard();
+});
+scCloseBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    scCloseCard();
 });
 async function doSearch(q) {
     show('loading');
@@ -922,7 +1200,9 @@ async function doSearch(q) {
     try {
         const data = await getJSON(`${API}/api/search?q=${encodeURIComponent(q)}`);
         saveRecentQ(q);
-        renderRecentQ();
+        scItems = scLoadRecents();
+        if (scOpen)
+            scRenderRows(false);
         if (!data.length) {
             showEmpty('No results found');
             return;
@@ -1523,14 +1803,8 @@ document.addEventListener('keydown', (e) => {
     }
     else if (e.key === '/' || e.key === 's') {
         e.preventDefault();
-        const v = $('nav .nav-item.active')?.dataset.view;
-        if (v !== 'search') {
-            $$('.nav-item').forEach((b) => b.classList.remove('active'));
-            $('[data-view="search"]').classList.add('active');
-            $$('.view').forEach((el) => el.classList.remove('active'));
-            $('#search-view').classList.add('active');
-        }
-        $('#search-input').focus();
+        goSearchView();
+        scInput.focus();
     }
 });
 // --- PROGRESS ---
@@ -2541,8 +2815,10 @@ $('#shuffle-btn').title = shuffleOn ? 'Shuffle: on' : 'Shuffle: off';
 sortMode = load('ns_sort', 'added');
 syncSortUI();
 updateVolIcon();
-renderRecentQ();
-syncSearchUI();
+scItems = scLoadRecents();
+scRenderRows(false);
+if (/Mac|iPhone|iPad/.test(navigator.platform))
+    scKbd.textContent = '⌘K';
 loadPlaylists();
 void initDownloads();
 void loadQuranReciters();
