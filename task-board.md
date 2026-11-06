@@ -46,8 +46,11 @@ matching section and note the platform when it is not cross-platform.
   starting platform builds. The corrected live Groq check passed in Actions run
   42260736781 for `v1.2.1-pre-alpha.3`: 81 words, six bullets, no removed
   Updates-card claim, and identical commit/download sections in the AI and
-  fallback output. **Left to do: publish the requested tag and inspect its
-  release description.**
+  fallback output. Tag `v1.2.1-pre-alpha.3` was published successfully in Actions
+  run 42261074833. Linux, macOS, Windows, and Android builds all passed, as did
+  the Windows, macOS, and Android runtime checks. The published prerelease has
+  five installers and the Groq-written description plus the verbatim commit
+  list. Verified on 2026-11-06.
   `GROQ_API_KEY` and `GROQ_MODEL` are both in place.
 - [ ] Tauri v2 dropped regenerated schemas into the tree:
   `tauri-app/src-tauri/gen/schemas/` (acl-manifests, android, capabilities,
@@ -56,7 +59,8 @@ matching section and note the platform when it is not cross-platform.
   committed, so the tidy answer is to commit them (or gitignore them if you
   would rather not track generated files). Decide once and do it.
 
-- [ ] Working on v1.2.1-pre-alpha.3
+- [x] Released `v1.2.1-pre-alpha.3` from `development`; all four platform builds
+  and all three runtime checks passed in Actions run 42261074833.
 
 - [x] Fix imported local nasheeds never appearing in "Your Nasheeds". The upload
   itself worked (`POST /api/local` saved the file and the `local: true` song, the
@@ -115,34 +119,39 @@ matching section and note the platform when it is not cross-platform.
   - Native libs are stored uncompressed (`extractNativeLibs=0`) and all four
     `.so` entries sit on a 16384-byte boundary, so the Android 15 16 KB page
     size rejection for libraries does not apply either.
-  - NO older release ever shipped an APK (every release's assets listed via
-    `gh api`; only v1.2.1-pre-alpha.1 has one), so no earlier Quran build
-    can be squatting on the package name and a signature conflict with a
-    leftover install is impossible.
+  - `v1.2.1-pre-alpha.1` did ship an APK with versionCode `1002001` and the
+    same release certificate as the newer APKs. The latest
+    `v1.2.1-pre-alpha.3` APK instead has versionCode `1`, so Android rejects it
+    as a downgrade when installed over the earlier release. This explains a
+    generic install failure when the user already has the earlier app.
 
-  First real artifact-side suspect found: `resources.arsc` is stored
-  uncompressed (correct) but only 4-byte aligned, NOT page-aligned (data
-  offset 44637848, i.e. 3736 bytes into a 4 KB page). Harmless on
-  4 KB-page phones, but on an Android 15 device running with 16 KB pages
-  the resource table must be page-mmapable and the install gets rejected,
-  which matches the exact wording of the error with permission already
-  granted.
+  Correction after inspecting the latest `v1.2.1-pre-alpha.3` APK:
+  `resources.arsc` only needs to be stored and 4-byte aligned for package
+  installation; its 16 KB offset is not an install blocker. The current 45.9 MB
+  APK passes `apksigner verify` (v2 signature), `zipalign -c -P 16 -v 4`, and
+  has stored 4-byte-aligned resources plus all four ABI directories. The arm64
+  native library is stored at a 16 KB-aligned offset. Its package metadata is
+  `com.goldstac.quran`, min SDK 24, target SDK 36, version code 1, and version
+  name `1.2.1-pre-alpha.3`. The CI Android 14 x86_64 install/runtime test also
+  passed. Android package installation is sound on the emulator, but it did not
+  exercise upgrading from the older release. `adb devices -l` currently shows
+  no connected device, so a separate clean-install issue on the Redmi A5 is
+  still unconfirmed. The Android workflow now stamps an ordered
+  versionCode, requires the existing release key, verifies APK metadata/signature/
+  ABIs/alignment, and tests upgrade from the original release on API 35. Local
+  script checks and verification of both published APKs passed. The full CI
+  build and emulator upgrade check still need to run on the next pushed build.
 
-  Next step needs the device. This machine already has `adb`
-  (v37.0.0-android-tools at /usr/bin/adb) and the APK sits ready in
-  `/tmp/opencode/apkcheck/`. Have the user enable Developer options (tap
-  "MIUI version" 7 times) then USB debugging and plug the phone in, then:
-  - `adb install -r app-universal-release.apk` for the exact
-    `Failure [INSTALL_FAILED_...]` line,
-  - `adb shell getconf PAGE_SIZE` (4096 vs 16384 decides the alignment
-    theory),
-  - `adb shell getprop ro.product.cpu.abilist` (confirm device ABIs).
-  If it is the page size, the fix is mechanical: page-align `resources.arsc`
-  in the Android build (newer AGP does it automatically, or a
-  `zipalign -P 16` pass) and cut a new pre-alpha. The other candidate if
-  the failure line says "incompatible": strip the AndroidTV
-  `LEANBACK_LAUNCHER` category and leanback feature the Tauri template
-  injects. Do not touch the Android job until the adb output is captured.
+  If the user still sees a failure after the versionCode fix, next step needs
+  the device. `adb` and Android SDK Build Tools are installed;
+  the latest APK is at `/tmp/quran-redmi-check/app-universal-release.apk`.
+  Connect the phone with USB debugging enabled and run
+  `adb install -r /tmp/quran-redmi-check/app-universal-release.apk`, then
+  `adb shell getconf PAGE_SIZE`, `adb shell getprop ro.product.cpu.abilist`,
+  and `adb logcat -d -s PackageManager PackageInstallerSession NativeLibraryHelper`
+  if install fails. Keep the exact `Failure [INSTALL_FAILED_...]` line. Use that
+  result to diagnose any remaining clean-install failure; the versionCode
+  downgrade is already fixed in the uncommitted Android build changes.
 
 - [ ] Android app (mobile build): create an Android version of the app using Tauri
   mobile/Android tooling, planned to run primarily in CI (not built locally).

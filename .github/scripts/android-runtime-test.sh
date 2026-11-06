@@ -7,11 +7,16 @@ dump_log() { adb logcat -d 2>/dev/null | tail -n 200; }
 echo "artifacts:"
 find installers \( -name '*.apk' -o -name '*.aab' \) | sort
 
-APK=$(find installers -name '*x86_64*.apk' | head -n 1)
-if [ -z "$APK" ]; then APK=$(find installers -name '*universal*.apk' | head -n 1); fi
-if [ -z "$APK" ]; then APK=$(find installers -name '*.apk' | head -n 1); fi
+APK=$(find installers -type f -name '*x86_64*.apk' ! -path 'installers/baseline/*' | head -n 1)
+if [ -z "$APK" ]; then APK=$(find installers -type f -name '*universal*.apk' ! -path 'installers/baseline/*' | head -n 1); fi
+if [ -z "$APK" ]; then APK=$(find installers -type f -name '*.apk' ! -path 'installers/baseline/*' | head -n 1); fi
 if [ -z "$APK" ]; then fail "no apk in the android-apk artifact"; fi
 echo "installing $APK"
+
+BASELINE="installers/baseline/app-universal-release.apk"
+if [ ! -f "$BASELINE" ]; then fail "the Android upgrade baseline is missing"; fi
+echo "installing previous release first: $BASELINE"
+adb install "$BASELINE" || fail "could not install the known-good Android baseline"
 
 if command -v unzip >/dev/null 2>&1; then
   APK_LIST=$(unzip -l "$APK" 2>/dev/null)
@@ -26,7 +31,7 @@ else
   echo "::warning::unzip not available, skipping the abi check"
 fi
 
-adb install -r "$APK" || fail "adb install failed"
+adb install -r "$APK" || fail "the new APK could not update the previous release"
 
 adb logcat -c
 adb shell am start -n com.goldstac.quran/.MainActivity || fail "could not start the app"

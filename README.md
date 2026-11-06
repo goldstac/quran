@@ -8,7 +8,7 @@
 
 Cross-platform: **Linux, macOS, and Windows** — anywhere Python runs plus a browser. (macOS and Windows just need the same Python + `yt-dlp` setup below; all commands work the same.)
 
-> Web app is the active version (`web/`). A Tauri desktop wrapper for testing lives in `tauri-app/`; Android is planned.
+> Web app is the active version (`web/`). Tauri desktop builds and Android APK prereleases are published on the [GitHub Releases page](https://github.com/goldstac/quran/releases).
 
 ## A note on intent
 

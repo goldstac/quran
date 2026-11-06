@@ -411,10 +411,17 @@ jobs:
           name: android-apk
           path: installers
 
+      - name: Download Android upgrade baseline
+        run: |
+          mkdir -p installers/baseline
+          curl --fail --location --retry 3 \
+            https://github.com/goldstac/quran/releases/download/v1.2.1-pre-alpha.1/app-universal-release.apk \
+            --output installers/baseline/app-universal-release.apk
+
       - name: Install and launch the app on an emulator
         uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
         with:
-          api-level: 34
+          api-level: 35
           arch: x86_64
           target: google_apis
           disable-animations: true
@@ -537,6 +544,17 @@ jobs:
               f.write(f'ANDROID_VERSION_NAME={ver}\n')
           PY
 
+      - name: Stamp Android package version
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF_NAME" == v* ]]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+          else
+            VERSION="$(python3 -c 'import json; print(json.load(open("package.json"))["version"])')"
+          fi
+          python3 .github/scripts/stamp-android-version.py "$VERSION"
+
       - name: Restore Android signing keystore
         shell: bash
         env:
@@ -545,8 +563,8 @@ jobs:
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           if [ -z "$KEYSTORE_BASE64" ]; then
-            echo "::warning::ANDROID_KEYSTORE_BASE64 secret missing, APK will be unsigned"
-            exit 0
+            echo "::error::ANDROID_KEYSTORE_BASE64 is required to preserve the Android app signing identity"
+            exit 1
           fi
           mkdir -p "$RUNNER_TEMP/keystore"
           echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/keystore/android.keystore"
@@ -561,6 +579,10 @@ jobs:
         working-directory: tauri-app/src-tauri
         shell: bash
         run: npx tauri android build --apk
+
+      - name: Verify Android APKs
+        shell: bash
+        run: bash .github/scripts/verify-android-apk.sh
 
       - name: Upload Android artifacts
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
