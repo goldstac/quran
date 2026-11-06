@@ -43,8 +43,11 @@ matching section and note the platform when it is not cross-platform.
   commit removed that feature. The prompt and smoke test now explicitly guard
   against that claim, and the smoke test enforces the actual 160-word cap.
   Workflow dispatch has `notes_only: true` so this validation can run without
-  starting platform builds. **Left to do: run the corrected live Groq check for
-  v1.2.1-pre-alpha.3, then inspect its release description.**
+  starting platform builds. The corrected live Groq check passed in Actions run
+  42260736781 for `v1.2.1-pre-alpha.3`: 81 words, six bullets, no removed
+  Updates-card claim, and identical commit/download sections in the AI and
+  fallback output. **Left to do: publish the requested tag and inspect its
+  release description.**
   `GROQ_API_KEY` and `GROQ_MODEL` are both in place.
 - [ ] Tauri v2 dropped regenerated schemas into the tree:
   `tauri-app/src-tauri/gen/schemas/` (acl-manifests, android, capabilities,
@@ -53,7 +56,7 @@ matching section and note the platform when it is not cross-platform.
   committed, so the tidy answer is to commit them (or gitignore them if you
   would rather not track generated files). Decide once and do it.
 
-- [ ] Working on v1.2.1
+- [ ] Working on v1.2.1-pre-alpha.3
 
 - [x] Fix imported local nasheeds never appearing in "Your Nasheeds". The upload
   itself worked (`POST /api/local` saved the file and the `local: true` song, the
