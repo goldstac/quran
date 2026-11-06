@@ -36,6 +36,7 @@ Rules:
 - The list is newest first. When an entry takes back something an entry further down added, leave the undone change out of What's new.
 - Translate commit types into user language: chore, ci, build, style, docs and refactor commits can be dropped unless they matter to users.
 - If the version contains a hyphen, for example v1.2.1-pre-alpha.3, say in the TL;DR that it is a pre-release.
+- Release descriptions are published on GitHub only. The app does not show them in its Updates card. An older commit may say the Updates card showed release notes, but a newer change removed that behavior; describe the current state.
 - Under 160 words in total. Headings and bullets only, no code blocks, no quotes around the whole text.
 EOF
 )

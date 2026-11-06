@@ -36,8 +36,15 @@ matching section and note the platform when it is not cross-platform.
   of the smoke script: no key, a well-behaved stub 200, a disobedient stub 200
   (em dash, its own Downloads block, a code fence, "songs") and a stub 401, all
   behaving, and the disobedient case caught a bug in my own first-line heading
-  check. **Left to do: dispatch `release.yml` on `development` to read the real
-  Groq output, then read the description on the next real tag.**
+  check. The real Groq smoke test passed in Actions run 42257132169 on
+  `development`; its summary was 54 words with four bullets, and the fallback
+  and fixed sections also passed. Reading the output found one semantic miss:
+  Groq advertised the Updates card release description even though a newer
+  commit removed that feature. The prompt and smoke test now explicitly guard
+  against that claim, and the smoke test enforces the actual 160-word cap.
+  Workflow dispatch has `notes_only: true` so this validation can run without
+  starting platform builds. **Left to do: run the corrected live Groq check for
+  v1.2.1-pre-alpha.3, then inspect its release description.**
   `GROQ_API_KEY` and `GROQ_MODEL` are both in place.
 - [ ] Tauri v2 dropped regenerated schemas into the tree:
   `tauri-app/src-tauri/gen/schemas/` (acl-manifests, android, capabilities,

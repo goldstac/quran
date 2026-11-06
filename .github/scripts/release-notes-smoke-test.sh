@@ -67,7 +67,12 @@ else
     ok "$BULLETS bullets under What's new"
   fi
   WORDS=$(printf '%s' "$AI_TOP" | wc -w)
-  if [ "$WORDS" -gt 200 ]; then problem "groq notes: $WORDS words, the cap is 160"; else ok "$WORDS words"; fi
+  if [ "$WORDS" -gt 160 ]; then problem "groq notes: $WORDS words, the cap is 160"; else ok "$WORDS words"; fi
+  if printf '%s' "$AI_TOP" | grep -qiE '(updates card|in-app card).{0,80}(shows?|displays?|includes?).{0,80}(release description|release notes)|(release description|release notes).{0,80}(updates card|in-app card).{0,80}(shows?|displays?|includes?)'; then
+    problem "groq notes: claims release descriptions appear in the Updates card"
+  else
+    ok "does not claim release descriptions appear in the Updates card"
+  fi
 fi
 
 echo "== what the fallback contributed =="
