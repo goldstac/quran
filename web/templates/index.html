@@ -40,6 +40,9 @@
       <button class="nav-item" data-view="local">
         <i class="fa-solid fa-folder-open"></i><span>Your Nasheeds</span>
       </button>
+      <button class="nav-item" data-view="provided">
+        <i class="fa-solid fa-circle-play"></i><span>Provided Nasheeds</span>
+      </button>
       <button class="nav-item" data-view="quran">
         <i class="fa-solid fa-book-quran"></i><span>Quran</span>
       </button>
@@ -140,6 +143,28 @@
           <p class="empty-sub">Search and save nasheeds to see them here</p>
         </div>
         <div id="lib-list" class="track-list" style="display:none"></div>
+      </div>
+    </div>
+
+    <div id="provided-view" class="view">
+      <div class="lib-sticky">
+        <div class="lib-heading">
+          <h1 class="lib-title">Provided Nasheeds</h1>
+          <button id="provided-refresh" class="lib-local-add" title="Refresh provided nasheeds" aria-label="Refresh provided nasheeds"><i class="fa-solid fa-arrows-rotate"></i></button>
+        </div>
+        <p id="provided-subtitle" class="lib-subtitle">Nasheeds provided by the Quran app</p>
+      </div>
+      <div class="lib-body">
+        <div id="provided-loading" class="empty" style="display:none">
+          <div class="spinner"></div>
+          <p class="empty-sub">Loading provided nasheeds...</p>
+        </div>
+        <div id="provided-empty" class="empty" style="display:none">
+          <div class="empty-icon"><i class="fa-solid fa-music"></i></div>
+          <p id="provided-empty-title" class="empty-title">No provided nasheeds yet</p>
+          <p id="provided-empty-sub" class="empty-sub">New nasheeds will appear here as they are added to the catalog.</p>
+        </div>
+        <div id="provided-list" class="track-list" style="display:none"></div>
       </div>
     </div>
 
@@ -384,6 +409,6 @@
     </div>
 </div>
 
-<script src="/static/app.js?v=search-close-2"></script>
+<script src="/static/app.js?v=provided-catalog-1"></script>
 </body>
 </html>

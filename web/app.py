@@ -300,6 +300,7 @@ def _clean_song(raw):
         "favorite": raw.get("favorite") is True,
         "local": raw.get("local") is True,
         "downloaded": raw.get("downloaded") is True,
+        "provided": raw.get("provided") is True,
     }
 
 
@@ -820,6 +821,134 @@ import urllib.request as _urllib
 from flask import request
 
 _stream_cache = {}
+
+_PROVIDED_BASE = "https://raw.githubusercontent.com/goldstac/quran/development/catalog"
+_PROVIDED_LOCAL_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "catalog")
+_provided_cache = {"expires": 0, "items": []}
+_provided_lock = threading.Lock()
+_provided_id_re = re.compile(r"^([a-z0-9]+(?:-[a-z0-9]+)*)$")
+
+
+def _load_provided_catalog(force=False):
+    with _provided_lock:
+        if not force and time.time() < _provided_cache["expires"]:
+            return _provided_cache["items"]
+    local_index = os.path.join(_PROVIDED_LOCAL_DIR, "index.json")
+    if not getattr(sys, "frozen", False) and os.path.isfile(local_index):
+        with open(local_index, encoding="utf-8") as source:
+            raw = json.load(source)
+    else:
+        req = _urllib.Request(_PROVIDED_BASE + "/index.json", headers={"User-Agent": UA})
+        with _urllib.urlopen(req, timeout=12) as resp:
+            raw = json.loads(resp.read().decode("utf-8"))
+    items = []
+    entries = raw.get("nasheeds", []) if isinstance(raw, dict) else []
+    for item in entries if isinstance(entries, list) else []:
+        if not isinstance(item, dict):
+            continue
+        sid = str(item.get("id", ""))
+        title = str(item.get("title", "")).strip()
+        munshid = str(item.get("munshid", "")).strip()
+        cover = str(item.get("cover", ""))
+        if not _provided_id_re.fullmatch(sid) or len(sid) > 55 or not title or not munshid:
+            continue
+        if item.get("audio") != f"audio/{sid}.mp3":
+            continue
+        if not re.fullmatch(rf"covers/{re.escape(sid)}\.(?:jpg|jpeg|png|webp)", cover):
+            continue
+        items.append({"id": sid, "title": title, "munshid": munshid, "cover": cover})
+    with _provided_lock:
+        _provided_cache.update(items=items, expires=time.time() + 300)
+    return items
+
+
+def _provided_item(song_id):
+    match = re.fullmatch(r"provided-([a-z0-9]+(?:-[a-z0-9]+)*)", song_id)
+    if not match:
+        return None
+    return next((item for item in _load_provided_catalog() if item["id"] == match.group(1)), None)
+
+
+def _serve_provided_asset(path, download_name=None):
+    local_path = os.path.join(_PROVIDED_LOCAL_DIR, *path.split("/"))
+    if not getattr(sys, "frozen", False) and in_dir(local_path, _PROVIDED_LOCAL_DIR) and os.path.isfile(local_path):
+        response = send_file(local_path, mimetype=file_mime(path), conditional=True, max_age=300)
+        if download_name:
+            response.headers["Content-Disposition"] = f'attachment; filename="{download_name}"'
+        return response
+    headers = {"User-Agent": UA}
+    range_header = request.headers.get("Range")
+    if range_header:
+        headers["Range"] = range_header
+    req = _urllib.Request(_PROVIDED_BASE + "/" + path, headers=headers)
+    resp = _urllib.urlopen(req, timeout=30)
+    out_headers = {
+        "Content-Type": file_mime(path),
+        "Accept-Ranges": "bytes",
+        "Cache-Control": "public, max-age=300",
+    }
+    for key in ("Content-Length", "Content-Range"):
+        if resp.headers.get(key):
+            out_headers[key] = resp.headers[key]
+    if download_name:
+        out_headers["Content-Disposition"] = f'attachment; filename="{download_name}"'
+
+    def generate():
+        try:
+            while True:
+                chunk = resp.read(65536)
+                if not chunk:
+                    break
+                yield chunk
+        finally:
+            resp.close()
+
+    status = resp.status if resp.status in (200, 206) else 200
+    return app.response_class(generate(), status=status, headers=out_headers)
+
+
+@app.route("/api/provided")
+def api_provided():
+    try:
+        items = _load_provided_catalog(request.args.get("refresh") == "1")
+    except Exception:
+        return jsonify({"error": "Provided Nasheeds catalog is unavailable"}), 502
+    return jsonify([{
+        "id": "provided-" + item["id"],
+        "title": item["title"],
+        "channel": item["munshid"],
+        "thumbnail": "/api/provided/cover/provided-" + item["id"],
+        "provided": True,
+    } for item in items])
+
+
+@app.route("/api/provided/cover/<song_id>")
+def api_provided_cover(song_id):
+    try:
+        item = _provided_item(song_id)
+    except Exception:
+        return jsonify({"error": "Provided Nasheeds catalog is unavailable"}), 502
+    if not item:
+        return jsonify({"error": "nasheed not found"}), 404
+    try:
+        return _serve_provided_asset(item["cover"])
+    except Exception:
+        return jsonify({"error": "cover unavailable"}), 502
+
+
+@app.route("/api/provided/audio/<song_id>")
+def api_provided_audio(song_id):
+    try:
+        item = _provided_item(song_id)
+    except Exception:
+        return jsonify({"error": "Provided Nasheeds catalog is unavailable"}), 502
+    if not item:
+        return jsonify({"error": "nasheed not found"}), 404
+    try:
+        name = item["id"] + ".mp3" if request.args.get("download") == "1" else None
+        return _serve_provided_asset("audio/" + item["id"] + ".mp3", name)
+    except Exception:
+        return jsonify({"error": "audio unavailable"}), 502
 
 
 def resolve_stream(video_id):

@@ -396,6 +396,7 @@ body{
 .track-act.yt-act:hover{color:#ff0033}
 .track-act.dl-done{color:#1db954}
 .track-act.dl-active{color:#c9a86c}
+.provided-download-act{text-decoration:none}
 
 /* ===== PLAYER BAR ===== */
 .player{

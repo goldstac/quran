@@ -190,6 +190,19 @@ matching section and note the platform when it is not cross-platform.
 
 ## Done
 
+- [x] Add a shared **Provided Nasheeds** catalog view. Source runs read the local
+  `catalog/index.json`; packaged builds fetch it from the public `development`
+  branch for testing. The view displays cover, title, and
+  munshid, plays MP3s through a Range-aware local proxy, and provides an MP3
+  download link. Add catalog entries and matching files under `catalog/audio/`
+  and `catalog/covers/`; `catalog/README.md` documents the metadata format.
+  The catalog starts empty until entries are added. Privacy, terms,
+  README, and AGENTS notes now describe the GitHub requests. Verified with
+  `npm run build`, `python3 -c "from app import app"`, and `git diff --check`.
+  Before release, switch the catalog source back to `main`. When this feature
+  is released, add it to the separate website repo's task board and update the
+  site copy.
+
 - [x] The Search view runs on the Pin UI "Search Card"
   (https://www.pinui.xyz/components/search-card), ported from its React +
   framer-motion source (630 lines TSX + 562 lines CSS, pulled out of the page

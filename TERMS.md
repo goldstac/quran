@@ -9,7 +9,7 @@ Use the app = you're good with these terms. Not good with them? Simply don't use
 
 ## 2. What the app is
 
-**Quran** (this app) is a free, open source player for the Quran and Islamic **nasheeds** — browse all 114 surahs with reciter choice, search YouTube for nasheeds, and play them through a player you run on your own device, with a personal library, likes, playlists, downloads for offline listening, and files you add yourself. No accounts, no subscriptions, no payments, no backend we operate. This is a hobby project, maintained in spare time, with no promise of updates or support.
+**Quran** (this app) is a free, open source player for the Quran and Islamic **nasheeds** — browse all 114 surahs with reciter choice, search YouTube for nasheeds, and play them through a player you run on your own device, with a personal library, likes, playlists, downloads for offline listening, and files you add yourself. It also has an optional Provided Nasheeds catalog hosted as public files on GitHub. No accounts, no subscriptions, and no app server we operate. This is a hobby project, maintained in spare time, with no promise of updates or support.
 
 It's made for the Quran and nasheeds. The YouTube search will match whatever you type, but using it for general music isn't what it's intended for.
 
@@ -20,9 +20,10 @@ You get a personal, non-exclusive, non-transferable licence to install and use t
 ## 4. The content isn't ours
 
 - The nasheeds themselves are hosted by **YouTube/Google** and belong to their writers, performers, labels, and rightsholders. The app is only an organiser and player for them — we claim no rights over the music.
+- Provided Nasheeds files are served from the public Quran app repository on GitHub. Their creators and rightsholders keep their rights; we make no ownership claim over those recordings.
 - Quran audio and reciter listings come from third parties (**Quran.com** / **MP3Quran** and similar CDNs). Those recordings belong to their reciters and rightsholders — again, we claim no rights; we're just pointing the player at them.
 - The app leans on the third-party open-source tool **yt-dlp** and on YouTube continuing to offer its public interfaces. Neither is ours; YouTube's own terms (https://www.youtube.com/t/terms) apply alongside these when you play things.
-- We're **not affiliated with, endorsed by, or sponsored by** YouTube, Google, Cloudflare, Discord, Spotify, Quran.com, or MP3Quran. "Spotify-like" only ever meant the visual style.
+- We're **not affiliated with, endorsed by, or sponsored by** YouTube, Google, GitHub, Cloudflare, Discord, Spotify, Quran.com, or MP3Quran. "Spotify-like" only ever meant the visual style.
 
 ## 5. Playing nice
 
@@ -35,11 +36,11 @@ Nasheeds you download for offline listening, and any files you add yourself, are
 
 ## 6. No uptime promises
 
-It's provided as-is, with no guarantee of support or availability. Search and playback depend on YouTube and yt-dlp still working — when YouTube changes things, features can break, sometimes without warning. We're not obliged to fix or maintain anything, though fixes may show up in the repo.
+It's provided as-is, with no guarantee of support or availability. Search and playback depend on YouTube and yt-dlp still working, and the Provided Nasheeds catalog depends on GitHub being available. When those services change or are unavailable, features can break. We're not obliged to fix or maintain anything, though fixes may show up in the repo.
 
 ## 7. Privacy
 
-What the app stores and where it connects is described in `PRIVACY.md`. Short version: it runs on your device and sends nothing to us.
+What the app stores and where it connects is described in `PRIVACY.md`. Short version: it runs on your device and has no account or app server.
 
 ## 8. No guarantees
 

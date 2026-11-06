@@ -11,6 +11,7 @@ interface Song {
   favorite?: boolean;
   local?: boolean;
   downloaded?: boolean;
+  provided?: boolean;
   kind?: 'quran';
   stream_url?: string;
   arabic?: string;
@@ -482,6 +483,9 @@ $$<HTMLElement>('.nav-item').forEach((btn) =>
     } else if (v === 'settings') {
       $('#settings-view').classList.add('active');
       void loadSettings();
+    } else if (v === 'provided') {
+      $('#provided-view').classList.add('active');
+      void loadProvided();
     } else {
       $('#library-view').classList.add('active');
       loadLib(v);
@@ -1317,7 +1321,8 @@ function makeRow(song: Song, idx: number, ctx: string): HTMLElement {
   if (currentSong && currentSong.id === song.id) r.classList.add('playing');
   const isQuran = ctx === 'quran' || song.kind === 'quran';
   const isLocal = !!song.local;
-  const canRemove = ctx !== 'search' && !isQuran;
+  const isProvided = !!song.provided || song.id.startsWith('provided-');
+  const canRemove = ctx !== 'search' && ctx !== 'provided' && !isQuran;
   const heart = song.favorite ? 'fa-solid fa-heart fav-on' : 'fa-regular fa-heart';
   const sub = isQuran
     ? `<span class="track-ar">${esc(song.arabic || '')}</span><span class="track-ayahs">${song.verses_count ? `${esc(String(song.verses_count))} ayahs` : ''}</span>`
@@ -1341,8 +1346,8 @@ function makeRow(song: Song, idx: number, ctx: string): HTMLElement {
       ${canRemove ? '<button class="track-act rem-act" title="Remove"><i class="fa-solid fa-trash"></i></button>' : ''}
       ${isQuran ? '' : `<button class="track-act fav-act" title="Like"><i class="${heart}"></i></button>
       <button class="track-act pl-act" title="Add to playlist"><i class="fa-solid fa-plus"></i></button>
-      ${isLocal ? '' : '<button class="track-act dl-act" title="Download for offline"><i class="fa-solid fa-download"></i></button>'}
-      ${isLocal ? '' : '<button class="track-act yt-act" title="See on YouTube"><i class="fa-brands fa-youtube"></i></button>'}
+      ${isProvided ? `<a class="track-act provided-download-act" href="/api/provided/audio/${encodeURIComponent(song.id)}?download=1" download title="Download MP3" aria-label="Download ${esc(song.title)} MP3"><i class="fa-solid fa-download"></i></a>` : isLocal ? '' : '<button class="track-act dl-act" title="Download for offline"><i class="fa-solid fa-download"></i></button>'}
+      ${isLocal || isProvided ? '' : '<button class="track-act yt-act" title="See on YouTube"><i class="fa-brands fa-youtube"></i></button>'}
       <button class="track-act disc-act" title="Shown in Discord"><i class="fa-solid fa-eye"></i></button>`}
     </div>`;
 
@@ -1370,7 +1375,7 @@ function makeRow(song: Song, idx: number, ctx: string): HTMLElement {
       ytBtn.addEventListener('click', (e) => { e.stopPropagation(); seeOnYouTube(song); });
     }
     const dlBtn = r.querySelector<HTMLElement>('.dl-act');
-    if (dlBtn) {
+    if (dlBtn && !isProvided) {
       dlBtnUi(dlBtn, song.id);
       dlBtn.addEventListener('click', (e) => { e.stopPropagation(); void dlAction(song); });
     }
@@ -1394,7 +1399,7 @@ function makeRow(song: Song, idx: number, ctx: string): HTMLElement {
 const warmed = new Set<string>();
 
 function warm(id: string) {
-  if (id.startsWith('local-') || downloadedIds.has(id)) return;
+  if (id.startsWith('local-') || id.startsWith('provided-') || downloadedIds.has(id)) return;
   if (warmed.has(id)) return;
   warmed.add(id);
   fetch(`${API}/api/warm/${encodeURIComponent(id)}`).then((r) => {
@@ -1425,6 +1430,15 @@ function refreshDl(id: string) {
 }
 
 async function dlAction(song: Song) {
+  if (song.provided || song.id.startsWith('provided-')) {
+    const link = document.createElement('a');
+    link.href = `${API}/api/provided/audio/${encodeURIComponent(song.id)}?download=1`;
+    link.download = `${song.id.replace(/^provided-/, '')}.mp3`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    return;
+  }
   if (song.kind === 'quran' || song.local) return;
   if (dlActive.has(song.id)) {
     await getJSON<{ ok: boolean }>(`${API}/api/download/remove`, {
@@ -1545,6 +1559,7 @@ function songSrc(song: Song): string {
     return `${API}/api/quran/chapter_audio/${reciter}/${chapter}`;
   }
   if (song.local) return `${API}/api/file/${encodeURIComponent(song.id)}`;
+  if (song.provided || song.id.startsWith('provided-')) return `${API}/api/provided/audio/${encodeURIComponent(song.id)}`;
   return `${API}/api/proxy/${encodeURIComponent(song.id)}`;
 }
 
@@ -1633,11 +1648,15 @@ function updatePlayer() {
     if (icon) icon.className = currentSong.kind === 'quran' ? 'fa-solid fa-book-quran' : 'fa-solid fa-music';
   }
   $('#fav-btn i').className = currentSong.favorite ? 'fa-solid fa-heart fav-on' : 'fa-regular fa-heart';
-  $('#yt-btn').classList.toggle('hidden', currentSong.kind === 'quran' || !!currentSong.local);
+  const isProvided = !!currentSong.provided || currentSong.id.startsWith('provided-');
+  $('#yt-btn').classList.toggle('hidden', currentSong.kind === 'quran' || !!currentSong.local || isProvided);
   const dlBtn = $('#dl-btn');
   const canDownload = currentSong.kind !== 'quran' && !currentSong.local;
   dlBtn.classList.toggle('hidden', !canDownload);
-  if (canDownload) dlBtnUi(dlBtn, currentSong.id);
+  if (canDownload) {
+    dlBtnUi(dlBtn, currentSong.id);
+    if (isProvided) dlBtn.title = 'Download MP3';
+  }
   syncQuranTranslation();
   if ('mediaSession' in navigator) {
     navigator.mediaSession.metadata = new MediaMetadata({
@@ -1651,7 +1670,7 @@ function updatePlayer() {
 
 // --- CONTROLS ---
 $('#yt-btn').addEventListener('click', () => {
-  if (!currentSong || currentSong.kind === 'quran' || currentSong.local) return;
+  if (!currentSong || currentSong.kind === 'quran' || currentSong.local || currentSong.provided || currentSong.id.startsWith('provided-')) return;
   seeOnYouTube(currentSong);
 });
 $('#dl-btn').addEventListener('click', () => {
@@ -1912,6 +1931,35 @@ function syncSortUI() {
   $$('.lib-sort-opt').forEach((o) => o.classList.toggle('active', o.dataset.sort === sortMode));
 }
 
+async function loadProvided(force = false) {
+  $('#provided-list').style.display = 'none';
+  $('#provided-empty').style.display = 'none';
+  $('#provided-loading').style.display = '';
+  $('#provided-subtitle').textContent = 'Nasheeds provided by the Quran app';
+  try {
+    const response = await fetch(`${API}/api/provided${force ? '?refresh=1' : ''}`);
+    if (!response.ok) throw new Error('catalog unavailable');
+    const songs = await response.json() as Song[];
+    $('#provided-loading').style.display = 'none';
+    $('#provided-subtitle').textContent = `${songs.length} provided nasheed${songs.length === 1 ? '' : 's'}`;
+    if (!songs.length) {
+      $('#provided-empty-title').textContent = 'No provided nasheeds yet';
+      $('#provided-empty-sub').textContent = 'New nasheeds will appear here as they are added to the catalog.';
+      $('#provided-empty').style.display = '';
+      return;
+    }
+    renderList('provided-list', songs, 'provided');
+    $('#provided-list').style.display = '';
+  } catch {
+    $('#provided-loading').style.display = 'none';
+    $('#provided-empty-title').textContent = 'Catalog unavailable';
+    $('#provided-empty-sub').textContent = 'Could not load provided nasheeds. Check your connection and try again.';
+    $('#provided-empty').style.display = '';
+  }
+}
+
+$('#provided-refresh').addEventListener('click', () => void loadProvided(true));
+
 async function loadLib(mode: string | undefined) {
   const lib = await getJSON<Library>(`${API}/api/library`);
   let songs: Song[] = [];
@@ -2071,6 +2119,7 @@ async function addToPl(song: Song) {
 }
 
 function seeOnYouTube(song: Song) {
+  if (song.provided || song.id.startsWith('provided-')) return;
   fetch(`${API}/api/open`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

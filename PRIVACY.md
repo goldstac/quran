@@ -11,13 +11,14 @@ Plain and simple: here's what the app does.
 - Files you add yourself ("Your Nasheeds") are copied into `~/.local/share/quran-app/local/` so they keep working even if you move the originals
 - The browser keeps a few settings locally (`ns_` keys): volume, loop/shuffle/sort, recents, last searches
 - If you link your own Discord bot, the link token and address are saved in `~/.local/share/quran-app/bot.json`
-- There is no server of ours in the picture at all: nothing you play, like, or search for is ever sent to us
+- There is no app server or account: your library, likes, and searches stay on your device
 
 ## Out on the network
 
 All requests go straight from your machine to:
 
 - **YouTube** (via `yt-dlp`) — nasheed searches, audio streaming, thumbnails
+- **GitHub** (`raw.githubusercontent.com`) — packaged builds fetch the Provided Nasheeds catalog and cover art when you open the section; playing or downloading one fetches its MP3. These requests go to the public Quran app repository from your device. When running from source, the app reads the catalog files from that checkout instead.
 - **Quran.com** and **MP3Quran** — ayah text and translations, reciter lists, Quran audio
 - **Google Fonts** and **cdnjs/Cloudflare** — interface fonts and icons
 - **GitHub** (`api.github.com` and release downloads) - only when you use the updater in Settings: it looks up the list of releases and, if you pick one, downloads that file to your machine

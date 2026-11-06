@@ -18,13 +18,14 @@ This app is made for the **Quran** and Islamic **nasheeds**. The YouTube search 
 
 - **Quran** — all 114 surahs, pick from 170+ reciters, Arabic + English names, play/shuffle
 - **Search YouTube** for nasheeds (via `yt-dlp`), with debounced live results
+- **Provided Nasheeds**: browse the shared catalog, play entries, and download their MP3s
 - **Smooth playback** through a local proxy — seeking/scrubbing works (Range-aware streaming)
 - **Custom UI components** — hand-built seek/volume sliders and modals, no stock browser widgets, calm dark theme with green and gold accents
 - **Your Library** — auto-saves what you play; likes ("Liked Nasheeds"), playlists with create / rename / delete, per-row remove
 - **Offline downloads** — save any nasheed to your device and keep playing with no wifi; a **Downloads** view collects them
 - **Your Nasheeds** — add your own MP3/MP4 files and play them like any other nasheed (no YouTube needed)
 - **Shuffle** (restores original order when toggled off) and **loop-one**; queue **auto-advances** when a track ends
-- **Recently Played** view + **recent search chips**
+- **Recently Played** view + **recent searches**
 - **Sort** library by recently added, title, or channel
 - **Keyboard shortcuts** (below), toast notifications, Media Session (lock-screen/OS media keys)
 - **Settings** — app version, GitHub repo, default volume, and an in-app **updater** that lists every release (pre-releases and older versions too) and downloads + installs the one you pick
@@ -134,7 +135,7 @@ TERMS.md        terms of service
 
 ## Privacy
 
-The app runs on your device: your library is a JSON file on disk, and requests go to YouTube (nasheeds), Quran.com + MP3Quran (Quran text and audio), and two CDNs (fonts/icons), plus Discord only if you turn on presence or link your own bot. Details: [PRIVACY.md](PRIVACY.md). Terms: [TERMS.md](TERMS.md).
+The app runs on your device: your library is a JSON file on disk, and requests go to YouTube (nasheeds), Quran.com + MP3Quran (Quran text and audio), GitHub for the optional Provided Nasheeds catalog in packaged builds, and two CDNs (fonts/icons), plus Discord only if you turn on presence or link your own bot. Details: [PRIVACY.md](PRIVACY.md). Terms: [TERMS.md](TERMS.md).
 
 ## Contributing
 
