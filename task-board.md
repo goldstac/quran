@@ -139,8 +139,13 @@ matching section and note the platform when it is not cross-platform.
   still unconfirmed. The Android workflow now stamps an ordered
   versionCode, requires the existing release key, verifies APK metadata/signature/
   ABIs/alignment, and tests upgrade from the original release on API 35. Local
-  script checks and verification of both published APKs passed. The full CI
-  build and emulator upgrade check still need to run on the next pushed build.
+  script checks and verification of both published APKs passed. Dispatch
+  42312963607 compiled Android but the package verifier caught Tauri's
+  `autoIncrementVersionCode` adding one on top of the stamped value. The
+  stamping script now writes the preceding value so the generated APK matches
+  the intended version code. That correction needs a new CI build and emulator
+  upgrade run; the Groq smoke job also failed on that dispatch because its
+  secret was unavailable.
 
   If the user still sees a failure after the versionCode fix, next step needs
   the device. `adb` and Android SDK Build Tools are installed;

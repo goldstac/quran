@@ -43,7 +43,7 @@ def main():
     android_properties = Path("tauri-app/src-tauri/gen/android/app/tauri.properties")
     android_properties.write_text(
         f"tauri.android.versionName={version}\n"
-        f"tauri.android.versionCode={code}\n"
+        f"tauri.android.versionCode={code - 1}\n"
     )
     with open(os.environ["GITHUB_ENV"], "a", encoding="utf-8") as env:
         env.write(f"ANDROID_VERSION_NAME={version}\n")
