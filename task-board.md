@@ -143,9 +143,11 @@ matching section and note the platform when it is not cross-platform.
   42312963607 compiled Android but the package verifier caught Tauri's
   `autoIncrementVersionCode` adding one on top of the stamped value. The
   stamping script now writes the preceding value so the generated APK matches
-  the intended version code. That correction needs a new CI build and emulator
-  upgrade run; the Groq smoke job also failed on that dispatch because its
-  secret was unavailable.
+  the intended version code. The next dispatch, 42314024736, produced the expected version code but then
+  stopped in APK verification without a specific diagnostic. The verifier now
+  reports the signer fingerprint and verbose zip alignment separately. A new
+  CI run is needed to identify and complete that check; the Groq smoke job also
+  failed on both dispatches because its secret was unavailable.
 
   If the user still sees a failure after the versionCode fix, next step needs
   the device. `adb` and Android SDK Build Tools are installed;

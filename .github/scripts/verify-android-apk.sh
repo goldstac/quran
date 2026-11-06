@@ -31,8 +31,13 @@ while IFS= read -r -d '' APK; do
       ;;
   esac
   "$BUILD_TOOLS/apksigner" verify --verbose --print-certs "$APK" > "$RUNNER_TEMP/apk-signature.txt"
-  grep -q 'Signer #1 certificate SHA-256 digest: 06cf45b8b7f8d5bd209acb89db77632aafb39968ef5267bd626f330e5982b040' "$RUNNER_TEMP/apk-signature.txt"
-  "$BUILD_TOOLS/zipalign" -c -P 16 4 "$APK"
+  SIGNER_SHA="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' "$RUNNER_TEMP/apk-signature.txt")"
+  if [ "$SIGNER_SHA" != "06cf45b8b7f8d5bd209acb89db77632aafb39968ef5267bd626f330e5982b040" ]; then
+    echo "::error::unexpected Android signing certificate for $APK: $SIGNER_SHA"
+    exit 1
+  fi
+  echo "APK signature verified: $SIGNER_SHA"
+  "$BUILD_TOOLS/zipalign" -c -P 16 -v 4 "$APK"
   python3 - "$APK" <<'PY'
 import sys
 import zipfile
