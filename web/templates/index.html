@@ -244,14 +244,23 @@
     </div>
 
     <div id="settings-view" class="view">
-      <div class="lib-sticky">
+      <div class="lib-sticky settings-sticky">
         <div class="lib-heading">
-          <h1 class="lib-title">Settings</h1>
+          <div>
+            <h1 class="lib-title">Settings</h1>
+          </div>
         </div>
-        <p class="lib-subtitle">App info and basics</p>
+        <p class="lib-subtitle">Make Quran feel right for you.</p>
       </div>
-      <div class="lib-body">
-        <div class="settings-card">
+      <div class="lib-body settings-body">
+        <div class="settings-sections">
+        <section class="settings-section">
+          <div class="settings-section-head">
+            <h2>UI</h2>
+            <p>App information and updates.</p>
+          </div>
+          <div class="settings-grid">
+        <div class="settings-card settings-card-about">
           <div class="settings-card-head">
             <h2 class="settings-card-title"><i class="fa-solid fa-circle-info"></i>About</h2>
           </div>
@@ -261,9 +270,10 @@
             <div class="settings-row"><span class="settings-row-label">Repository</span><a class="settings-row-value" id="set-repo" href="https://github.com/goldstac/quran" target="_blank" rel="noopener noreferrer">github.com/goldstac/quran</a></div>
           </div>
         </div>
-        <div class="settings-card">
+        <div class="settings-card settings-card-updates">
           <div class="settings-card-head">
             <h2 class="settings-card-title"><i class="fa-solid fa-arrows-rotate"></i>Updates</h2>
+            <p class="settings-card-sub">Check for a newer release, or include early builds to try changes before they are stable.</p>
           </div>
           <div class="settings-rows">
             <div class="settings-row">
@@ -291,10 +301,45 @@
           </div>
           <p id="set-check-note" class="settings-note"></p>
         </div>
-        <div class="settings-card">
+        <div class="settings-card settings-card-note">
+          <div class="settings-card-head">
+            <h2 class="settings-card-title gold"><i class="fa-solid fa-hands-praying"></i>About this app</h2>
+            <p class="settings-card-sub">Made for the Quran and nasheeds. Your library and preferences stay on this device. Online features connect to services such as YouTube, GitHub, and Discord when you use them.</p>
+          </div>
+        </div>
+          </div>
+        </section>
+        <section class="settings-section">
+          <div class="settings-section-head">
+            <h2>Sound</h2>
+            <p>Choose the default volume for playback.</p>
+          </div>
+          <div class="settings-grid">
+        <div class="settings-card settings-card-sound">
+          <div class="settings-card-head">
+            <h2 class="settings-card-title"><i class="fa-solid fa-volume-high"></i>Sound</h2>
+            <p class="settings-card-sub">Choose the volume used when Quran starts. You can still adjust it anytime in the player.</p>
+          </div>
+          <div class="settings-rows">
+            <div class="settings-row">
+              <span class="settings-row-label">Default volume</span>
+              <div class="vol-track settings-vol" id="settings-volume-bar" role="slider" aria-label="Default volume" aria-valuemin="0" aria-valuemax="100" aria-valuenow="70"></div>
+              <span id="set-vol-label" class="set-vol-label">70%</span>
+            </div>
+          </div>
+        </div>
+          </div>
+        </section>
+        <section class="settings-section">
+          <div class="settings-section-head">
+            <h2>Discord</h2>
+            <p>Control profile presence and connect your bot.</p>
+          </div>
+          <div class="settings-grid">
+        <div class="settings-card settings-card-discord">
           <div class="settings-card-head">
             <h2 class="settings-card-title gold"><i class="fa-brands fa-discord"></i>Discord presence</h2>
-            <p class="settings-card-sub">Shows what you are listening to on your Discord profile. Keep Discord desktop running and it connects automatically. Use the eye button on any nasheed to hide or show it from your presence and your bot.</p>
+            <p class="settings-card-sub">Show your current nasheed or Quran recitation on your Discord profile. Discord desktop needs to be open. Use the eye button on a nasheed row to hide it.</p>
           </div>
           <div class="settings-rows">
             <div class="settings-row">
@@ -309,10 +354,10 @@
             </div>
           </div>
         </div>
-        <div class="settings-card">
+        <div class="settings-card settings-card-bot">
           <div class="settings-card-head">
             <h2 class="settings-card-title"><i class="fa-solid fa-headphones"></i>Discord bot</h2>
-            <p class="settings-card-sub">Link your own Discord bot to bring <code>su!track</code> and <code>su!fm</code> into your server. Run <code>su!track link</code> there, paste the code below, and the bot follows what you play. Nasheeds you hide with the eye button are never sent.</p>
+            <p class="settings-card-sub">Run <code>su!track link</code> in your server, then enter the code below. The bot URL points to your bot service. Use Test to check that Quran can reach it. Hidden nasheeds are not shared.</p>
           </div>
           <div class="settings-rows">
             <div class="settings-row">
@@ -341,24 +386,8 @@
           </div>
           <p id="bot-note" class="settings-note"></p>
         </div>
-        <div class="settings-card">
-          <div class="settings-card-head">
-            <h2 class="settings-card-title"><i class="fa-solid fa-volume-high"></i>Sound</h2>
-            <p class="settings-card-sub">Saved on your device and used when the app starts.</p>
           </div>
-          <div class="settings-rows">
-            <div class="settings-row">
-              <span class="settings-row-label">Default volume</span>
-              <div class="vol-track settings-vol" id="settings-volume-bar" role="slider" aria-label="Default volume" aria-valuemin="0" aria-valuemax="100" aria-valuenow="70"></div>
-              <span id="set-vol-label" class="set-vol-label">70%</span>
-            </div>
-          </div>
-        </div>
-        <div class="settings-card">
-          <div class="settings-card-head">
-            <h2 class="settings-card-title gold"><i class="fa-solid fa-hands-praying"></i>About this app</h2>
-            <p class="settings-card-sub">Made for the Quran and nasheeds, not general music. Everything is stored locally on your device.</p>
-          </div>
+        </section>
         </div>
       </div>
     </div>

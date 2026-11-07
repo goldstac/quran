@@ -216,6 +216,15 @@ matching section and note the platform when it is not cross-platform.
 
 ## Done
 
+- [x] Refresh Settings into UI, Sound, and Discord sections. Use compact
+  bordered panels and familiar form controls inspired by shadcn, adapted to
+  the existing Flask UI. Align the single-panel Sound and Discord controls to
+  the same content width; keep the two UI info panels in a balanced grid.
+  Add concise explanations in plain language. Existing controls and IDs are
+  unchanged. Checked the rendered page and `git diff --check`. The visual edits
+  are uncommitted on `development` in `web/templates/index.html`,
+  `web/static/style.css`, and `task-board.md`.
+
 - [x] Add a shared **Provided Nasheeds** catalog view. Source runs read the local
   `catalog/index.json`; packaged builds fetch it from the public `development`
   branch for testing. The view displays cover, title, and
