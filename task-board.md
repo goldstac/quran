@@ -143,11 +143,11 @@ matching section and note the platform when it is not cross-platform.
   42312963607 compiled Android but the package verifier caught Tauri's
   `autoIncrementVersionCode` adding one on top of the stamped value. The
   stamping script now writes the preceding value so the generated APK matches
-  the intended version code. Dispatch 42315053084 produced the expected version code. Signing verification
-  passed, then its fingerprint check failed because apksigner wrote the signer
-  details to stderr while the script captured only stdout. The verifier now
-  captures both streams and reports the signer fingerprint and verbose zip
-  alignment. This correction needs one more CI build/runtime run.
+  the intended version code. Dispatch 42315053084 produced the expected version code. APK signing verification passed, but the fingerprint comparison did not get a
+  value from apksigner on CI. The preflight now checks that apksigner accepts
+  the signature, while the emulator upgrade from the original APK proves signer
+  continuity through Android Package Manager. The next CI run
+  must confirm this verifier and the upgrade path together.
 
   If the user still sees a failure after the versionCode fix, next step needs
   the device. `adb` and Android SDK Build Tools are installed;
