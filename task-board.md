@@ -221,21 +221,22 @@ matching section and note the platform when it is not cross-platform.
   the existing Flask UI. Align the single-panel Sound and Discord controls to
   the same content width; keep the two UI info panels in a balanced grid.
   Add concise explanations in plain language. Existing controls and IDs are
-  unchanged. Checked the rendered page and `git diff --check`. The visual edits
-  are uncommitted on `development` in `web/templates/index.html`,
-  `web/static/style.css`, and `task-board.md`.
+  unchanged. Checked the rendered page and `git diff --check`. Committed as
+  `d9b8941` on `development`.
 
 - [x] Add a shared **Provided Nasheeds** catalog view. Source runs read the local
-  `catalog/index.json`; packaged builds fetch it from the public `development`
-  branch for testing. The view displays cover, title, and
+  `catalog/index.json`; packaged builds fetch it from the public `main` branch
+  for release `v1.2.1-pre-alpha.4` (testing builds can use `development`). The
+  view displays cover, title, and
   munshid, plays MP3s through a Range-aware local proxy, and provides an MP3
   download link. Add catalog entries and matching files under `catalog/audio/`
   and `catalog/covers/`; `catalog/README.md` documents the metadata format.
   The catalog starts empty until entries are added. Privacy, terms,
   README, and AGENTS notes now describe the GitHub requests. Verified with
   `npm run build`, `python3 -c "from app import app"`, and `git diff --check`.
-  Before release, switch the catalog source back to `main`. When this feature
-  is released, add it to the separate website repo's task board and update the
+  The packaged catalog source was switched to `main` for release
+  `v1.2.1-pre-alpha.4`. When this feature is released, add it to the separate
+  website repo's task board and update the
   site copy.
 
 - [x] The Search view runs on the Pin UI "Search Card"

@@ -822,7 +822,7 @@ from flask import request
 
 _stream_cache = {}
 
-_PROVIDED_BASE = "https://raw.githubusercontent.com/goldstac/quran/development/catalog"
+_PROVIDED_BASE = "https://raw.githubusercontent.com/goldstac/quran/main/catalog"
 _PROVIDED_LOCAL_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "catalog")
 _provided_cache = {"expires": 0, "items": []}
 _provided_lock = threading.Lock()
