@@ -30,7 +30,7 @@ while IFS= read -r -d '' APK; do
       exit 1
       ;;
   esac
-  "$BUILD_TOOLS/apksigner" verify --verbose --print-certs "$APK" > "$RUNNER_TEMP/apk-signature.txt"
+  "$BUILD_TOOLS/apksigner" verify --verbose --print-certs "$APK" > "$RUNNER_TEMP/apk-signature.txt" 2>&1
   SIGNER_SHA="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' "$RUNNER_TEMP/apk-signature.txt")"
   if [ "$SIGNER_SHA" != "06cf45b8b7f8d5bd209acb89db77632aafb39968ef5267bd626f330e5982b040" ]; then
     echo "::error::unexpected Android signing certificate for $APK: $SIGNER_SHA"

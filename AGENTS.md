@@ -21,7 +21,7 @@ Two app versions exist in this repo:
 
 ## Task board
 
-`task-board.md` is the living list of known issues, in-flight work, and shipped items. Update it in the same change as the work it describes: new items go at the top of the matching section (High / Medium / Low / Done), and anything you finish moves to Done with how it was verified. Be explicit about work left uncommitted (the file paths and the branch), because that is what makes it findable later; right now that means `.github/scripts/verify-android-apk.sh`, `AGENTS.md`, and `task-board.md` on `development`.
+`task-board.md` is the living list of known issues, in-flight work, and shipped items. Update it in the same change as the work it describes: new items go at the top of the matching section (High / Medium / Low / Done), and anything you finish moves to Done with how it was verified. Be explicit about work left uncommitted (the file paths and the branch), because that is what makes it findable later; right now that means `.github/scripts/verify-android-apk.sh` and `task-board.md` on `development`.
 
 ## Website repo
 
