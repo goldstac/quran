@@ -216,6 +216,37 @@ matching section and note the platform when it is not cross-platform.
 
 ## Done
 
+- [x] Settings gained a **Data** section with clear history / clear cache.
+  The section (`#settings-view`) has two cards: **History** showing counts for
+  recent searches (`ns_recentq`) and recently played (`ns_recent`) with a
+  `#set-clear-history` button, and **Cache** showing the in-memory entry count
+  (`#set-cache-entries` from `GET /api/cache`) with a `#set-clear-cache`
+  button. Both buttons gate on `confirmDialog` before doing anything. Clearing
+  history wipes only `ns_recentq` + `ns_recent` in localStorage, empties the
+  search card's own recents state (`scItems` / `scCleared` + `scRenderRows`),
+  reloads the Recently Played view when it is the active library mode, and
+  refreshes both counts. Clearing cache POSTs `/api/cache/clear`, which empties
+  `_stream_cache`, `_quran_cache`, `_provided_cache`, and `_update_cache` (new
+  `_cache_entries()` helper totals them for `GET /api/cache` too) and returns
+  the new count; both routes sit above the `__main__` block. Library,
+  playlists, downloads, and imported nasheeds are deliberately untouched, and
+  each card ends with a status note ("History cleared." / "Cache cleared.")
+  plus a toast.
+
+  Shipped on `development` with this change: `web/app.py`,
+  `web/templates/index.html`, `web/ts/app.ts`, plus the rebuilt
+  `web/static/app.js`, and the docs. Verified with `npm run build`,
+  `python3 -c "from app import app"`, and a `test_client` round trip (seeded
+  all four caches to 4 entries, clear returned 0 with every cache emptied).
+  Visually verified with headless Firefox on the real markup + compiled
+  `app.js`: the Data section renders in Settings, the confirm modal opens over
+  it, and the full accept flow takes 5 searches / 3 played / 7 cache entries
+  down to 0 / 0 / 0 with both notes and the toast showing. The harness's first
+  run looked for the wrong accept button class (`confirmDialog` uses
+  `modal-btn-danger`, labeled "Delete", not `modal-btn-primary`), which is why
+  an earlier screenshot showed the modal never being accepted; the fetch stub
+  also had to distinguish `/api/cache/clear` from `/api/cache`.
+
 - [x] Refresh Settings into UI, Sound, and Discord sections. Use compact
   bordered panels and familiar form controls inspired by shadcn, adapted to
   the existing Flask UI. Align the single-panel Sound and Discord controls to

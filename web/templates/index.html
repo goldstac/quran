@@ -388,6 +388,41 @@
         </div>
           </div>
         </section>
+        <section class="settings-section">
+          <div class="settings-section-head">
+            <h2>Data</h2>
+            <p>Clear what the app remembers on this device.</p>
+          </div>
+          <div class="settings-grid">
+        <div class="settings-card settings-card-history">
+          <div class="settings-card-head">
+            <h2 class="settings-card-title"><i class="fa-solid fa-clock-rotate-left"></i>History</h2>
+            <p class="settings-card-sub">Your recent searches and the nasheeds you played recently. Clearing it leaves your library, playlists, downloads, and imported nasheeds alone.</p>
+          </div>
+          <div class="settings-rows">
+            <div class="settings-row"><span class="settings-row-label">Recent searches</span><span class="settings-row-value" id="set-hist-searches">0</span></div>
+            <div class="settings-row"><span class="settings-row-label">Recently played</span><span class="settings-row-value" id="set-hist-played">0</span></div>
+          </div>
+          <div class="set-btn-row">
+            <button id="set-clear-history" class="set-btn" type="button"><i class="fa-solid fa-trash-can"></i><span>Clear history</span></button>
+          </div>
+          <p id="set-history-note" class="settings-note"></p>
+        </div>
+        <div class="settings-card settings-card-cache">
+          <div class="settings-card-head">
+            <h2 class="settings-card-title"><i class="fa-solid fa-database"></i>Cache</h2>
+            <p class="settings-card-sub">Temporary data used to open streams, Quran text, and catalogs faster. Clearing it is safe: the app rebuilds it as you listen.</p>
+          </div>
+          <div class="settings-rows">
+            <div class="settings-row"><span class="settings-row-label">Stored entries</span><span class="settings-row-value" id="set-cache-entries">0</span></div>
+          </div>
+          <div class="set-btn-row">
+            <button id="set-clear-cache" class="set-btn ghost" type="button"><i class="fa-solid fa-broom"></i><span>Clear cache</span></button>
+          </div>
+          <p id="set-cache-note" class="settings-note"></p>
+        </div>
+          </div>
+        </section>
         </div>
       </div>
     </div>

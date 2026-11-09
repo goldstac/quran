@@ -1831,6 +1831,30 @@ def api_update_run():
     return jsonify({"ok": True})
 
 
+def _cache_entries():
+    return (
+        len(_stream_cache)
+        + len(_quran_cache)
+        + len(_provided_cache.get("items") or [])
+        + (1 if _update_cache.get("releases") else 0)
+    )
+
+
+@app.route("/api/cache")
+def api_cache():
+    return jsonify({"entries": _cache_entries()})
+
+
+@app.route("/api/cache/clear", methods=["POST"])
+def api_cache_clear():
+    global _provided_cache, _update_cache
+    _stream_cache.clear()
+    _quran_cache.clear()
+    _provided_cache = {"expires": 0, "items": []}
+    _update_cache = {"at": 0, "releases": None}
+    return jsonify({"ok": True, "entries": _cache_entries()})
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, default=None, help="Port to run on. Default: auto-find from 5000")

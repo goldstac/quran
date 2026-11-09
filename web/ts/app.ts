@@ -2666,6 +2666,20 @@ settingsVol.onInput = (p) => {
   $('#set-vol-label').textContent = Math.round(p) + '%';
 };
 
+function syncHistoryCounts() {
+  $('#set-hist-searches').textContent = String(scLoadRecents().length);
+  $('#set-hist-played').textContent = String(load<Song[]>('ns_recent', []).length);
+}
+
+async function loadCacheCount() {
+  try {
+    const d = await getJSON<{ entries: number }>(`${API}/api/cache`);
+    $('#set-cache-entries').textContent = String(d.entries);
+  } catch {
+    $('#set-cache-entries').textContent = 'unknown';
+  }
+}
+
 async function loadSettings() {
   try {
     const d = await getJSON<{ version?: string }>(`${API}/api/version`);
@@ -2675,7 +2689,47 @@ async function loadSettings() {
     $('#set-version').textContent = 'unknown';
   }
   applyPrereleaseChannel();
+  syncHistoryCounts();
+  void loadCacheCount();
 }
+
+$('#set-clear-history').addEventListener('click', async () => {
+  const ok = await confirmDialog(
+    'Clear history',
+    'Remove your recent searches and the nasheeds you played recently? Your library, playlists, downloads, and imported nasheeds stay.'
+  );
+  if (!ok) return;
+  store('ns_recentq', []);
+  store('ns_recent', []);
+  scItems = [];
+  scCleared = [];
+  scRenderRows(false);
+  if (currentLibMode === 'recent') loadLib('recent');
+  syncHistoryCounts();
+  $('#set-history-note').textContent = 'History cleared.';
+  toast('History cleared');
+});
+
+$('#set-clear-cache').addEventListener('click', async () => {
+  const ok = await confirmDialog(
+    'Clear cache',
+    'Clear cached stream links, Quran text, and catalogs? Playback keeps working, they just reload as you use the app.'
+  );
+  if (!ok) return;
+  try {
+    const d = await getJSON<{ ok: boolean; entries: number }>(`${API}/api/cache/clear`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    $('#set-cache-entries').textContent = String(d.entries);
+    $('#set-cache-note').textContent = 'Cache cleared.';
+    toast('Cache cleared');
+  } catch {
+    $('#set-cache-note').textContent = 'Could not clear the cache.';
+    toast('Could not clear cache');
+  }
+});
 
 async function loadSidebarVersion() {
   const ver = $('#sidebar-ver');
