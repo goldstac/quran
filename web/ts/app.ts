@@ -1253,15 +1253,25 @@ scRoot.addEventListener('keydown', (e) => {
   }
   scCloseCard();
 });
+function scDismiss() {
+  if (scInput.value) {
+    scInput.value = '';
+    clearTimeout(searchTimer);
+    showEmpty();
+    scApplyFilter();
+  }
+  scCloseCard();
+}
+
 scCloseBtn.addEventListener('pointerdown', (e) => {
   e.preventDefault();
   e.stopPropagation();
-  scCloseCard();
+  scDismiss();
 });
 scCloseBtn.addEventListener('click', (e) => {
   e.preventDefault();
   e.stopPropagation();
-  scCloseCard();
+  scDismiss();
 });
 
 async function doSearch(q: string) {

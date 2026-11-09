@@ -262,8 +262,10 @@ matching section and note the platform when it is not cross-platform.
   restore). Typing still debounces into the same `doSearch`, so results render
   below exactly as before, and `/` or `S` still jumps to the view and focuses
   the input. Ctrl K / Cmd K opens it from anywhere and closes it when it is
-  open, Escape clears the query first then folds the card, and a press outside
-  folds it too. The kbd hint swaps to ⌘K on Mac and is hidden on mobile.
+  open, and a press outside folds it. The X runs `scDismiss()`: it clears the
+  query, resets the results to the empty state, and folds the card back to the
+  resting field in one click (Escape still clears first and folds on the second
+  press). The kbd hint swaps to ⌘K on Mac and is hidden on mobile.
 
   Matched to the app instead of the demo: 12px radius with the site's input
   treatment (`rgba(255,255,255,.05)` field, hairline border) instead of a
@@ -287,11 +289,13 @@ matching section and note the platform when it is not cross-platform.
   by real recents.
 
   The X button folds the card back to the compact search field on pointer down
-  and keeps the current query/results; its click handler also supports keyboard
-  activation. Closing is idempotent and always removes the expanded classes.
-  Escape still clears a non-empty query first, then folds the card on the next
-  press. The compiled script URL is versioned so browsers load the updated
-  handler.
+  and clears the query in the same click: `scDismiss()` empties the input,
+  resets the results to the empty state, then folds, so one press returns the
+  bar to rest. The click handler runs the same path for keyboard activation,
+  and both are idempotent (the second call finds nothing left to clear and a
+  card already closed). Escape still clears a non-empty query first, then folds
+  the card on the next press. The compiled script URL is versioned so browsers
+  load the updated handler.
 
   Uncommitted on `development`: `web/templates/index.html`,
   `web/static/style.css`, `web/ts/app.ts`, plus the rebuilt
@@ -301,15 +305,17 @@ matching section and note the platform when it is not cross-platform.
   hover sheet and trash on row 2, the empty state (no recents, action button
   hidden), the two filter states (`zzz` hides every row and shows
   `No results for "zzz"`, `ad` leaves only `adhan` and the card shrinks to fit),
-  and the mobile layout (kbd hidden, full-width card). No console errors in any
-  of them. The preview harness was also fixed along the way: it appended a
-  second `<script src="/static/app.js">`, so every page threw
-  `SyntaxError: redeclaration of let discordEnabled` on load; the generator
-  (`/tmp/opencode/gen_preview.py`) now inserts its seed before the app's own
-  tag. Screenshot round one caught a real bug: `scSetBody` measured with
-  `scrollHeight` and only released to `auto` after 460ms, so shrinking the list
-  inside that window (typing immediately after focusing) left the card at its
-  old height with a dead band under the chips. It now measures the body's
+  the mobile layout (kbd hidden, full-width card), and the X path (open, type
+  `adhan`, fire the X handlers) which comes back byte-identical to the resting
+  closed state, so the query really is gone and the bar really did fold. No
+  console errors in any of them. The preview harness was also fixed along the
+  way: it appended a second `<script src="/static/app.js">`, so every page
+  threw `SyntaxError: redeclaration of let discordEnabled` on load; the
+  generator (`/tmp/opencode/gen_preview.py`) now inserts its seed before the
+  app's own tag. Screenshot round one caught a real bug: `scSetBody` measured
+  with `scrollHeight` and only released to `auto` after 460ms, so shrinking the
+  list inside that window (typing immediately after focusing) left the card at
+  its old height with a dead band under the chips. It now measures the body's
   children directly and re-syncs the height whenever the list changes while the
   explicit height is still set, so the card stays snug.
 
