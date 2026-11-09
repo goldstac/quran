@@ -239,7 +239,9 @@ matching section and note the platform when it is not cross-platform.
   `_downloads` / `_stream_cache` / `_quran_cache`, and `getattr(sys,
   "_MEIPASS", "")` instead of `sys._MEIPASS`, which only exists under
   PyInstaller). CI: the `validate` job in `release.yml` now installs
-  `web/requirements-dev.txt` (pytest + mypy, added to the pip cache keys) and
+  `web/requirements-dev.txt` (pytest + mypy + Pillow, added to the pip cache
+  keys; Pillow is a dev-only dep so mypy can resolve the optional `PIL`
+  cover-art import, which is not installed by the runtime requirements) and
   runs `python -m pytest -q` from `web/` plus `python -m mypy web/app.py`
   between the import check and the frontend build. `.gitignore` gained
   `.pytest_cache/`.
