@@ -39,14 +39,25 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-          cache-dependency-path: web/requirements.txt
+          cache-dependency-path: |
+            web/requirements.txt
+            web/requirements-dev.txt
 
       - name: Install Python deps
-        run: python -m pip install -r web/requirements.txt
+        run: |
+          python -m pip install -r web/requirements.txt
+          python -m pip install -r web/requirements-dev.txt
 
       - name: Backend imports cleanly
         working-directory: web
         run: python -c "from app import app"
+
+      - name: Backend tests
+        working-directory: web
+        run: python -m pytest -q
+
+      - name: Backend type check
+        run: python -m mypy web/app.py
 
       - name: Set up Node
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4

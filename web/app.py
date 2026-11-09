@@ -60,7 +60,7 @@ UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari
 # Configure template and static folders for frozen app
 if getattr(sys, "frozen", False):
     # Running as frozen executable (PyInstaller)
-    base_path = sys._MEIPASS
+    base_path = getattr(sys, "_MEIPASS", "")
     app.template_folder = os.path.join(base_path, "templates")
     app.static_folder = os.path.join(base_path, "static")
     if "SSL_CERT_FILE" not in os.environ:
@@ -410,7 +410,7 @@ def api_file(sid):
 
 _dl_lock = threading.Lock()
 _dl_sem = threading.Semaphore(2)
-_downloads = {}
+_downloads: dict[str, dict] = {}
 DL_FORMATS = "bestaudio[ext=m4a]/bestaudio[ext=mp3]/bestaudio"
 
 
@@ -820,7 +820,7 @@ def api_pl_rename():
 import urllib.request as _urllib
 from flask import request
 
-_stream_cache = {}
+_stream_cache: dict[str, str] = {}
 
 _PROVIDED_BASE = "https://raw.githubusercontent.com/goldstac/quran/main/catalog"
 _PROVIDED_LOCAL_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "catalog")
@@ -1030,7 +1030,7 @@ def api_proxy(video_id):
         return str(e), 500
 
 
-_quran_cache = {}
+_quran_cache: dict[str, object] = {}
 
 
 def _cache_put(key, value):

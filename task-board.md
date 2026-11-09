@@ -216,6 +216,41 @@ matching section and note the platform when it is not cross-platform.
 
 ## Done
 
+- [x] Backend now has a real test suite and a type check, both wired into CI.
+  `web/tests/` (12 tests, runs in ~0.1s): `conftest.py` redirects `$HOME` to a
+  temp dir *before* `import app`, so pytest never touches the real
+  `~/.local/share/quran-app` data (and removes the temp home at session end);
+  an autouse fixture resets `library.json` and all four caches around every
+  test. `test_api.py` covers `/api/version`, `/api/cache` count +
+  `/api/cache/clear` (seeded 4 entries -> 0, every cache emptied), library
+  add/fav/remove with the invalid-id 400, playlist-cleanup on library remove,
+  both file guards (a stored file in `downloads/` is deleted on remove, a file
+  outside the data dir is deliberately kept), `Range` serving of stored files
+  (200 full, `206` with `Content-Range` for `bytes=0-3`, 404 for missing/no
+  copy), playlist CRUD + error statuses (400/404 on empty, unknown, and
+  duplicate inputs), and the YouTube-only `/api/open` guard (non-YouTube,
+  wrong scheme, `javascript:`, and empty URLs all blocked with 400; no test
+  ever sends a real YouTube URL so CI cannot open a browser). Writing the
+  Range test surfaced a deliberate behavior: `_clean_song` strips `filepath`
+  from client-supplied songs (clients cannot inject file paths), so tests
+  store files the way the download/import workers do, via `save_lib` directly.
+
+  `mypy web/app.py` starts clean: 4 fixes in `app.py` (annotations for
+  `_downloads` / `_stream_cache` / `_quran_cache`, and `getattr(sys,
+  "_MEIPASS", "")` instead of `sys._MEIPASS`, which only exists under
+  PyInstaller). CI: the `validate` job in `release.yml` now installs
+  `web/requirements-dev.txt` (pytest + mypy, added to the pip cache keys) and
+  runs `python -m pytest -q` from `web/` plus `python -m mypy web/app.py`
+  between the import check and the frontend build. `.gitignore` gained
+  `.pytest_cache/`.
+
+  Shipped on `development` with this change: `web/tests/`,
+  `web/requirements-dev.txt`, `web/app.py` (the 4 type fixes only),
+  `.github/workflows/release.yml`, `.gitignore`, `AGENTS.md`, `task-board.md`.
+  Verified with `python3 -m pytest -q` (12 passed), `python3 -m mypy
+  web/app.py` (clean), `python3 -c "from app import app"`, and
+  `git diff --check`.
+
 - [x] Settings gained a **Data** section with clear history / clear cache.
   The section (`#settings-view`) has two cards: **History** showing counts for
   recent searches (`ns_recentq`) and recently played (`ns_recent`) with a
