@@ -155,6 +155,104 @@ def test_playlist_errors(client):
     assert client.post("/api/playlists/rename", json={"old": "", "new": ""}).status_code == 400
 
 
+def test_library_clear_wipes_library_and_files(client):
+    path = store_file("abc123")
+    client.post("/api/playlists/create", json={"name": "Chill"})
+    client.post("/api/playlists/Chill/add", json=SONG)
+    backend.ensure_dirs()
+    orphan = os.path.join(backend.LOCAL_DIR, "orphan.art.jpg")
+    with open(orphan, "wb") as f:
+        f.write(b"x")
+    before = sum(
+        len(os.listdir(d))
+        for d in (backend.DOWNLOAD_DIR, backend.LOCAL_DIR)
+        if os.path.isdir(d)
+    )
+
+    r = client.post("/api/library/clear")
+    assert r.status_code == 200
+    d = r.get_json()
+    assert d["ok"] is True
+    assert d["songs"] == 1
+    assert d["files"] == before
+
+    assert client.get("/api/library").get_json()["songs"] == []
+    assert client.get("/api/playlists").get_json() == []
+    assert not os.path.exists(path)
+    assert not os.path.exists(orphan)
+    for directory in (backend.DOWNLOAD_DIR, backend.LOCAL_DIR):
+        if os.path.isdir(directory):
+            assert os.listdir(directory) == []
+
+
+def test_library_clear_keeps_files_outside_data_dir(client):
+    outside = tempfile.NamedTemporaryFile(delete=False, suffix=".mp3")
+    outside.write(b"x")
+    outside.close()
+    lib = backend.load_lib()
+    lib["songs"].append(dict(SONG, filepath=outside.name))
+    backend.save_lib(lib)
+
+    r = client.post("/api/library/clear")
+    assert r.status_code == 200
+    d = r.get_json()
+    assert d["ok"] is True
+    assert d["songs"] == 1
+    assert client.get("/api/library").get_json()["songs"] == []
+    assert os.path.isfile(outside.name)
+    os.remove(outside.name)
+
+
+def test_library_clear_keeps_local_when_excluded(client):
+    path = store_file("abc123")
+    backend.ensure_dirs()
+    local_path = os.path.join(backend.LOCAL_DIR, "imported.mp3")
+    with open(local_path, "wb") as f:
+        f.write(b"x")
+    lib = backend.load_lib()
+    lib["songs"].append({"id": "loc1", "title": "Imported", "local": True, "filepath": local_path})
+    lib["playlists"].append({"name": "Chill", "songs": []})
+    backend.save_lib(lib)
+
+    r = client.post("/api/library/clear", json={"local": False})
+    d = r.get_json()
+    assert d["ok"] is True
+    assert d["songs"] == 1
+    assert d["playlists"] == 1
+
+    lib = client.get("/api/library").get_json()
+    assert [s["id"] for s in lib["songs"]] == ["loc1"]
+    assert lib["playlists"] == []
+    assert not os.path.exists(path)
+    assert os.path.isfile(local_path)
+
+
+def test_library_clear_strips_downloads_but_keeps_nasheeds(client):
+    path = store_file("abc123")
+    client.post("/api/playlists/create", json={"name": "Chill"})
+
+    r = client.post(
+        "/api/library/clear",
+        json={"nasheeds": False, "playlists": False, "downloads": True, "local": False},
+    )
+    d = r.get_json()
+    assert d["ok"] is True
+    assert d["songs"] == 0
+    assert d["playlists"] == 0
+    assert not os.path.exists(path)
+
+    lib = client.get("/api/library").get_json()
+    assert len(lib["songs"]) == 1
+    assert "filepath" not in lib["songs"][0]
+    assert not lib["songs"][0].get("downloaded")
+    assert [p["name"] for p in lib["playlists"]] == ["Chill"]
+
+
+def test_library_clear_rejects_bad_options(client):
+    assert client.post("/api/library/clear", json={"local": "yes"}).status_code == 400
+    assert client.post("/api/library/clear", json={"nasheeds": 1}).status_code == 400
+
+
 def test_open_blocks_non_youtube(client):
     for url in (
         "https://evil.example.com/x",

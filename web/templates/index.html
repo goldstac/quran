@@ -408,6 +408,46 @@
           </div>
           <p id="set-history-note" class="settings-note"></p>
         </div>
+        <div class="settings-card settings-card-library">
+          <div class="settings-card-head">
+            <h2 class="settings-card-title"><i class="fa-solid fa-compact-disc"></i>Library</h2>
+            <p class="settings-card-sub">Pick what gets removed, then clear. Anything you leave out stays on this device; history and cache are never touched.</p>
+          </div>
+          <div class="settings-rows">
+            <div class="settings-row">
+              <span class="settings-row-label">Nasheeds</span>
+              <span class="settings-ctl">
+                <label class="toggle"><input type="checkbox" id="clear-nasheeds" checked><span class="toggle-slider"></span></label>
+                <span class="settings-row-value" id="set-lib-count">0</span>
+              </span>
+            </div>
+            <div class="settings-row">
+              <span class="settings-row-label">Playlists</span>
+              <span class="settings-ctl">
+                <label class="toggle"><input type="checkbox" id="clear-playlists" checked><span class="toggle-slider"></span></label>
+                <span class="settings-row-value" id="set-pl-count">0</span>
+              </span>
+            </div>
+            <div class="settings-row">
+              <span class="settings-row-label">Downloads</span>
+              <span class="settings-ctl">
+                <label class="toggle"><input type="checkbox" id="clear-downloads" checked><span class="toggle-slider"></span></label>
+                <span class="settings-row-value" id="set-dl-count">0</span>
+              </span>
+            </div>
+            <div class="settings-row">
+              <span class="settings-row-label">Local nasheeds</span>
+              <span class="settings-ctl">
+                <label class="toggle"><input type="checkbox" id="clear-local" checked><span class="toggle-slider"></span></label>
+                <span class="settings-row-value" id="set-local-count">0</span>
+              </span>
+            </div>
+          </div>
+          <div class="set-btn-row">
+            <button id="set-clear-library" class="set-btn" type="button"><i class="fa-solid fa-trash-can"></i><span>Clear library</span></button>
+          </div>
+          <p id="set-lib-note" class="settings-note"></p>
+        </div>
         <div class="settings-card settings-card-cache">
           <div class="settings-card-head">
             <h2 class="settings-card-title"><i class="fa-solid fa-database"></i>Cache</h2>

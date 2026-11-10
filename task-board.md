@@ -216,6 +216,62 @@ matching section and note the platform when it is not cross-platform.
 
 ## Done
 
+- [x] The Data section can now wipe the whole library, not just history, and
+  you choose what goes.
+  New **Library** card in Settings > Data (between History and Cache) with four
+  toggle rows, each showing a live count: Nasheeds `#set-lib-count`,
+  Playlists `#set-pl-count`, Downloads `#set-dl-count` (offline copies),
+  Local nasheeds `#set-local-count`, plus a `#set-clear-library` button.
+  `POST /api/library/clear` (above the `__main__` block) takes an optional
+  JSON body `{nasheeds, playlists, downloads, local}`; every key defaults to
+  `true`, any non-bool value is a 400, and an empty body `{}` is a full wipe
+  (back-compat, so older callers and the two original tests still work).
+  Files always follow their removed entries: a dropped nasheed takes its
+  `filepath` and local art thumb with it. `nasheeds` off keeps non-local
+  entries with their likes; `playlists` off keeps playlists; `downloads` on
+  sweeps the `downloads/` dir and strips `filepath`/`downloaded` from
+  surviving nasheeds (so no orphaned flags); `local` off keeps imported
+  entries and their files in `local/`. In-flight yt-dlp downloads are killed
+  under `_dl_lock` only when `nasheeds` or `downloads` is on, and a download
+  worker that finishes late sees its `_downloads` entry gone and returns
+  before it can write to the library. Response is `{ok, songs, playlists,
+  files}`.
+  The card's four checkboxes persist to localStorage `ns_libclear` (missing
+  keys fall back to `true`), the confirm message is built from the selection
+  ("Remove your nasheeds and likes, your playlists and downloaded offline
+  copies ..."), and the button disables when all four are off. The handler
+  gates on `confirmDialog`, then refreshes the counts, re-renders the sidebar
+  playlists, re-renders the hidden library view with
+  `if (currentLibMode) loadLib(currentLibMode)` so `currentList` and playlist
+  context cannot go stale, and shows the `Library cleared.` note plus toast.
+  The first draft guarded on `#library-view` being active instead, which can
+  never be true while Settings is open (views are mutually exclusive) and
+  would have stolen the view if it ever could, so it became the mode-based
+  refresh.
+
+  Uncommitted on `development`: `web/app.py`, `web/templates/index.html`,
+  `web/ts/app.ts`, rebuilt `web/static/app.js`, `web/tests/test_api.py`,
+  `AGENTS.md`, `task-board.md`. Verified with `python3 -m pytest -q` (17
+  passed: the 5 clear tests cover the full wipe + storage-dir sweep, the
+  files-outside-the-data-dir guard, keeping local when excluded, stripping
+  downloads while keeping nasheeds and playlists, and the 400 on non-bool
+  options), `python3 -m mypy web/app.py` (clean),
+  `python3 -c "from app import app"`, `npm run build`, and `git diff --check`.
+  End to end in a real browser against `HOME=/tmp/opencode/e2e-home python3
+  web/app.py --port 5055` (throwaway data, port 5055 so port 5000 stays free,
+  real `~/.local/share/quran-app` untouched): card shows counts 2 / 1 / 1 / 1
+  all toggled on; switching Local nasheeds off updates `ns_libclear` and the
+  confirm message drops local; accepting takes the counts to 0 / 0 / 0 / 1
+  with the note and toast, the sidebar playlist is gone, `GET /api/library`
+  returns only `loc1`, `local/loc1.mp3` survives while `downloads/aaa111.mp3`
+  is deleted; all four off disables the button; a reload restores the persisted
+  off state; and `curl -d '{}'` still does the full wipe (`{files:2, ok:true,
+  playlists:1, songs:2}`) leaving only `library.json`. The T3 preview
+  browser's snapshot/screenshot call fails on this machine and no desktop
+  browser is attached to the session, so this round was verified at DOM level
+  via `preview_evaluate` rather than with screenshots. Sandbox (server,
+  preview tab, fake home) cleaned up afterwards; port 5000 stayed free.
+
 - [x] Backend now has a real test suite and a type check, both wired into CI.
   `web/tests/` (12 tests, runs in ~0.1s): `conftest.py` redirects `$HOME` to a
   temp dir *before* `import app`, so pytest never touches the real

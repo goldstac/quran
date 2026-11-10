@@ -2643,6 +2643,50 @@ async function loadCacheCount() {
         $('#set-cache-entries').textContent = 'unknown';
     }
 }
+async function loadLibraryCounts() {
+    try {
+        const d = await getJSON(`${API}/api/library`);
+        const plain = d.songs.filter((s) => !s.local);
+        $('#set-lib-count').textContent = String(plain.length);
+        $('#set-pl-count').textContent = String(d.playlists.length);
+        $('#set-dl-count').textContent = String(plain.filter((s) => s.downloaded).length);
+        $('#set-local-count').textContent = String(d.songs.filter((s) => s.local).length);
+    }
+    catch {
+        $('#set-lib-count').textContent = 'unknown';
+        $('#set-pl-count').textContent = 'unknown';
+        $('#set-dl-count').textContent = 'unknown';
+        $('#set-local-count').textContent = 'unknown';
+    }
+}
+const clearOptIds = [
+    ['nasheeds', '#clear-nasheeds'],
+    ['playlists', '#clear-playlists'],
+    ['downloads', '#clear-downloads'],
+    ['local', '#clear-local'],
+];
+function readClearOpts() {
+    const o = { nasheeds: false, playlists: false, downloads: false, local: false };
+    for (const [k, sel] of clearOptIds)
+        o[k] = $(sel).checked;
+    return o;
+}
+function updateClearBtn(o) {
+    $('#set-clear-library').toggleAttribute('disabled', !(o.nasheeds || o.playlists || o.downloads || o.local));
+}
+function syncClearOpts() {
+    const o = readClearOpts();
+    store('ns_libclear', o);
+    updateClearBtn(o);
+}
+function applyClearOpts() {
+    const saved = load('ns_libclear', {});
+    clearOptIds.forEach(([k, sel]) => {
+        $(sel).checked = saved[k] ?? true;
+    });
+    updateClearBtn(readClearOpts());
+}
+clearOptIds.forEach(([, sel]) => $(sel).addEventListener('change', syncClearOpts));
 async function loadSettings() {
     try {
         const d = await getJSON(`${API}/api/version`);
@@ -2655,6 +2699,8 @@ async function loadSettings() {
     applyPrereleaseChannel();
     syncHistoryCounts();
     void loadCacheCount();
+    void loadLibraryCounts();
+    applyClearOpts();
 }
 $('#set-clear-history').addEventListener('click', async () => {
     const ok = await confirmDialog('Clear history', 'Remove your recent searches and the nasheeds you played recently? Your library, playlists, downloads, and imported nasheeds stay.');
@@ -2670,6 +2716,39 @@ $('#set-clear-history').addEventListener('click', async () => {
     syncHistoryCounts();
     $('#set-history-note').textContent = 'History cleared.';
     toast('History cleared');
+});
+$('#set-clear-library').addEventListener('click', async () => {
+    const o = readClearOpts();
+    const parts = [];
+    if (o.nasheeds)
+        parts.push('your nasheeds and likes');
+    if (o.playlists)
+        parts.push('your playlists');
+    if (o.downloads)
+        parts.push('downloaded offline copies');
+    if (o.local)
+        parts.push('your imported local nasheeds');
+    const what = parts.length > 1 ? parts.slice(0, -1).join(', ') + ' and ' + parts[parts.length - 1] : parts[0];
+    const ok = await confirmDialog('Clear library', `Remove ${what} from this device? This cannot be undone. Everything left switched off stays, and your history and cache are not touched.`);
+    if (!ok)
+        return;
+    try {
+        await getJSON(`${API}/api/library/clear`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(o),
+        });
+        void loadLibraryCounts();
+        void loadPlaylists();
+        if (currentLibMode)
+            void loadLib(currentLibMode);
+        $('#set-lib-note').textContent = 'Library cleared.';
+        toast('Library cleared');
+    }
+    catch {
+        $('#set-lib-note').textContent = 'Could not clear the library.';
+        toast('Could not clear library');
+    }
 });
 $('#set-clear-cache').addEventListener('click', async () => {
     const ok = await confirmDialog('Clear cache', 'Clear cached stream links, Quran text, and catalogs? Playback keeps working, they just reload as you use the app.');

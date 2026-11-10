@@ -2680,6 +2680,57 @@ async function loadCacheCount() {
   }
 }
 
+async function loadLibraryCounts() {
+  try {
+    const d = await getJSON<{ songs: Song[]; playlists: Playlist[] }>(`${API}/api/library`);
+    const plain = d.songs.filter((s) => !s.local);
+    $('#set-lib-count').textContent = String(plain.length);
+    $('#set-pl-count').textContent = String(d.playlists.length);
+    $('#set-dl-count').textContent = String(plain.filter((s) => s.downloaded).length);
+    $('#set-local-count').textContent = String(d.songs.filter((s) => s.local).length);
+  } catch {
+    $('#set-lib-count').textContent = 'unknown';
+    $('#set-pl-count').textContent = 'unknown';
+    $('#set-dl-count').textContent = 'unknown';
+    $('#set-local-count').textContent = 'unknown';
+  }
+}
+
+type ClearOpts = { nasheeds: boolean; playlists: boolean; downloads: boolean; local: boolean };
+
+const clearOptIds: Array<[keyof ClearOpts, string]> = [
+  ['nasheeds', '#clear-nasheeds'],
+  ['playlists', '#clear-playlists'],
+  ['downloads', '#clear-downloads'],
+  ['local', '#clear-local'],
+];
+
+function readClearOpts(): ClearOpts {
+  const o: ClearOpts = { nasheeds: false, playlists: false, downloads: false, local: false };
+  for (const [k, sel] of clearOptIds) o[k] = ($(sel) as HTMLInputElement).checked;
+  return o;
+}
+
+function updateClearBtn(o: ClearOpts) {
+  $('#set-clear-library').toggleAttribute('disabled', !(o.nasheeds || o.playlists || o.downloads || o.local));
+}
+
+function syncClearOpts() {
+  const o = readClearOpts();
+  store('ns_libclear', o);
+  updateClearBtn(o);
+}
+
+function applyClearOpts() {
+  const saved = load<Partial<ClearOpts>>('ns_libclear', {});
+  clearOptIds.forEach(([k, sel]) => {
+    ($(sel) as HTMLInputElement).checked = saved[k] ?? true;
+  });
+  updateClearBtn(readClearOpts());
+}
+
+clearOptIds.forEach(([, sel]) => $(sel).addEventListener('change', syncClearOpts));
+
 async function loadSettings() {
   try {
     const d = await getJSON<{ version?: string }>(`${API}/api/version`);
@@ -2691,6 +2742,8 @@ async function loadSettings() {
   applyPrereleaseChannel();
   syncHistoryCounts();
   void loadCacheCount();
+  void loadLibraryCounts();
+  applyClearOpts();
 }
 
 $('#set-clear-history').addEventListener('click', async () => {
@@ -2708,6 +2761,36 @@ $('#set-clear-history').addEventListener('click', async () => {
   syncHistoryCounts();
   $('#set-history-note').textContent = 'History cleared.';
   toast('History cleared');
+});
+
+$('#set-clear-library').addEventListener('click', async () => {
+  const o = readClearOpts();
+  const parts: string[] = [];
+  if (o.nasheeds) parts.push('your nasheeds and likes');
+  if (o.playlists) parts.push('your playlists');
+  if (o.downloads) parts.push('downloaded offline copies');
+  if (o.local) parts.push('your imported local nasheeds');
+  const what = parts.length > 1 ? parts.slice(0, -1).join(', ') + ' and ' + parts[parts.length - 1] : parts[0];
+  const ok = await confirmDialog(
+    'Clear library',
+    `Remove ${what} from this device? This cannot be undone. Everything left switched off stays, and your history and cache are not touched.`
+  );
+  if (!ok) return;
+  try {
+    await getJSON<{ ok: boolean }>(`${API}/api/library/clear`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(o),
+    });
+    void loadLibraryCounts();
+    void loadPlaylists();
+    if (currentLibMode) void loadLib(currentLibMode);
+    $('#set-lib-note').textContent = 'Library cleared.';
+    toast('Library cleared');
+  } catch {
+    $('#set-lib-note').textContent = 'Could not clear the library.';
+    toast('Could not clear library');
+  }
 });
 
 $('#set-clear-cache').addEventListener('click', async () => {

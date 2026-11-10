@@ -1855,6 +1855,82 @@ def api_cache_clear():
     return jsonify({"ok": True, "entries": _cache_entries()})
 
 
+@app.route("/api/library/clear", methods=["POST"])
+def api_library_clear():
+    body = request.get_json(silent=True) or {}
+    opts = {}
+    for key in ("nasheeds", "playlists", "downloads", "local"):
+        v = body.get(key, True)
+        if not isinstance(v, bool):
+            return jsonify({"error": "bad options"}), 400
+        opts[key] = v
+    lib = load_lib()
+    removed = 0
+    playlists_removed = 0
+    if opts["playlists"]:
+        playlists_removed = len(lib.get("playlists", []))
+        lib["playlists"] = []
+    kept = []
+    files = 0
+    for s in lib.get("songs", []):
+        is_local = bool(s.get("local"))
+        drop = opts["local"] if is_local else opts["nasheeds"]
+        if drop:
+            removed += 1
+            p = s.get("filepath") or ""
+            if p and os.path.isfile(p) and (in_dir(p, DOWNLOAD_DIR) or in_dir(p, LOCAL_DIR)):
+                try:
+                    os.remove(p)
+                    files += 1
+                except OSError:
+                    pass
+            ap = s.get("artfile") or ""
+            if ap and os.path.isfile(ap) and in_dir(ap, LOCAL_DIR):
+                try:
+                    os.remove(ap)
+                    files += 1
+                except OSError:
+                    pass
+            continue
+        if not is_local and opts["downloads"] and (s.get("downloaded") or s.get("filepath")):
+            p = s.get("filepath") or ""
+            if p and os.path.isfile(p) and (in_dir(p, DOWNLOAD_DIR) or in_dir(p, LOCAL_DIR)):
+                try:
+                    os.remove(p)
+                    files += 1
+                except OSError:
+                    pass
+            s.pop("filepath", None)
+            s.pop("downloaded", None)
+        kept.append(s)
+    if opts["nasheeds"] or opts["downloads"]:
+        with _dl_lock:
+            for st in _downloads.values():
+                if st.get("state") == "downloading":
+                    proc = st.get("proc")
+                    if proc:
+                        try:
+                            proc.kill()
+                        except OSError:
+                            pass
+            _downloads.clear()
+    for flag, directory in ((opts["downloads"], DOWNLOAD_DIR), (opts["local"], LOCAL_DIR)):
+        if not flag or not os.path.isdir(directory):
+            continue
+        for f in os.listdir(directory):
+            p = os.path.join(directory, f)
+            if not os.path.isfile(p):
+                continue
+            try:
+                os.remove(p)
+                files += 1
+            except OSError:
+                pass
+    lib["songs"] = kept
+    save_lib(lib)
+    return jsonify({"ok": True, "songs": removed, "playlists": playlists_removed, "files": files})
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, default=None, help="Port to run on. Default: auto-find from 5000")
