@@ -30,14 +30,14 @@ matching section and note the platform when it is not cross-platform.
   `/api/proxy` (all 206) and completing a real download (progress 21 -> 69 ->
   100, file stored, library flagged, remove cleaned it up). Changed
   `tauri-app/src-tauri/src/server.rs` only.
-- [ ] Committed work still sitting in the tree on `development` (kept uncommitted
-  on purpose until the mobile fix batch is reviewed):
-  `tauri-app/src-tauri/src/server.rs` (the backend completion above),
-  `.github/workflows/release.yml` (desktop builds no longer fail when the Tauri
-  config version and `Cargo.toml` drift apart, because the workflow now stamps
-  the version into `tauri.conf.json` before building, mirroring what the
-  Android build already does), `AGENTS.md` (documents the Android backend and
-  the VISIONOS resolve), and this task board.
+- [ ] The mobile fix batch is committed on `development` and awaiting push
+  review: `c453b76 feat(api): complete the mobile backend routes`,
+  `f939d2a fix(ci): stamp tauri config version for desktop builds`,
+  `417907d style(ui): restyle the loading screen to the app theme`, and
+  `a32cfcb fix(ui): make track rows and controls touch friendly on mobile`.
+  `cargo check` passes in `tauri-app/src-tauri`; the backend routes were
+  exercised live (see the finished item below). Nothing is pushed yet, so
+  origin does not have the mobile fixes.
 - [ ] The Provided Nasheeds catalog only exists on the `development` branch
   (`catalog/index.json` is not on `main`), and both backends point at it:
   `web/app.py` `_PROVIDED_BASE` and the Rust server's `PROVIDED_BASE` hardcode
@@ -115,6 +115,18 @@ matching section and note the platform when it is not cross-platform.
   local song (and still throws on the pre-fix bundle, so the check is real).
 
 ## Medium priority
+
+- [x] The mobile UI fixes shipped (commits `417907d` and `a32cfcb` on
+  `development`): the loading page got the app theme (dark background with the
+  green and gold glows, a floating logo card, fade-in, a warm error state that
+  drops the spinner), track rows use a two-row grid so titles get real space
+  (clamp to two lines) while duration and actions sit on their own lines, the
+  Discord eye and redundant play buttons hide on phones, player controls and
+  the hamburger grew to 44/46px touch targets, a single tap plays a row on
+  coarse pointers (double click stays for mouse), and playback failures other
+  than the autoplay policy now toast instead of vanishing. Verified
+  `npm run build` clean and the compiled bundle contains the new behavior.
+  Android runtime test strings untouched.
 
 - [ ] The app's website lives in its own repo: `~/Documents/GitHub/quran-app-website`
   (public, `main`, pushed), a sibling of this repo rather than a submodule, and
@@ -228,6 +240,12 @@ matching section and note the platform when it is not cross-platform.
 
 ## Low priority / notes
 
+- [ ] `android-runtime-test.sh` only checks `/` and `/api/library` through the
+  adb forward. Now that the mobile backend has the full route set, cheap extra
+  assertions would catch regressions early: curl `/api/version` (expects the
+  stamped version) and `/api/provided` (expects 200 with at least one nasheed
+  while the catalog branch is `development`). Optional but nice before the
+  next prerelease.
 - [ ] The root disk (`/dev/sda7`) hit 100% on 2026-11-03 and took tooling down
   with it (file writes and shell output both failed with "No space left on
   device"). Freed about 830M by clearing `~/.cache` (kept `ms-playwright`), the
