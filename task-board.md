@@ -5,6 +5,46 @@ matching section and note the platform when it is not cross-platform.
 
 ## High priority
 
+- [x] Mobile (Android) backend was missing most API routes, which is why search
+  results played but the library, Provided Nasheeds, Quran, settings, downloads
+  and local import were all dead on the phone. The Android app runs a
+  hand-rolled Rust server (`tauri-app/src-tauri/src/server.rs`) that only had 13
+  routes while the frontend needs about 39. Completed the set to match
+  `web/app.py`: logo + version, Provided Nasheeds (catalog/cover/audio with
+  Range and `?download=1`), the four Quran routes, cache count/clear, library
+  clear with the full option semantics (400 on non-bool, `{}` = full wipe, per
+  category file sweeps, download flag stripping), library remove now deletes
+  stored files like Flask, discord status/hidden/toggle, bot prefs, report,
+  open (501), updates (empty list), `/api/file` with Range/206, proxy serving
+  stored files for downloaded nasheeds, multipart `/api/local` import and the
+  whole download flow (`/api/download`, `/status`, `/remove`) with progress and
+  cancel. Every new route was exercised against a live server on this machine:
+  Range/206 math, multipart parsing (quoted filenames, bad extension, missing
+  part), download start/progress/cancel/complete/cleanup, library clear options
+  and file deletion. Also fixed stream resolution while testing: the ANDROID
+  innertube client returns googlevideo URLs that 403 after about 1 MB of
+  transferred bytes, which would break seek-based playback and any download;
+  `resolve()` now tries the VISIONOS client first (watch page fetch for
+  visitorData, then the player API, same trick yt-dlp uses) and keeps ANDROID
+  as fallback. Verified by streaming three separated Range requests through
+  `/api/proxy` (all 206) and completing a real download (progress 21 -> 69 ->
+  100, file stored, library flagged, remove cleaned it up). Changed
+  `tauri-app/src-tauri/src/server.rs` only.
+- [ ] Committed work still sitting in the tree on `development` (kept uncommitted
+  on purpose until the mobile fix batch is reviewed):
+  `tauri-app/src-tauri/src/server.rs` (the backend completion above),
+  `.github/workflows/release.yml` (desktop builds no longer fail when the Tauri
+  config version and `Cargo.toml` drift apart, because the workflow now stamps
+  the version into `tauri.conf.json` before building, mirroring what the
+  Android build already does), `AGENTS.md` (documents the Android backend and
+  the VISIONOS resolve), and this task board.
+- [ ] The Provided Nasheeds catalog only exists on the `development` branch
+  (`catalog/index.json` is not on `main`), and both backends point at it:
+  `web/app.py` `_PROVIDED_BASE` and the Rust server's `PROVIDED_BASE` hardcode
+  `development`. That is correct for testing (packaged builds fetch the public
+  repo), but both must be switched to `main` before a stable release, and
+  `main` must first receive the catalog. Tracked so release day does not ship
+  an empty Provided Nasheeds page.
 - [ ] AI release notes for every tag (added, needs the secret + the first tag to
   prove it): the `release` job no longer hardcodes the description. A
   `Write release notes` step diffs the new tag against the previous `v*` tag
