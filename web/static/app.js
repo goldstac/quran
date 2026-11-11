@@ -1300,7 +1300,16 @@ function makeRow(song, idx, ctx) {
         if (rowImg.complete && rowImg.naturalWidth === 0)
             hideImg();
     }
-    r.addEventListener('dblclick', () => playSong(song, idx, ctx));
+    if (window.matchMedia('(pointer: coarse)').matches) {
+        r.addEventListener('click', (e) => {
+            if (e.target.closest('.track-act'))
+                return;
+            playSong(song, idx, ctx);
+        });
+    }
+    else {
+        r.addEventListener('dblclick', () => playSong(song, idx, ctx));
+    }
     let warmTimer;
     if (!isQuran) {
         r.addEventListener('mouseenter', () => {
@@ -1495,8 +1504,11 @@ function playError(e) {
     if (name === 'AbortError')
         return;
     setBuffering(false);
-    if (name === 'NotAllowedError')
+    if (name === 'NotAllowedError') {
         toast('Click play to start');
+        return;
+    }
+    toast('Playback failed, try again');
 }
 function songSrc(song) {
     if (song.kind === 'quran') {
