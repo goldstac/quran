@@ -185,6 +185,20 @@ matching section and note the platform when it is not cross-platform.
   unknown-sources gate is ruled out and the package installer itself is
   refusing.
 
+  2026-11-13 update: the user reports the same class of failure when
+  updating a Realme C71 (which HAS `v1.2.1-pre-alpha.5` installed) to
+  `v1.2.1-pre-alpha.6`, worded roughly "app not valid package to
+  install". Ruled out by direct inspection of both release APKs: the
+  signing certificates are byte-identical (sha256 prefix `6bbb4450`), the
+  new APK's versionCode `102010006` is above the installed `102010005`,
+  `apksigner verify` and `zipalign -c -P 16 -v 4` both pass, and all four
+  ABIs are present, so the artifact is a valid upgrade. Working theory:
+  the Realme's browser download was truncated/corrupt. Suggested to the
+  user: delete the old download, re-download `app-universal-release.apk`
+  (46,904,909 bytes) and check the size before installing, or copy the
+  APK from the working Redmi A5 via ShareMe/Bluetooth. If that fails the
+  next step is `adb install -r` from a connected phone.
+
   Ruled out by inspecting the downloaded APK directly (results recorded
   here; analysis dir `/tmp/opencode/apkcheck/` holds the re-downloaded APK
   and `signer.txt`, the first pass's `axml.py` was lost when /tmp got wiped
