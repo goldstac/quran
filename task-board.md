@@ -21,8 +21,8 @@ matching section and note the platform when it is not cross-platform.
   `onWebViewCreate` because wry attaches the WebView after `onCreate`. Also
   dropped the one `env(safe-area-inset-bottom)` term in `style.css`'s mobile
   modal padding since the native padding now guarantees the whole viewport is
-  inside the bars. Needs device confirmation on the next prerelease (pending
-  at the time of writing).
+  inside the bars. Needs device confirmation on `v1.2.1-pre-alpha.6`, which
+  ships it.
 
 - [x] Mobile (Android) backend was missing most API routes, which is why search
   results played but the library, Provided Nasheeds, Quran, settings, downloads
@@ -103,7 +103,9 @@ matching section and note the platform when it is not cross-platform.
   prints both in the run log, and fails unless the structure holds: exactly one
   `## Changes` and one `## Downloads`, the four installer lines, no em dash, a
   TL;DR as the first line rather than a heading, a `## What's new` with 3 to 6
-  bullets under 160 words, no "songs", and byte-identical pipeline-written
+  bullets (the minimum drops to the change count when the tag has fewer than 3
+  user-facing commits, so a single-fix prerelease can pass) under 160 words,
+  no "songs", and byte-identical pipeline-written
   sections across the two runs. It also fails when the key is missing or Groq
   contributes nothing, so a broken key shows up before release day. Local runs
   of the smoke script: no key, a well-behaved stub 200, a disobedient stub 200
@@ -307,6 +309,21 @@ matching section and note the platform when it is not cross-platform.
 
 ## Done
 
+- [x] Released `v1.2.1-pre-alpha.6` with the Android system-bar fix, plus a CI
+  fix to let the release-notes smoke test pass on a single-change tag.
+  The safe-area work shipped in `fix(android): keep content clear of the
+  system bars` (`b27b5ea`); version files bumped in
+  `chore(release): prepare v1.2.1-pre-alpha.6` (`781a8f6`).
+  The first two smoke-test runs failed because Groq wrote one bullet under
+  `## What's new` and the check demanded 3, which is impossible for a tag
+  whose only user-facing commit is the Android fix. Fixed by scaling the
+  bullet minimum to the change count in
+  `.github/scripts/write-release-notes.sh` (prompt) and
+  `.github/scripts/release-notes-smoke-test.sh` (check), committed as
+  `fix(ci): scale the release-notes bullet minimum to the change list`
+  (`efc4ee9`); smoke test passed in run 43450970206; release pipeline run
+  43451158134. Needs device confirmation on the Redmi A5 (bars clearance,
+  tappable hamburger).
 - [x] The Data section can now wipe the whole library, not just history, and
   you choose what goes.
   New **Library** card in Settings > Data (between History and Cache) with four
