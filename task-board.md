@@ -30,6 +30,20 @@ matching section and note the platform when it is not cross-platform.
   `/api/proxy` (all 206) and completing a real download (progress 21 -> 69 ->
   100, file stored, library flagged, remove cleaned it up). Changed
   `tauri-app/src-tauri/src/server.rs` only.
+- [x] Released `v1.2.1-pre-alpha.5` from `development` on 2026-11-13 (Actions run
+  43336833954): every job green, including the Android runtime test that boots
+  the emulator, upgrades the known-good APK in place, and checks the in-app
+  server plus the loading page. The prerelease ships the mobile fix batch: the
+  completed Android backend routes, the VISIONOS stream resolve, the loading
+  screen restyle, and the touch-friendly track rows. The Groq-written notes
+  follow the fixed structure (TL;DR, `## What's new`, verbatim `## Changes`,
+  `## Downloads`) and passed the pre-tag smoke test (dispatch run 43336701279).
+  The APK is `app-universal-release.apk` (46.9 MB) on
+  https://github.com/goldstac/quran/releases/tag/v1.2.1-pre-alpha.5 . The
+  version bump commit `bb990c8` keeps package.json, Cargo.toml, Cargo.lock and
+  tauri.conf.json at `1.2.1-pre-alpha.5`. Real-device feedback from the user's
+  Redmi A5 is still pending, so the Redmi install question below stays open
+  until they confirm the new APK installs and plays.
 - [ ] The mobile fix batch is committed on `development` and awaiting push
   review: `c453b76 feat(api): complete the mobile backend routes`,
   `f939d2a fix(ci): stamp tauri config version for desktop builds`,
