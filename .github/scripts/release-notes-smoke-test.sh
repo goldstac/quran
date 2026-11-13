@@ -61,8 +61,14 @@ else
   printf '%s' "$AI_TOP" | grep -q "## What's new" || problem "groq notes: missing the \"## What's new\" heading"
   if printf '%s' "$AI_TOP" | grep -qiE '\bsongs?\b'; then problem "groq notes: says songs instead of nasheeds"; fi
   BULLETS=$(printf '%s' "$AI_TOP" | grep -c '^- ')
-  if [ "$BULLETS" -lt 3 ] || [ "$BULLETS" -gt 6 ]; then
-    problem "groq notes: expected 3 to 6 bullets under What's new, got $BULLETS"
+  NOTESTAG="${NOTES_TAG:-${GITHUB_REF_NAME:-}}"
+  NOTESREF="${NOTES_REF:-${GITHUB_REF_NAME:-HEAD}}"
+  NOTESPREV=$(git describe --tags --abbrev=0 --match 'v*' "${NOTESREF}^" 2>/dev/null || true)
+  if [ -n "$NOTESPREV" ]; then NOTESRANGE="$NOTESPREV..$NOTESREF"; else NOTESRANGE="$NOTESREF"; fi
+  NCHANGES=$(git log --no-merges --pretty=format:'%s' "$NOTESRANGE" | grep -cE '^(feat|fix|perf|revert|refactor)' || true)
+  MINB=$(( NCHANGES >= 1 && NCHANGES < 3 ? NCHANGES : 3 ))
+  if [ "$BULLETS" -lt "$MINB" ] || [ "$BULLETS" -gt 6 ]; then
+    problem "groq notes: expected $MINB to 6 bullets under What's new, got $BULLETS"
   else
     ok "$BULLETS bullets under What's new"
   fi

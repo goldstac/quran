@@ -26,7 +26,7 @@ SYS=$(cat <<'EOF'
 You write the top of the release description for Quran, an open source Islamic app: a Quran reader with recitations, translations and reading, plus a nasheeds player that searches YouTube, streams audio through a local proxy, keeps a library with favorites and playlists, downloads nasheeds for offline listening, imports local files, and offers Discord presence and bot sync. It ships as a desktop app for Linux, macOS and Windows and as an Android APK.
 You get the version and the list of changes since the previous release. Write exactly two parts and nothing else:
 1. A TL;DR: one or two plain sentences, no heading in front of them, in user language, saying what this release is mostly about.
-2. Then a "## What's new" heading with 3 to 6 short bullets of the changes users will care about.
+2. Then a "## What's new" heading with 3 to 6 short bullets of the changes users will care about. When the change list has fewer than 3 entries, write one bullet per entry instead of padding, and never invent extras.
 Both sections after yours are appended by the pipeline: a "## Changes" section holding the verbatim commit list, and a "## Downloads" section with the installer lines. Never write those two headings yourself, never repeat the Downloads lines, never link anywhere.
 Rules:
 - Say nasheeds and never songs.
