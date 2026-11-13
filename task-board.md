@@ -5,6 +5,25 @@ matching section and note the platform when it is not cross-platform.
 
 ## High priority
 
+- [x] The phone's system bars covered app content on the Redmi A5: the bottom
+  player bar sat under the navigation buttons and the top of the UI mixed with
+  the status bar clock/battery, so the hamburger only worked when you hit its
+  lower half. Root cause: the app calls `enableEdgeToEdge()` and targets SDK
+  36, and Android 15 enforces edge-to-edge, so the WebView draws under the
+  system bars and nothing applied the insets (wry just calls
+  `setContentView(webView)`). Fix in
+  `gen/android/.../MainActivity.kt`: keep edge-to-edge but with explicit dark
+  transparent system bar styles, set the window background to the app dark
+  color so the strip behind the bars blends, and pad `android.R.id.content` by
+  the system bars + display cutout via a `WindowInsetsCompat` listener that
+  returns the insets unchanged (IME keeps flowing to the WebView so keyboard
+  resize is untouched), with a `requestApplyInsets` re-dispatch in
+  `onWebViewCreate` because wry attaches the WebView after `onCreate`. Also
+  dropped the one `env(safe-area-inset-bottom)` term in `style.css`'s mobile
+  modal padding since the native padding now guarantees the whole viewport is
+  inside the bars. Needs device confirmation on the next prerelease (pending
+  at the time of writing).
+
 - [x] Mobile (Android) backend was missing most API routes, which is why search
   results played but the library, Provided Nasheeds, Quran, settings, downloads
   and local import were all dead on the phone. The Android app runs a

@@ -784,7 +784,7 @@ body{
   .quran-ayah-text{font-size:14.5px;line-height:1.8}
   .quran-trans-tools{gap:10px}
   .modal-backdrop{align-items:flex-end}
-  .modal{width:100%;max-width:480px;border-radius:14px 14px 0 0;padding:20px 16px calc(20px + env(safe-area-inset-bottom))}
+  .modal{width:100%;max-width:480px;border-radius:14px 14px 0 0;padding:20px 16px}
   .toast{bottom:96px;max-width:88vw;white-space:normal;text-align:center}
 }
 
