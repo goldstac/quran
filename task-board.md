@@ -323,6 +323,11 @@ matching section and note the platform when it is not cross-platform.
 
 ## Done
 
+- [x] Released `v1.2.1-pre-alpha.7` with the standalone Quran reader and the
+  mobile spacing pass. Smoke test passed (run 43613948649), full pipeline
+  green (run 43614044361), APK `app-universal-release.apk` (46,969,929
+  bytes). Needs device confirmation on the Redmi A5 and the Realme C71
+  (squish fix + new reader).
 - [x] Mobile spacing pass: row action buttons had `gap:0` in the mobile
   refinement block, so up to four buttons (like, playlist, download, YouTube)
   sat touching each other; the player bar controls crowded the title, and the
