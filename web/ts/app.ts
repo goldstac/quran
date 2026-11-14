@@ -498,7 +498,9 @@ interface QuranChapter {
   id: number;
   name_simple: string;
   name_arabic: string;
+  name_complex?: string;
   verses_count: number;
+  revelation_place?: string;
   translated_name?: { name: string };
 }
 
@@ -516,6 +518,8 @@ let quranChapters: QuranChapter[] = [];
 let quranLoaded = false;
 let quranReciters: QuranReciter[] = [];
 let quranReciterId = Number(QURAN_DEFAULT_RECITER);
+let readChapterId = Math.min(Math.max(Number(load<number>('ns_qread', 1)) || 1, 1), 114);
+let pendingAyahSeek: { chapter: number; num: number; count: number } | null = null;
 
 function quranReciterName(id: number): string {
   const r = quranReciters.find((x) => x.id === id);
@@ -550,12 +554,33 @@ function quranSongs(): Song[] {
 }
 
 function renderQuranList() {
-  const songs = quranSongs();
+  const filterRow = $('#quran-filter-row');
+  if (quranLoaded && quranChapters.length) {
+    filterRow.style.display = '';
+  } else {
+    filterRow.style.display = 'none';
+    (quranFilterInput as HTMLInputElement).value = '';
+    $('#quran-filter-clear').style.display = 'none';
+  }
+  const term = quranFilterInput.value.trim().toLowerCase();
+  const songs = term
+    ? quranSongs().filter((s) => {
+        const ch = quranChapters.find((c) => c.id === s.chapter_id);
+        return (
+          String(s.chapter_id).includes(term) ||
+          (!!ch &&
+            (ch.name_simple.toLowerCase().includes(term) ||
+              ch.name_arabic.includes(term) ||
+              (ch.name_complex || '').toLowerCase().includes(term) ||
+              (ch.translated_name?.name || '').toLowerCase().includes(term)))
+        );
+      })
+    : quranSongs();
   if (!songs.length) {
     $('#quran-list').style.display = 'none';
-    $('#quran-empty').style.display = '';
+    $('#quran-empty').style.display = term ? 'none' : '';
     $('#quran-actions').classList.add('hidden');
-    $('#quran-subtitle').textContent = 'Listen to the Quran';
+    $('#quran-subtitle').textContent = term ? `No surahs match "${term}"` : 'Listen to the Quran';
     return;
   }
   $('#quran-empty').style.display = 'none';
@@ -650,19 +675,169 @@ function transHint(text: string) {
   $('#quran-ayah-pos').textContent = '';
   $('#ayah-prev').toggleAttribute('disabled', true);
   $('#ayah-next').toggleAttribute('disabled', true);
+  renderQuranReadHead();
 }
 
 function seekToAyah(num: number) {
   const rows = $$('.quran-trans-body .quran-ayah');
   const n = rows.length;
-  if (!n || !audio.duration || currentSong?.kind !== 'quran') return;
+  if (!n || !audio.duration || currentSong?.kind !== 'quran' || currentSong.chapter_id !== readChapterId) return;
   const target = Math.max(0, Math.min(num - 1, n - 1));
   audio.currentTime = ((target + 0.01) / n) * audio.duration;
   audio.play().catch(playError);
 }
 
+function playingReadChapter(): boolean {
+  return (
+    !!currentSong &&
+    currentSong.kind === 'quran' &&
+    currentSong.chapter_id === readChapterId &&
+    !!audio.duration
+  );
+}
+
+function readerChapter(): QuranChapter | undefined {
+  return quranChapters.find((c) => c.id === readChapterId);
+}
+
+function startQuranFromAyah(chapterId: number, num: number, count: number) {
+  const ch = quranChapters.find((c) => c.id === chapterId);
+  if (!ch) return;
+  const songs = quranSongs();
+  const song = songs.find((s) => s.chapter_id === chapterId);
+  if (!song) return;
+  pendingAyahSeek = { chapter: chapterId, num, count };
+  playSong(song, Math.max(0, songs.indexOf(song)), 'quran');
+}
+
+function onAyahClick(num: number, count: number) {
+  if (playingReadChapter()) {
+    seekToAyah(num);
+  } else {
+    startQuranFromAyah(readChapterId, num, count);
+  }
+}
+
+function scrollToAyah(num: number) {
+  const rows = $$('.quran-trans-body .quran-ayah');
+  const n = rows.length;
+  if (!n) return;
+  const target = Math.max(0, Math.min(num - 1, n - 1));
+  transAyahIdx = target;
+  rows.forEach((r) => r.classList.remove('active'));
+  rows[target].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  $('#quran-ayah-pos').textContent = `${target + 1} / ${n}`;
+  $('#ayah-prev').toggleAttribute('disabled', target <= 0);
+  $('#ayah-next').toggleAttribute('disabled', target >= n - 1);
+}
+
+function setReadChapter(id: number) {
+  if (!quranChapters.some((c) => c.id === id)) return;
+  const changed = readChapterId !== id;
+  readChapterId = id;
+  store('ns_qread', String(id));
+  if (changed) {
+    transLoadedKey = '';
+    transAyahIdx = -1;
+    $('#quran-ayah-pos').textContent = '';
+  }
+  syncQuranTranslation();
+}
+
+function renderQuranReadHead() {
+  const head = $('#quran-read-head');
+  const ch = readerChapter();
+  if (!quranChapters.length || !ch) {
+    head.style.display = 'none';
+    return;
+  }
+  head.style.display = '';
+  $('#quran-read-num').textContent = String(ch.id);
+  $('#quran-read-name').textContent = ch.name_simple;
+  $('#quran-read-arabic').textContent = ch.name_arabic;
+  const place = ch.revelation_place ? ch.revelation_place[0].toUpperCase() + ch.revelation_place.slice(1) : '';
+  const bits = [ch.translated_name?.name || ch.name_complex || '', place, `${ch.verses_count} ayahs`].filter(Boolean);
+  $('#quran-read-meta').textContent = bits.join(' · ');
+}
+
+function showSurahPicker() {
+  if (!quranChapters.length) return;
+  let done = false;
+  const finish = () => {
+    if (done) return;
+    done = true;
+    m.close();
+  };
+  const content = document.createElement('div');
+  content.className = 'modal-body reciter-picker';
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'modal-input';
+  input.placeholder = 'Search surahs…';
+  input.spellcheck = false;
+  const count = document.createElement('div');
+  count.className = 'modal-hint reciter-picker-count';
+  const list = document.createElement('div');
+  list.className = 'modal-list reciter-picker-list';
+  const render = (q: string) => {
+    const term = q.trim().toLowerCase();
+    const items = quranChapters.filter(
+      (c) =>
+        !term ||
+        String(c.id).includes(term) ||
+        c.name_simple.toLowerCase().includes(term) ||
+        c.name_arabic.includes(term) ||
+        (c.name_complex || '').toLowerCase().includes(term) ||
+        (c.translated_name?.name || '').toLowerCase().includes(term)
+    );
+    list.innerHTML = '';
+    if (!items.length) {
+      const h = document.createElement('div');
+      h.className = 'modal-hint';
+      h.innerHTML = '<i class="fa-solid fa-magnifying-glass" style="margin-right:8px"></i>No surahs found';
+      list.appendChild(h);
+    } else {
+      items.forEach((c) => {
+        const on = c.id === readChapterId;
+        const opt = document.createElement('button');
+        opt.type = 'button';
+        opt.className = 'modal-opt reciter-opt' + (on ? ' active' : '');
+        opt.innerHTML = `
+          <i class="fa-solid ${on ? 'fa-check' : 'fa-book-quran'}"></i>
+          <span class="reciter-opt-text">
+            <span class="reciter-opt-name">${esc(String(c.id))}. ${esc(c.name_simple)}</span>
+            ${c.translated_name?.name || c.verses_count ? `<span class="reciter-opt-style">${esc(c.translated_name?.name || '')}${c.translated_name?.name && c.verses_count ? ' · ' : ''}${c.verses_count ? `${esc(String(c.verses_count))} ayahs` : ''}</span>` : ''}
+          </span>
+          <span class="surah-opt-ar" dir="rtl">${esc(c.name_arabic)}</span>`;
+        opt.addEventListener('click', () => {
+          setReadChapter(c.id);
+          finish();
+        });
+        list.appendChild(opt);
+      });
+    }
+    count.textContent = term
+      ? `${items.length} of ${quranChapters.length} surahs`
+      : `${quranChapters.length} surahs`;
+  };
+  input.addEventListener('input', () => render(input.value));
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      const first = list.querySelector<HTMLElement>('.reciter-opt');
+      if (first) {
+        e.preventDefault();
+        first.click();
+      }
+    }
+  });
+  content.append(input, count, list);
+  const m = new Modal('Choose surah', content, () => finish(), 'modal-reciter');
+  render('');
+  window.setTimeout(() => input.focus(), 30);
+}
+
 function highlightTransAyah(scroll: boolean) {
-  if (!currentSong || currentSong.kind !== 'quran') return;
+  if (!currentSong || currentSong.kind !== 'quran' || currentSong.chapter_id !== readChapterId) return;
   const rows = $$('.quran-trans-body .quran-ayah');
   if (!rows.length) return;
   const dur = audio.duration || currentSong.duration || 0;
@@ -681,12 +856,19 @@ function highlightTransAyah(scroll: boolean) {
 
 function syncQuranTranslation() {
   $$('.quran-trans-lang').forEach((b) => b.classList.toggle('active', b.dataset.lang === transLang));
+  renderQuranReadHead();
   const body = $('#quran-trans-body');
-  const ch = currentSong && currentSong.kind === 'quran' ? currentSong.chapter_id ?? 0 : 0;
+  if (currentSong?.kind === 'quran' && currentSong.chapter_id && readChapterId !== currentSong.chapter_id) {
+    readChapterId = currentSong.chapter_id;
+    store('ns_qread', String(readChapterId));
+    transLoadedKey = '';
+    transAyahIdx = -1;
+  }
+  const ch = readChapterId;
   if (!ch) {
     transLoadedKey = '';
     transAyahIdx = -1;
-    transHint('Play a surah to read along');
+    transHint('Choose a surah to read');
     return;
   }
   const dataLang = transLang === 'off' ? transDataLang : transLang;
@@ -710,13 +892,20 @@ function syncQuranTranslation() {
     $('#quran-trans-src').textContent = transLang === 'off' ? 'Arabic only' : data.name;
     body.classList.toggle('hide-tr', transLang === 'off');
     body.innerHTML = '';
+    if (ch !== 1 && ch !== 9) {
+      const b = document.createElement('div');
+      b.className = 'quran-bismillah';
+      b.dir = 'rtl';
+      b.innerHTML = '<span>بِسْمِ ٱللَّٰهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</span>';
+      body.appendChild(b);
+    }
     data.verses.forEach((v) => {
       const row = document.createElement('div');
       row.className = 'quran-ayah';
       row.innerHTML = `
         <div class="quran-ayah-ar" dir="rtl">${esc(v.arabic)}<span class="quran-ayah-badge">${esc(String(v.num))}</span></div>
         <div class="quran-ayah-text">${esc(v.text)}</div>`;
-      row.addEventListener('click', () => seekToAyah(v.num));
+      row.addEventListener('click', () => onAyahClick(v.num, data.verses.length));
       body.appendChild(row);
     });
     highlightTransAyah(true);
@@ -754,11 +943,64 @@ $$<HTMLElement>('.quran-trans-lang').forEach((b) =>
 );
 
 $('#ayah-prev').addEventListener('click', () => {
-  if (transAyahIdx > 0) seekToAyah(transAyahIdx);
+  if (transAyahIdx > 0) {
+    if (playingReadChapter()) seekToAyah(transAyahIdx);
+    else scrollToAyah(transAyahIdx);
+  }
 });
 $('#ayah-next').addEventListener('click', () => {
   const n = $$('.quran-trans-body .quran-ayah').length;
-  if (transAyahIdx >= 0 && transAyahIdx < n - 1) seekToAyah(transAyahIdx + 2);
+  if (transAyahIdx < n - 1) {
+    if (playingReadChapter()) seekToAyah(transAyahIdx + 2);
+    else scrollToAyah(transAyahIdx + 2);
+  }
+});
+
+$('#quran-read-pick').addEventListener('click', () => showSurahPicker());
+
+function jumpToAyah() {
+  const el = $('#ayah-jump') as HTMLInputElement;
+  const ch = readerChapter();
+  if (!ch) return;
+  const num = Math.floor(Number(el.value));
+  el.value = '';
+  if (!num || num < 1 || num > ch.verses_count) {
+    toast(`Surah has ${ch.verses_count} ayahs`);
+    return;
+  }
+  if (playingReadChapter()) seekToAyah(num);
+  else scrollToAyah(num);
+}
+
+$('#ayah-jump-go').addEventListener('click', jumpToAyah);
+$('#ayah-jump').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    jumpToAyah();
+  }
+});
+
+const quranFilterInput = $('#quran-filter') as HTMLInputElement;
+
+quranFilterInput.addEventListener('input', () => {
+  $('#quran-filter-clear').style.display = quranFilterInput.value ? '' : 'none';
+  renderQuranList();
+});
+quranFilterInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    e.stopPropagation();
+    quranFilterInput.value = '';
+    $('#quran-filter-clear').style.display = 'none';
+    renderQuranList();
+    quranFilterInput.blur();
+  }
+});
+$('#quran-filter-clear').addEventListener('click', () => {
+  quranFilterInput.value = '';
+  $('#quran-filter-clear').style.display = 'none';
+  renderQuranList();
+  quranFilterInput.focus();
 });
 
 function renderQuranReciterChips() {
@@ -835,6 +1077,8 @@ async function loadQuran() {
     if (quranLoaded && quranChapters.length) {
       $('#quran-loading').style.display = 'none';
       renderQuranList();
+      renderQuranReadHead();
+      syncQuranTranslation();
       return;
     }
     try {
@@ -845,6 +1089,8 @@ async function loadQuran() {
       quranLoaded = true;
       $('#quran-loading').style.display = 'none';
       renderQuranList();
+      renderQuranReadHead();
+      syncQuranTranslation();
     } catch {
       $('#quran-loading').style.display = 'none';
       $('#quran-list').style.display = 'none';
@@ -1353,6 +1599,7 @@ function makeRow(song: Song, idx: number, ctx: string): HTMLElement {
     ${song.duration_string ? `<span class="track-dur">${esc(song.duration_string)}</span>` : ''}
     <div class="track-actions">
       <button class="track-act play-act" title="Play"><i class="fa-solid fa-play"></i></button>
+      ${isQuran ? '<button class="track-act read-act" title="Read"><i class="fa-solid fa-book-open"></i></button>' : ''}
       ${canRemove ? '<button class="track-act rem-act" title="Remove"><i class="fa-solid fa-trash"></i></button>' : ''}
       ${isQuran ? '' : `<button class="track-act fav-act" title="Like"><i class="${heart}"></i></button>
       <button class="track-act pl-act" title="Add to playlist"><i class="fa-solid fa-plus"></i></button>
@@ -1384,6 +1631,16 @@ function makeRow(song: Song, idx: number, ctx: string): HTMLElement {
     r.addEventListener('mouseleave', () => clearTimeout(warmTimer));
   }
   r.querySelector('.play-act')!.addEventListener('click', (e) => { e.stopPropagation(); playSong(song, idx, ctx); });
+  if (isQuran) {
+    const readBtn = r.querySelector<HTMLElement>('.read-act');
+    if (readBtn && song.chapter_id) {
+      readBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        setReadChapter(song.chapter_id as number);
+        $('#quran-trans').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
+  }
   if (!isQuran) {
     r.querySelector('.fav-act')!.addEventListener('click', (e) => { e.stopPropagation(); toggleFav(song); });
     r.querySelector('.pl-act')!.addEventListener('click', (e) => { e.stopPropagation(); addToPl(song); });
@@ -1791,6 +2048,11 @@ audio.addEventListener('play', () => {
   reportEvent('resume');
 });
 audio.addEventListener('loadedmetadata', () => {
+  if (pendingAyahSeek && currentSong?.kind === 'quran' && currentSong.chapter_id === pendingAyahSeek.chapter && audio.duration) {
+    const { num, count } = pendingAyahSeek;
+    pendingAyahSeek = null;
+    audio.currentTime = ((num - 1 + 0.01) / Math.max(count, num)) * audio.duration;
+  }
   if (!audio.paused) {
     dcLastRefresh = 0;
     pushDiscord(true);
@@ -1817,6 +2079,7 @@ function resetPlayer() {
   currentSong = null;
   queueIdx = -1;
   startingId = null;
+  pendingAyahSeek = null;
   setBuffering(false);
   $('#player-title').textContent = 'No track playing';
   $('#player-artist').textContent = '';
