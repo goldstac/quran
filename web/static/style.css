@@ -986,9 +986,25 @@ body{
     -webkit-box-orient:vertical;line-height:1.25;
   }
   .track-dur{grid-area:dur;align-self:center;margin-left:10px}
-  .track-actions{grid-area:act;opacity:1;gap:0;justify-self:end}
-  .track-act{width:34px;height:34px;font-size:13px}
+  .track-row{padding:8px 8px}
+  .track-actions{grid-area:act;opacity:1;gap:4px;justify-self:end;margin-right:2px}
+  .track-act{width:34px;height:34px;font-size:13px;border-radius:8px}
   .track-act.play-act,.track-act.disc-act{display:none}
+  .player{
+    padding:8px 12px 10px;column-gap:10px;
+  }
+  .player-controls{gap:8px}
+  .player-art{width:42px;height:42px}
+  .player-title,.player-artist{max-width:38vw}
   .player .ctrl{width:40px;height:40px;font-size:16px}
   .player .play-pause{width:44px;height:44px;font-size:16px}
+  .quran-read-head{padding:14px 14px 12px;gap:10px}
+  .quran-read-medallion{width:38px;height:38px}
+  .quran-read-pick{padding:8px 12px}
+  .quran-read-pick span{display:none}
+  .quran-trans-head{padding:12px 14px}
+  .quran-trans-tools{gap:8px;row-gap:8px}
+  .quran-ayah-jump{gap:3px}
+  .ayah-jump-input{width:62px;padding:6px 8px;font-size:12px}
+  .quran-filter-row{margin:0 0 12px;padding:9px 12px}
 }

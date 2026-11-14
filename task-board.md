@@ -323,6 +323,28 @@ matching section and note the platform when it is not cross-platform.
 
 ## Done
 
+- [x] Mobile spacing pass: row action buttons had `gap:0` in the mobile
+  refinement block, so up to four buttons (like, playlist, download, YouTube)
+  sat touching each other; the player bar controls crowded the title, and the
+  new ayah jump input made the reader header tight. Fixed in the third mobile
+  media block: 4px gaps between row buttons with 8px radius, player padding
+  and control gaps loosened, art and title caps shrunk, reader header and
+  tools given breathing room, ayah jump input narrowed, filter row margin
+  tightened, Choose surah button reduced to an icon on phones.
+- [x] The Quran section now works as a standalone reader.
+  `readChapterId` (persisted `ns_qread`) drives the reader panel so nothing
+  needs to be playing to read; playing a surah makes the reader follow it.
+  Added a reader head card (surah number, names, translated name/revelation
+  place/ayah count, Choose surah button), a `showSurahPicker()` modal in the
+  reciter-picker style, a `read-act` book button on every surah row, a
+  `#quran-filter` input for the surah list, an `#ayah-jump` input in the
+  reader tools, tap-an-ayah-to-play-from-there, and a bismillah line above the
+  ayahs (except surahs 1 and 9). Verified with a jsdom smoke test
+  (`/tmp/opencode/uitest/smoke.mjs`): head renders, picker selects and
+  persists, filter matches number/name/translated, read button opens the
+  surah, jump validates against the verse count, and nothing plays without
+  a click. Committed as `feat(quran): read any surah without playing, with
+  surah search and ayah jump` (`3fa1184`).
 - [x] Released `v1.2.1-pre-alpha.6` with the Android system-bar fix, plus a CI
   fix to let the release-notes smoke test pass on a single-change tag.
   The safe-area work shipped in `fix(android): keep content clear of the
