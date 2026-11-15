@@ -323,6 +323,23 @@ matching section and note the platform when it is not cross-platform.
 
 ## Done
 
+- [x] App-wide English + Tamil language switch. Every user-facing string in
+  `app.ts` moved through the `t(key, vars?)` helper backed by the `I18N.en` /
+  `I18N.ta` dictionaries (~180 keys each), and static markup in
+  `index.html` got `data-i18n` / `data-i18n-title` / `data-i18n-aria` /
+  `data-i18n-ph` attributes. The choice persists as `ns_lang`; switching
+  (Settings UI section, new Language card with English / Tamil buttons,
+  `.lang-opt`) calls `refreshForLang()`, which re-renders lists, the Quran
+  reader, the search card, settings counts, bot/discord statuses and the
+  player bar so the whole app flips at once. Covers nav, search card, library
+  and provided views, all Quran strings (surah counts, picker, filter, ayah
+  tools), every row button tooltip, all toasts/confirm dialogs, player
+  controls, Discord presence/bot statuses, updates flow, data-clearing copy
+  and search recency strings. Verified with an extended jsdom smoke test
+  (`/tmp/opencode/uitest/smoke.mjs`): switch persists, html lang updates,
+  nav and Quran subtitle flip both ways, reader and filter keep working.
+  Backend untouched (frontend-only); the next APK picks this up since
+  `server.rs` embeds the frontend at compile time.
 - [x] Released `v1.2.1-pre-alpha.7` with the standalone Quran reader and the
   mobile spacing pass. Smoke test passed (run 43613948649), full pipeline
   green (run 43614044361), APK `app-universal-release.apk` (46,969,929
