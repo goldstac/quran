@@ -6,16 +6,19 @@ from pathlib import Path
 
 
 VERSION_PATTERN = re.compile(
-    r"^(\d+)\.(\d+)\.(\d+)(?:-(?:pre-)?(alpha|beta|rc)\.(\d+))?$"
+    r"^(\d+)\.(\d+)\.(\d+)(?:-(pre-)?(alpha|beta|rc)\.(\d+))?$"
 )
-STAGE_OFFSETS = {"alpha": 0, "beta": 3000, "rc": 6000}
+# Each pre-release stage owns a disjoint range of stage values so versionCode
+# stays monotonic across stage changes: pre-alpha < alpha < beta < rc < final.
+STAGE_OFFSETS = {"pre-alpha": 0, "alpha": 1000, "beta": 2000, "rc": 3000}
+STAGE_MAX = 999
 
 
 def version_code(version):
     match = VERSION_PATTERN.fullmatch(version)
     if not match:
         raise ValueError(f"unsupported Android version: {version}")
-    major, minor, patch, stage, stage_number = match.groups()
+    major, minor, patch, pre_prefix, stage, stage_number = match.groups()
     major, minor, patch = int(major), int(minor), int(patch)
     if major > 20 or minor > 99 or patch > 99:
         raise ValueError(f"version is outside the Android versionCode range: {version}")
@@ -23,9 +26,9 @@ def version_code(version):
         stage_value = 9999
     else:
         stage_number = int(stage_number)
-        if not 1 <= stage_number <= 2999:
+        if not 1 <= stage_number <= STAGE_MAX:
             raise ValueError(f"pre-release number is outside the supported range: {version}")
-        stage_value = STAGE_OFFSETS[stage] + stage_number
+        stage_value = STAGE_OFFSETS[("pre-" if pre_prefix else "") + stage] + stage_number
     result = major * 100_000_000 + minor * 1_000_000 + patch * 10_000 + stage_value
     if result > 2_100_000_000:
         raise ValueError(f"versionCode exceeds Android's limit: {version}")
