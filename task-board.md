@@ -323,6 +323,16 @@ matching section and note the platform when it is not cross-platform.
 
 ## Done
 
+- [x] Released `v1.2.1-alpha.1` (first normal-alpha tag, APK 47,150,377
+  bytes, run 43747327393 all green, versionCode 102011001) carrying the Tamil
+  language switch. The stage scheme changed from `pre-alpha` to `alpha`, so
+  the Android versionCode stamper now gives each stage a disjoint range
+  (pre-alpha 0-999, alpha 1000-1999, beta 2000-2999, rc 3000-3999, final
+  9999) and the in-app updater's `cmpSemver` ranks `alpha` above `pre-alpha`
+  (verified with eight ordering cases). One smoke run failed because Groq
+  wrote a single bullet for a 2-change release; a retry passed. Needs device
+  confirmation on the Redmi A5 and the Realme C71 (Tamil switch, spacing fix,
+  Quran reader).
 - [x] App-wide English + Tamil language switch. Every user-facing string in
   `app.ts` moved through the `t(key, vars?)` helper backed by the `I18N.en` /
   `I18N.ta` dictionaries (~180 keys each), and static markup in
