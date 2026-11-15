@@ -18,54 +18,54 @@
       <div class="brand-text">
         <span class="brand-name">Quran</span>
       </div>
-      <button id="menu-close" class="menu-close" type="button" aria-label="Close menu"><i class="fa-solid fa-xmark"></i></button>
+      <button id="menu-close" class="menu-close" type="button" data-i18n-aria="menu.close" aria-label="Close menu"><i class="fa-solid fa-xmark"></i></button>
     </div>
 
     <nav class="sidebar-nav">
       <button class="nav-item active" data-view="search">
-        <i class="fa-solid fa-magnifying-glass"></i><span>Search</span>
+        <i class="fa-solid fa-magnifying-glass"></i><span data-i18n="nav.search">Search</span>
       </button>
       <button class="nav-item" data-view="library">
-        <i class="fa-solid fa-book-open"></i><span>Your Library</span>
+        <i class="fa-solid fa-book-open"></i><span data-i18n="nav.library">Your Library</span>
       </button>
       <button class="nav-item" data-view="recent">
-        <i class="fa-solid fa-clock-rotate-left"></i><span>Recently Played</span>
+        <i class="fa-solid fa-clock-rotate-left"></i><span data-i18n="nav.recent">Recently Played</span>
       </button>
       <button class="nav-item" data-view="favorites">
-        <i class="fa-solid fa-heart"></i><span>Liked Nasheeds</span>
+        <i class="fa-solid fa-heart"></i><span data-i18n="nav.favorites">Liked Nasheeds</span>
       </button>
       <button class="nav-item" data-view="downloads">
-        <i class="fa-solid fa-download"></i><span>Downloads</span>
+        <i class="fa-solid fa-download"></i><span data-i18n="nav.downloads">Downloads</span>
       </button>
       <button class="nav-item" data-view="local">
-        <i class="fa-solid fa-folder-open"></i><span>Your Nasheeds</span>
+        <i class="fa-solid fa-folder-open"></i><span data-i18n="nav.local">Your Nasheeds</span>
       </button>
       <button class="nav-item" data-view="provided">
-        <i class="fa-solid fa-circle-play"></i><span>Provided Nasheeds</span>
+        <i class="fa-solid fa-circle-play"></i><span data-i18n="nav.provided">Provided Nasheeds</span>
       </button>
       <button class="nav-item" data-view="quran">
-        <i class="fa-solid fa-book-quran"></i><span>Quran</span>
+        <i class="fa-solid fa-book-quran"></i><span data-i18n="nav.quran">Quran</span>
       </button>
       <button class="nav-item" data-view="settings">
-        <i class="fa-solid fa-gear"></i><span>Settings</span>
+        <i class="fa-solid fa-gear"></i><span data-i18n="nav.settings">Settings</span>
       </button>
     </nav>
 
     <div class="sidebar-sep"></div>
 
     <div class="sidebar-section">
-      <span>Playlists</span>
+      <span data-i18n="sidebar.playlists">Playlists</span>
       <button id="add-pl-btn" class="sidebar-add"><i class="fa-solid fa-plus"></i></button>
     </div>
 
     <div id="playlist-nav" class="sidebar-playlists"></div>
 
-    <p class="sidebar-intent">Made for the Quran &amp; nasheeds, not general music.</p>
+    <p class="sidebar-intent" data-i18n="sidebar.intent">Made for the Quran &amp; nasheeds, not general music.</p>
 
     <div id="sidebar-ver" class="sidebar-ver"></div>
   </aside>
 
-  <button id="menu-btn" class="menu-btn" type="button" aria-label="Open menu"><i class="fa-solid fa-bars"></i></button>
+  <button id="menu-btn" class="menu-btn" type="button" data-i18n-aria="menu.open" aria-label="Open menu"><i class="fa-solid fa-bars"></i></button>
   <div id="sidebar-backdrop" class="sidebar-backdrop"></div>
 
   <main id="main" class="main">
@@ -76,15 +76,15 @@
           <div class="psearch__card" id="sc-card">
             <div class="psearch__bar">
               <span class="psearch__glass"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21 21-4.34-4.34"></path><circle cx="11" cy="11" r="8"></circle></svg></span>
-              <input type="text" id="search-input" class="psearch__input" placeholder="Search" aria-label="Search nasheeds">
-              <button type="button" id="sc-close" class="psearch__close" aria-label="Close search"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
+              <input type="text" id="search-input" class="psearch__input" placeholder="Search" data-i18n-ph="search.placeholder" data-i18n-aria="search.aria" aria-label="Search nasheeds">
+              <button type="button" id="sc-close" class="psearch__close" data-i18n-aria="search.close" aria-label="Close search"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
               <kbd class="psearch__kbd" id="sc-kbd">Ctrl K</kbd>
             </div>
             <div class="psearch__body" id="sc-body">
               <div class="psearch__panel">
                 <div class="psearch__head">
-                  <span class="psearch__head-label">Recent searches</span>
-                  <button type="button" class="psearch__action" id="sc-action">Clear all</button>
+                  <span class="psearch__head-label" data-i18n="search.recents">Recent searches</span>
+                  <button type="button" class="psearch__action" id="sc-action" data-i18n="search.clear_all">Clear all</button>
                 </div>
                 <ul class="psearch__list" id="sc-list"></ul>
                 <div class="psearch__foot"></div>
@@ -97,13 +97,13 @@
       <div class="search-body">
         <div id="search-empty" class="empty">
           <div class="empty-icon"><i class="fa-solid fa-music"></i></div>
-          <p class="empty-title">Search for nasheeds</p>
-          <p class="empty-sub">Find and play nasheeds from YouTube</p>
-          <p class="empty-sub">Made for the Quran &amp; nasheeds, not general music</p>
+          <p class="empty-title" data-i18n="search.empty_title">Search for nasheeds</p>
+          <p class="empty-sub" data-i18n="search.empty_sub1">Find and play nasheeds from YouTube</p>
+          <p class="empty-sub" data-i18n="search.empty_sub2">Made for the Quran &amp; nasheeds, not general music</p>
         </div>
         <div id="search-loading" class="empty" style="display:none">
           <div class="spinner"></div>
-          <p class="empty-sub">Searching...</p>
+          <p class="empty-sub" data-i18n="search.searching">Searching...</p>
         </div>
         <div id="search-results" class="track-list" style="display:none"></div>
       </div>
@@ -112,35 +112,35 @@
     <div id="library-view" class="view">
       <div class="lib-sticky">
         <div class="lib-heading">
-          <h1 id="lib-title" class="lib-title">Your Library</h1>
-          <button id="lib-rename" class="lib-rename hidden" title="Rename playlist"><i class="fa-solid fa-pen"></i></button>
-          <button id="lib-del" class="lib-del hidden" title="Delete playlist"><i class="fa-solid fa-trash"></i></button>
-          <button id="local-add" class="lib-local-add hidden" title="Add your own nasheeds"><i class="fa-solid fa-plus"></i></button>
+          <h1 id="lib-title" class="lib-title" data-i18n="nav.library">Your Library</h1>
+          <button id="lib-rename" class="lib-rename hidden" data-i18n-title="pl.rename" title="Rename playlist"><i class="fa-solid fa-pen"></i></button>
+          <button id="lib-del" class="lib-del hidden" data-i18n-title="lib.delete" title="Delete playlist"><i class="fa-solid fa-trash"></i></button>
+          <button id="local-add" class="lib-local-add hidden" data-i18n-title="lib.add_local" title="Add your own nasheeds"><i class="fa-solid fa-plus"></i></button>
           <input type="file" id="local-file" accept="audio/*,video/*,.mp3,.m4a,.mp4,.webm,.ogg,.oga,.opus,.wav,.flac,.aac" multiple hidden>
           <div class="lib-sort" id="lib-sort">
-            <button id="lib-sort-btn" class="lib-sort-btn" title="Sort">
+            <button id="lib-sort-btn" class="lib-sort-btn" data-i18n-title="sort.label" title="Sort">
               <i class="fa-solid fa-arrow-down-wide-short"></i>
               <span id="lib-sort-label">Recently added</span>
               <i class="fa-solid fa-chevron-down"></i>
             </button>
             <div id="lib-sort-menu" class="lib-sort-menu hidden">
-              <button class="lib-sort-opt active" data-sort="added">Recently added</button>
-              <button class="lib-sort-opt" data-sort="title">Title A–Z</button>
-              <button class="lib-sort-opt" data-sort="channel">Channel</button>
+              <button class="lib-sort-opt active" data-sort="added" data-i18n="sort.added">Recently added</button>
+              <button class="lib-sort-opt" data-sort="title" data-i18n="sort.title">Title A–Z</button>
+              <button class="lib-sort-opt" data-sort="channel" data-i18n="sort.channel">Channel</button>
             </div>
           </div>
         </div>
         <p id="lib-subtitle" class="lib-subtitle"></p>
         <div id="lib-actions" class="lib-actions hidden">
-          <button id="pl-play" class="lib-play" title="Play"><i class="fa-solid fa-play"></i></button>
-          <button id="shuffle-play-btn" class="lib-shuffle" title="Shuffle play"><i class="fa-solid fa-shuffle"></i></button>
+          <button id="pl-play" class="lib-play" data-i18n-title="lib.play" title="Play"><i class="fa-solid fa-play"></i></button>
+          <button id="shuffle-play-btn" class="lib-shuffle" data-i18n-title="lib.shuffle" title="Shuffle play"><i class="fa-solid fa-shuffle"></i></button>
         </div>
       </div>
       <div class="lib-body">
         <div id="lib-empty" class="empty" style="display:none">
           <div class="empty-icon"><i class="fa-solid fa-folder-open"></i></div>
-          <p class="empty-title">Nothing here yet</p>
-          <p class="empty-sub">Search and save nasheeds to see them here</p>
+          <p class="empty-title" data-i18n="lib.empty_title">Nothing here yet</p>
+          <p class="empty-sub" data-i18n="lib.empty_sub">Search and save nasheeds to see them here</p>
         </div>
         <div id="lib-list" class="track-list" style="display:none"></div>
       </div>
@@ -149,20 +149,20 @@
     <div id="provided-view" class="view">
       <div class="lib-sticky">
         <div class="lib-heading">
-          <h1 class="lib-title">Provided Nasheeds</h1>
-          <button id="provided-refresh" class="lib-local-add" title="Refresh provided nasheeds" aria-label="Refresh provided nasheeds"><i class="fa-solid fa-arrows-rotate"></i></button>
+          <h1 class="lib-title" data-i18n="nav.provided">Provided Nasheeds</h1>
+          <button id="provided-refresh" class="lib-local-add" data-i18n-title="provided.refresh" data-i18n-aria="provided.refresh" title="Refresh provided nasheeds" aria-label="Refresh provided nasheeds"><i class="fa-solid fa-arrows-rotate"></i></button>
         </div>
-        <p id="provided-subtitle" class="lib-subtitle">Nasheeds provided by the Quran app</p>
+        <p id="provided-subtitle" class="lib-subtitle" data-i18n="provided.sub">Nasheeds provided by the Quran app</p>
       </div>
       <div class="lib-body">
         <div id="provided-loading" class="empty" style="display:none">
           <div class="spinner"></div>
-          <p class="empty-sub">Loading provided nasheeds...</p>
+          <p class="empty-sub" data-i18n="provided.loading">Loading provided nasheeds...</p>
         </div>
         <div id="provided-empty" class="empty" style="display:none">
           <div class="empty-icon"><i class="fa-solid fa-music"></i></div>
-          <p id="provided-empty-title" class="empty-title">No provided nasheeds yet</p>
-          <p id="provided-empty-sub" class="empty-sub">New nasheeds will appear here as they are added to the catalog.</p>
+          <p id="provided-empty-title" class="empty-title" data-i18n="provided.empty_title">No provided nasheeds yet</p>
+          <p id="provided-empty-sub" class="empty-sub" data-i18n="provided.empty_sub">New nasheeds will appear here as they are added to the catalog.</p>
         </div>
         <div id="provided-list" class="track-list" style="display:none"></div>
       </div>
@@ -171,25 +171,25 @@
     <div id="quran-view" class="view">
       <div class="lib-sticky">
         <div class="lib-heading">
-          <h1 class="lib-title">Quran</h1>
+          <h1 class="lib-title" data-i18n="nav.quran">Quran</h1>
         </div>
-        <p id="quran-subtitle" class="lib-subtitle">Listen to the Quran</p>
+        <p id="quran-subtitle" class="lib-subtitle" data-i18n="quran.sub">Listen to the Quran</p>
         <div id="quran-actions" class="lib-actions hidden">
-          <button id="quran-play" class="lib-play" title="Play all surahs"><i class="fa-solid fa-play"></i></button>
-          <button id="quran-shuffle" class="lib-shuffle" title="Shuffle play"><i class="fa-solid fa-shuffle"></i></button>
+          <button id="quran-play" class="lib-play" data-i18n-title="quran.play_all" title="Play all surahs"><i class="fa-solid fa-play"></i></button>
+          <button id="quran-shuffle" class="lib-shuffle" data-i18n-title="quran.shuffle" title="Shuffle play"><i class="fa-solid fa-shuffle"></i></button>
         </div>
         <div class="quran-reciter-block">
           <div class="quran-reciter-head">
-            <span class="quran-reciter-label">Reciter</span>
+            <span class="quran-reciter-label" data-i18n="quran.reciter">Reciter</span>
             <div class="quran-reciter-meta">
               <span id="quran-reciter-pos" class="quran-reciter-pos"></span>
-              <button id="quran-reciter-browse" class="quran-reciter-nav" title="Browse & search reciters" type="button">
+              <button id="quran-reciter-browse" class="quran-reciter-nav" data-i18n-title="quran.reciter_browse" title="Browse &amp; search reciters" type="button">
                 <i class="fa-solid fa-list"></i>
               </button>
-              <button id="quran-reciter-prev" class="quran-reciter-nav" title="Previous reciter" type="button">
+              <button id="quran-reciter-prev" class="quran-reciter-nav" data-i18n-title="quran.reciter_prev" title="Previous reciter" type="button">
                 <i class="fa-solid fa-chevron-left"></i>
               </button>
-              <button id="quran-reciter-next" class="quran-reciter-nav" title="Next reciter" type="button">
+              <button id="quran-reciter-next" class="quran-reciter-nav" data-i18n-title="quran.reciter_next" title="Next reciter" type="button">
                 <i class="fa-solid fa-chevron-right"></i>
               </button>
             </div>
@@ -198,7 +198,7 @@
             <button id="quran-reciter-scroll-l" class="quran-reciter-edge" type="button" tabindex="-1" aria-hidden="true">
               <i class="fa-solid fa-chevron-left"></i>
             </button>
-            <div id="quran-reciter-scroller" class="quran-reciter-scroller" role="listbox" aria-label="Choose reciter" tabindex="0"></div>
+            <div id="quran-reciter-scroller" class="quran-reciter-scroller" role="listbox" aria-label="Choose reciter" data-i18n-aria="quran.reciter_aria" tabindex="0"></div>
             <button id="quran-reciter-scroll-r" class="quran-reciter-edge" type="button" tabindex="-1" aria-hidden="true">
               <i class="fa-solid fa-chevron-right"></i>
             </button>
@@ -216,24 +216,24 @@
               </div>
               <div id="quran-read-meta" class="quran-read-meta"></div>
             </div>
-            <button id="quran-read-pick" class="quran-read-pick" type="button" title="Choose surah">
-              <i class="fa-solid fa-list"></i><span>Choose surah</span>
+            <button id="quran-read-pick" class="quran-read-pick" type="button" data-i18n-title="quran.pick" title="Choose surah">
+              <i class="fa-solid fa-list"></i><span data-i18n="quran.pick">Choose surah</span>
             </button>
           </div>
           <div class="quran-trans-head">
             <div class="quran-trans-title">
-              <span class="quran-trans-label">Ayah</span>
+              <span class="quran-trans-label" data-i18n="quran.ayah_label">Ayah</span>
               <span id="quran-trans-src" class="quran-trans-src"></span>
             </div>
             <div class="quran-trans-tools">
               <div class="quran-trans-pos">
-                <button id="ayah-prev" class="quran-ayah-nav" type="button" title="Previous ayah" disabled><i class="fa-solid fa-chevron-left"></i></button>
+                <button id="ayah-prev" class="quran-ayah-nav" type="button" data-i18n-title="quran.ayah_prev" title="Previous ayah" disabled><i class="fa-solid fa-chevron-left"></i></button>
                 <span id="quran-ayah-pos" class="quran-ayah-pos"></span>
-                <button id="ayah-next" class="quran-ayah-nav" type="button" title="Next ayah" disabled><i class="fa-solid fa-chevron-right"></i></button>
+                <button id="ayah-next" class="quran-ayah-nav" type="button" data-i18n-title="quran.ayah_next" title="Next ayah" disabled><i class="fa-solid fa-chevron-right"></i></button>
               </div>
               <div class="quran-ayah-jump">
-                <input id="ayah-jump" class="ayah-jump-input" type="number" min="1" placeholder="Ayah" aria-label="Go to ayah">
-                <button id="ayah-jump-go" class="quran-ayah-nav" type="button" title="Go to ayah"><i class="fa-solid fa-arrow-right"></i></button>
+                <input id="ayah-jump" class="ayah-jump-input" type="number" min="1" placeholder="Ayah" data-i18n-ph="quran.ayah_ph" data-i18n-aria="quran.ayah_jump_aria" aria-label="Go to ayah">
+                <button id="ayah-jump-go" class="quran-ayah-nav" type="button" data-i18n-title="quran.ayah_go" title="Go to ayah"><i class="fa-solid fa-arrow-right"></i></button>
               </div>
               <div class="quran-trans-langs">
                 <button class="quran-trans-lang" data-lang="off" type="button">Off</button>
@@ -243,23 +243,23 @@
             </div>
           </div>
           <div id="quran-trans-body" class="quran-trans-body">
-            <div class="quran-trans-hint">Choose a surah to read</div>
+            <div class="quran-trans-hint" data-i18n="quran.hint">Choose a surah to read</div>
           </div>
         </div>
         <div id="quran-filter-row" class="quran-filter-row" style="display:none">
           <i class="fa-solid fa-magnifying-glass"></i>
-          <input id="quran-filter" type="text" placeholder="Filter surahs" spellcheck="false" autocomplete="off">
-          <button id="quran-filter-clear" class="quran-filter-clear" type="button" title="Clear filter" style="display:none"><i class="fa-solid fa-xmark"></i></button>
+          <input id="quran-filter" type="text" placeholder="Filter surahs" data-i18n-ph="quran.filter_ph" spellcheck="false" autocomplete="off">
+          <button id="quran-filter-clear" class="quran-filter-clear" type="button" data-i18n-title="quran.filter_clear" title="Clear filter" style="display:none"><i class="fa-solid fa-xmark"></i></button>
         </div>
         <div id="quran-empty" class="empty" style="display:none">
           <div class="empty-icon"><i class="fa-solid fa-book-quran"></i></div>
-          <p class="empty-title">Quran unavailable</p>
-          <p class="empty-sub">Could not load surahs</p>
-          <button id="quran-retry" class="empty-retry" type="button">Try again</button>
+          <p class="empty-title" data-i18n="quran.unavailable">Quran unavailable</p>
+          <p class="empty-sub" data-i18n="quran.load_err">Could not load surahs</p>
+          <button id="quran-retry" class="empty-retry" type="button" data-i18n="quran.retry">Try again</button>
         </div>
         <div id="quran-loading" class="empty">
           <div class="spinner"></div>
-          <p class="empty-sub">Loading Quran...</p>
+          <p class="empty-sub" data-i18n="quran.loading">Loading Quran...</p>
         </div>
         <div id="quran-list" class="track-list" style="display:none"></div>
       </div>
@@ -269,41 +269,56 @@
       <div class="lib-sticky settings-sticky">
         <div class="lib-heading">
           <div>
-            <h1 class="lib-title">Settings</h1>
+            <h1 class="lib-title" data-i18n="nav.settings">Settings</h1>
           </div>
         </div>
-        <p class="lib-subtitle">Make Quran feel right for you.</p>
+        <p class="lib-subtitle" data-i18n="set.settings_sub">Make Quran feel right for you.</p>
       </div>
       <div class="lib-body settings-body">
         <div class="settings-sections">
         <section class="settings-section">
           <div class="settings-section-head">
-            <h2>UI</h2>
-            <p>App information and updates.</p>
+            <h2 data-i18n="set.section_ui">UI</h2>
+            <p data-i18n="set.section_ui_sub">App information and updates.</p>
           </div>
           <div class="settings-grid">
-        <div class="settings-card settings-card-about">
+        <div class="settings-card settings-card-language">
           <div class="settings-card-head">
-            <h2 class="settings-card-title"><i class="fa-solid fa-circle-info"></i>About</h2>
+            <h2 class="settings-card-title"><i class="fa-solid fa-language"></i><span data-i18n="set.language">Language</span></h2>
+            <p class="settings-card-sub" data-i18n="set.language_sub">Use Quran in English or Tamil. The whole app switches right away.</p>
           </div>
           <div class="settings-rows">
-            <div class="settings-row"><span class="settings-row-label">App</span><span class="settings-row-value" id="set-name">Quran</span></div>
-            <div class="settings-row"><span class="settings-row-label">Version</span><span class="settings-row-value" id="set-version">...</span></div>
-            <div class="settings-row"><span class="settings-row-label">Repository</span><a class="settings-row-value" id="set-repo" href="https://github.com/goldstac/quran" target="_blank" rel="noopener noreferrer">github.com/goldstac/quran</a></div>
+            <div class="settings-row">
+              <span class="settings-row-label" data-i18n="set.language_label">App language</span>
+              <span class="settings-ctl lang-opts">
+                <button class="lang-opt" data-ui-lang="en" type="button" aria-pressed="true">English</button>
+                <button class="lang-opt" data-ui-lang="ta" type="button" aria-pressed="false">தமிழ்</button>
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="settings-card settings-card-about">
+          <div class="settings-card-head">
+            <h2 class="settings-card-title"><i class="fa-solid fa-circle-info"></i><span data-i18n="set.about">About</span></h2>
+          </div>
+          <div class="settings-rows">
+            <div class="settings-row"><span class="settings-row-label" data-i18n="set.about_app">App</span><span class="settings-row-value" id="set-name">Quran</span></div>
+            <div class="settings-row"><span class="settings-row-label" data-i18n="set.about_version">Version</span><span class="settings-row-value" id="set-version">...</span></div>
+            <div class="settings-row"><span class="settings-row-label" data-i18n="set.about_repo">Repository</span><a class="settings-row-value" id="set-repo" href="https://github.com/goldstac/quran" target="_blank" rel="noopener noreferrer">github.com/goldstac/quran</a></div>
           </div>
         </div>
         <div class="settings-card settings-card-updates">
           <div class="settings-card-head">
-            <h2 class="settings-card-title"><i class="fa-solid fa-arrows-rotate"></i>Updates</h2>
-            <p class="settings-card-sub">Check for a newer release, or include early builds to try changes before they are stable.</p>
+            <h2 class="settings-card-title"><i class="fa-solid fa-arrows-rotate"></i><span data-i18n="set.updates">Updates</span></h2>
+            <p class="settings-card-sub" data-i18n="set.updates_sub">Check for a newer release, or include early builds to try changes before they are stable.</p>
           </div>
           <div class="settings-rows">
             <div class="settings-row">
-              <span class="settings-row-label">Latest release</span>
-              <span class="settings-row-value" id="set-latest">Unknown</span>
+              <span class="settings-row-label" data-i18n="set.latest">Latest release</span>
+              <span class="settings-row-value" id="set-latest" data-i18n="set.unknown">Unknown</span>
             </div>
             <div class="settings-row">
-              <span class="settings-row-label">Pre-release builds</span>
+              <span class="settings-row-label" data-i18n="set.prereleases">Pre-release builds</span>
               <span class="settings-ctl">
                 <label class="toggle">
                   <input type="checkbox" id="set-prerelease">
@@ -313,9 +328,9 @@
             </div>
           </div>
           <div class="set-btn-row">
-            <button id="set-check" class="set-btn" type="button"><i class="fa-solid fa-arrows-rotate"></i><span>Check for updates</span></button>
-            <button id="set-update" class="set-btn" type="button" disabled><i class="fa-solid fa-download"></i><span>Update</span></button>
-            <button id="set-run" class="set-btn ghost" type="button" hidden><i class="fa-solid fa-rocket"></i><span>Run new version</span></button>
+            <button id="set-check" class="set-btn" type="button"><i class="fa-solid fa-arrows-rotate"></i><span data-i18n="set.check_updates">Check for updates</span></button>
+            <button id="set-update" class="set-btn" type="button" disabled><i class="fa-solid fa-download"></i><span data-i18n="set.update">Update</span></button>
+            <button id="set-run" class="set-btn ghost" type="button" hidden><i class="fa-solid fa-rocket"></i><span data-i18n="set.run_new">Run new version</span></button>
           </div>
           <div id="set-progress-wrap" class="update-progress" hidden>
             <div class="update-bar"><div id="set-progress-fill" class="update-bar-fill"></div></div>
@@ -325,27 +340,27 @@
         </div>
         <div class="settings-card settings-card-note">
           <div class="settings-card-head">
-            <h2 class="settings-card-title gold"><i class="fa-solid fa-hands-praying"></i>About this app</h2>
-            <p class="settings-card-sub">Made for the Quran and nasheeds. Your library and preferences stay on this device. Online features connect to services such as YouTube, GitHub, and Discord when you use them.</p>
+            <h2 class="settings-card-title gold"><i class="fa-solid fa-hands-praying"></i><span data-i18n="set.app_note_title">About this app</span></h2>
+            <p class="settings-card-sub" data-i18n="set.app_note_sub">Made for the Quran and nasheeds. Your library and preferences stay on this device. Online features connect to services such as YouTube, GitHub, and Discord when you use them.</p>
           </div>
         </div>
           </div>
         </section>
         <section class="settings-section">
           <div class="settings-section-head">
-            <h2>Sound</h2>
-            <p>Choose the default volume for playback.</p>
+            <h2 data-i18n="set.section_sound">Sound</h2>
+            <p data-i18n="set.section_sound_sub">Choose the default volume for playback.</p>
           </div>
           <div class="settings-grid">
         <div class="settings-card settings-card-sound">
           <div class="settings-card-head">
-            <h2 class="settings-card-title"><i class="fa-solid fa-volume-high"></i>Sound</h2>
-            <p class="settings-card-sub">Choose the volume used when Quran starts. You can still adjust it anytime in the player.</p>
+            <h2 class="settings-card-title"><i class="fa-solid fa-volume-high"></i><span data-i18n="set.section_sound">Sound</span></h2>
+            <p class="settings-card-sub" data-i18n="set.sound_sub">Choose the volume used when Quran starts. You can still adjust it anytime in the player.</p>
           </div>
           <div class="settings-rows">
             <div class="settings-row">
-              <span class="settings-row-label">Default volume</span>
-              <div class="vol-track settings-vol" id="settings-volume-bar" role="slider" aria-label="Default volume" aria-valuemin="0" aria-valuemax="100" aria-valuenow="70"></div>
+              <span class="settings-row-label" data-i18n="set.default_vol">Default volume</span>
+              <div class="vol-track settings-vol" id="settings-volume-bar" role="slider" data-i18n-aria="set.default_vol" aria-label="Default volume" aria-valuemin="0" aria-valuemax="100" aria-valuenow="70"></div>
               <span id="set-vol-label" class="set-vol-label">70%</span>
             </div>
           </div>
@@ -354,36 +369,36 @@
         </section>
         <section class="settings-section">
           <div class="settings-section-head">
-            <h2>Discord</h2>
-            <p>Control profile presence and connect your bot.</p>
+            <h2 data-i18n="set.section_discord">Discord</h2>
+            <p data-i18n="set.section_discord_sub">Control profile presence and connect your bot.</p>
           </div>
           <div class="settings-grid">
         <div class="settings-card settings-card-discord">
           <div class="settings-card-head">
-            <h2 class="settings-card-title gold"><i class="fa-brands fa-discord"></i>Discord presence</h2>
-            <p class="settings-card-sub">Show your current nasheed or Quran recitation on your Discord profile. Discord desktop needs to be open. Use the eye button on a nasheed row to hide it.</p>
+            <h2 class="settings-card-title gold"><i class="fa-brands fa-discord"></i><span data-i18n="set.presence">Discord presence</span></h2>
+            <p class="settings-card-sub" data-i18n="set.presence_sub">Show your current nasheed or Quran recitation on your Discord profile. Discord desktop needs to be open. Use the eye button on a nasheed row to hide it.</p>
           </div>
           <div class="settings-rows">
             <div class="settings-row">
-              <span class="settings-row-label">Share what I play</span>
+              <span class="settings-row-label" data-i18n="set.share_play">Share what I play</span>
               <span class="settings-ctl">
                 <label class="toggle">
                   <input type="checkbox" id="set-discord">
                   <span class="toggle-slider"></span>
                 </label>
-                <span id="set-discord-status" class="disc-status">Off</span>
+                <span id="set-discord-status" class="disc-status" data-i18n="set.dc_off">Off</span>
               </span>
             </div>
           </div>
         </div>
         <div class="settings-card settings-card-bot">
           <div class="settings-card-head">
-            <h2 class="settings-card-title"><i class="fa-solid fa-headphones"></i>Discord bot</h2>
-            <p class="settings-card-sub">Run <code>su!track link</code> in your server, then enter the code below. The bot URL points to your bot service. Use Test to check that Quran can reach it. Hidden nasheeds are not shared.</p>
+            <h2 class="settings-card-title"><i class="fa-solid fa-headphones"></i><span data-i18n="set.bot">Discord bot</span></h2>
+            <p class="settings-card-sub" data-i18n="set.bot_sub">Run <code>su!track link</code> in your server, then enter the code below. The bot URL points to your bot service. Use Test to check that Quran can reach it. Hidden nasheeds are not shared.</p>
           </div>
           <div class="settings-rows">
             <div class="settings-row">
-              <span class="settings-row-label">Send what I play</span>
+              <span class="settings-row-label" data-i18n="set.send_play">Send what I play</span>
               <span class="settings-ctl">
                 <label class="toggle">
                   <input type="checkbox" id="set-bot">
@@ -393,18 +408,18 @@
               </span>
             </div>
             <div class="settings-row">
-              <span class="settings-row-label">Bot URL</span>
+              <span class="settings-row-label" data-i18n="set.bot_url">Bot URL</span>
               <input type="text" id="bot-url" class="set-input" placeholder="http://127.0.0.1:3000" spellcheck="false" autocomplete="off">
-              <button id="bot-test" class="set-btn ghost" type="button"><i class="fa-solid fa-satellite-dish"></i><span>Test</span></button>
+              <button id="bot-test" class="set-btn ghost" type="button"><i class="fa-solid fa-satellite-dish"></i><span data-i18n="set.bot_test">Test</span></button>
             </div>
             <div class="settings-row">
-              <span class="settings-row-label">Link code</span>
-              <input type="text" id="bot-code" class="set-input set-input-code" placeholder="From su!track link" spellcheck="false" autocomplete="off">
-              <button id="bot-link" class="set-btn" type="button"><i class="fa-solid fa-link"></i><span>Link</span></button>
+              <span class="settings-row-label" data-i18n="set.link_code">Link code</span>
+              <input type="text" id="bot-code" class="set-input set-input-code" placeholder="From su!track link" data-i18n-ph="set.link_ph" spellcheck="false" autocomplete="off">
+              <button id="bot-link" class="set-btn" type="button"><i class="fa-solid fa-link"></i><span data-i18n="set.link">Link</span></button>
             </div>
           </div>
           <div class="set-btn-row">
-            <button id="bot-unlink" class="set-btn ghost" type="button" disabled><i class="fa-solid fa-plug-circle-xmark"></i><span>Unlink</span></button>
+            <button id="bot-unlink" class="set-btn ghost" type="button" disabled><i class="fa-solid fa-plug-circle-xmark"></i><span data-i18n="set.unlink">Unlink</span></button>
           </div>
           <p id="bot-note" class="settings-note"></p>
         </div>
@@ -412,53 +427,53 @@
         </section>
         <section class="settings-section">
           <div class="settings-section-head">
-            <h2>Data</h2>
-            <p>Clear what the app remembers on this device.</p>
+            <h2 data-i18n="set.section_data">Data</h2>
+            <p data-i18n="set.section_data_sub">Clear what the app remembers on this device.</p>
           </div>
           <div class="settings-grid">
         <div class="settings-card settings-card-history">
           <div class="settings-card-head">
-            <h2 class="settings-card-title"><i class="fa-solid fa-clock-rotate-left"></i>History</h2>
-            <p class="settings-card-sub">Your recent searches and the nasheeds you played recently. Clearing it leaves your library, playlists, downloads, and imported nasheeds alone.</p>
+            <h2 class="settings-card-title"><i class="fa-solid fa-clock-rotate-left"></i><span data-i18n="set.history">History</span></h2>
+            <p class="settings-card-sub" data-i18n="set.history_sub">Your recent searches and the nasheeds you played recently. Clearing it leaves your library, playlists, downloads, and imported nasheeds alone.</p>
           </div>
           <div class="settings-rows">
-            <div class="settings-row"><span class="settings-row-label">Recent searches</span><span class="settings-row-value" id="set-hist-searches">0</span></div>
-            <div class="settings-row"><span class="settings-row-label">Recently played</span><span class="settings-row-value" id="set-hist-played">0</span></div>
+            <div class="settings-row"><span class="settings-row-label" data-i18n="set.recent_searches">Recent searches</span><span class="settings-row-value" id="set-hist-searches">0</span></div>
+            <div class="settings-row"><span class="settings-row-label" data-i18n="set.recent_played">Recently played</span><span class="settings-row-value" id="set-hist-played">0</span></div>
           </div>
           <div class="set-btn-row">
-            <button id="set-clear-history" class="set-btn" type="button"><i class="fa-solid fa-trash-can"></i><span>Clear history</span></button>
+            <button id="set-clear-history" class="set-btn" type="button"><i class="fa-solid fa-trash-can"></i><span data-i18n="set.clear_history">Clear history</span></button>
           </div>
           <p id="set-history-note" class="settings-note"></p>
         </div>
         <div class="settings-card settings-card-library">
           <div class="settings-card-head">
-            <h2 class="settings-card-title"><i class="fa-solid fa-compact-disc"></i>Library</h2>
-            <p class="settings-card-sub">Pick what gets removed, then clear. Anything you leave out stays on this device; history and cache are never touched.</p>
+            <h2 class="settings-card-title"><i class="fa-solid fa-compact-disc"></i><span data-i18n="set.lib_card">Library</span></h2>
+            <p class="settings-card-sub" data-i18n="set.lib_sub">Pick what gets removed, then clear. Anything you leave out stays on this device; history and cache are never touched.</p>
           </div>
           <div class="settings-rows">
             <div class="settings-row">
-              <span class="settings-row-label">Nasheeds</span>
+              <span class="settings-row-label" data-i18n="set.nasheeds">Nasheeds</span>
               <span class="settings-ctl">
                 <label class="toggle"><input type="checkbox" id="clear-nasheeds" checked><span class="toggle-slider"></span></label>
                 <span class="settings-row-value" id="set-lib-count">0</span>
               </span>
             </div>
             <div class="settings-row">
-              <span class="settings-row-label">Playlists</span>
+              <span class="settings-row-label" data-i18n="set.playlists">Playlists</span>
               <span class="settings-ctl">
                 <label class="toggle"><input type="checkbox" id="clear-playlists" checked><span class="toggle-slider"></span></label>
                 <span class="settings-row-value" id="set-pl-count">0</span>
               </span>
             </div>
             <div class="settings-row">
-              <span class="settings-row-label">Downloads</span>
+              <span class="settings-row-label" data-i18n="set.downloads">Downloads</span>
               <span class="settings-ctl">
                 <label class="toggle"><input type="checkbox" id="clear-downloads" checked><span class="toggle-slider"></span></label>
                 <span class="settings-row-value" id="set-dl-count">0</span>
               </span>
             </div>
             <div class="settings-row">
-              <span class="settings-row-label">Local nasheeds</span>
+              <span class="settings-row-label" data-i18n="set.local_nasheeds">Local nasheeds</span>
               <span class="settings-ctl">
                 <label class="toggle"><input type="checkbox" id="clear-local" checked><span class="toggle-slider"></span></label>
                 <span class="settings-row-value" id="set-local-count">0</span>
@@ -466,20 +481,20 @@
             </div>
           </div>
           <div class="set-btn-row">
-            <button id="set-clear-library" class="set-btn" type="button"><i class="fa-solid fa-trash-can"></i><span>Clear library</span></button>
+            <button id="set-clear-library" class="set-btn" type="button"><i class="fa-solid fa-trash-can"></i><span data-i18n="set.clear_library">Clear library</span></button>
           </div>
           <p id="set-lib-note" class="settings-note"></p>
         </div>
         <div class="settings-card settings-card-cache">
           <div class="settings-card-head">
-            <h2 class="settings-card-title"><i class="fa-solid fa-database"></i>Cache</h2>
-            <p class="settings-card-sub">Temporary data used to open streams, Quran text, and catalogs faster. Clearing it is safe: the app rebuilds it as you listen.</p>
+            <h2 class="settings-card-title"><i class="fa-solid fa-database"></i><span data-i18n="set.cache">Cache</span></h2>
+            <p class="settings-card-sub" data-i18n="set.cache_sub">Temporary data used to open streams, Quran text, and catalogs faster. Clearing it is safe: the app rebuilds it as you listen.</p>
           </div>
           <div class="settings-rows">
-            <div class="settings-row"><span class="settings-row-label">Stored entries</span><span class="settings-row-value" id="set-cache-entries">0</span></div>
+            <div class="settings-row"><span class="settings-row-label" data-i18n="set.stored_entries">Stored entries</span><span class="settings-row-value" id="set-cache-entries">0</span></div>
           </div>
           <div class="set-btn-row">
-            <button id="set-clear-cache" class="set-btn ghost" type="button"><i class="fa-solid fa-broom"></i><span>Clear cache</span></button>
+            <button id="set-clear-cache" class="set-btn ghost" type="button"><i class="fa-solid fa-broom"></i><span data-i18n="set.clear_cache">Clear cache</span></button>
           </div>
           <p id="set-cache-note" class="settings-note"></p>
         </div>
@@ -501,40 +516,40 @@
       </div>
     </div>
     <div class="player-meta">
-      <div id="player-title" class="player-title">No track playing</div>
+      <div id="player-title" class="player-title" data-i18n="player.idle">No track playing</div>
       <div id="player-artist" class="player-artist"></div>
     </div>
-    <button id="fav-btn" class="player-fav"><i class="fa-regular fa-heart"></i></button>
-    <button id="yt-btn" class="player-fav player-yt hidden" title="See on YouTube"><i class="fa-brands fa-youtube"></i></button>
-    <button id="dl-btn" class="player-fav player-dl hidden" title="Download for offline"><i class="fa-solid fa-download"></i></button>
+    <button id="fav-btn" class="player-fav" data-i18n-title="row.like" title="Like"><i class="fa-regular fa-heart"></i></button>
+    <button id="yt-btn" class="player-fav player-yt hidden" data-i18n-title="player.yt" title="See on YouTube"><i class="fa-brands fa-youtube"></i></button>
+    <button id="dl-btn" class="player-fav player-dl hidden" data-i18n-title="player.dl" title="Download for offline"><i class="fa-solid fa-download"></i></button>
   </div>
 
   <div class="player-center">
     <div class="player-controls">
-      <button id="shuffle-btn" class="ctrl" title="Shuffle"><i class="fa-solid fa-shuffle"></i></button>
-      <button id="loop-btn" class="ctrl" title="Loop"><i class="fa-solid fa-repeat"></i></button>
-      <button id="prev-btn" class="ctrl" title="Previous"><i class="fa-solid fa-backward-step"></i></button>
+      <button id="shuffle-btn" class="ctrl" data-i18n-title="player.shuffle" title="Shuffle"><i class="fa-solid fa-shuffle"></i></button>
+      <button id="loop-btn" class="ctrl" data-i18n-title="player.loop" title="Loop"><i class="fa-solid fa-repeat"></i></button>
+      <button id="prev-btn" class="ctrl" data-i18n-title="player.prev" title="Previous"><i class="fa-solid fa-backward-step"></i></button>
       <button id="play-btn" class="play-pause">
         <i id="play-icon" class="fa-solid fa-play"></i>
         <i id="pause-icon" class="fa-solid fa-pause hidden"></i>
         <i id="buf-icon" class="fa-solid fa-circle-notch fa-spin hidden"></i>
       </button>
-      <button id="next-btn" class="ctrl" title="Next"><i class="fa-solid fa-forward-step"></i></button>
-      <button id="stop-btn" class="ctrl" title="Stop"><i class="fa-solid fa-stop"></i></button>
+      <button id="next-btn" class="ctrl" data-i18n-title="player.next" title="Next"><i class="fa-solid fa-forward-step"></i></button>
+      <button id="stop-btn" class="ctrl" data-i18n-title="player.stop" title="Stop"><i class="fa-solid fa-stop"></i></button>
     </div>
 <div class="player-seek">
         <span id="time-pos" class="time">0:00</span>
-        <div class="seek-track" id="progress-bar" role="slider" aria-label="Seek" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+        <div class="seek-track" id="progress-bar" role="slider" data-i18n-aria="player.seek" aria-label="Seek" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
         <span id="time-dur" class="time">0:00</span>
       </div>
   </div>
 
 <div class="player-right">
-      <button id="vol-btn" class="ctrl" title="Volume"><i class="fa-solid fa-volume-high"></i></button>
-      <div class="vol-track" id="volume-bar" role="slider" aria-label="Volume" aria-valuemin="0" aria-valuemax="100" aria-valuenow="70"></div>
+      <button id="vol-btn" class="ctrl" data-i18n-title="player.vol" title="Volume"><i class="fa-solid fa-volume-high"></i></button>
+      <div class="vol-track" id="volume-bar" role="slider" data-i18n-aria="player.vol" aria-label="Volume" aria-valuemin="0" aria-valuemax="100" aria-valuenow="70"></div>
     </div>
 </div>
 
-<script src="/static/app.js?v=provided-catalog-1"></script>
+<script src="/static/app.js?v=i18n-1"></script>
 </body>
 </html>

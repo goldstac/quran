@@ -897,6 +897,13 @@ body{
 #settings-view .settings-row a{color:#8ed5a1;text-decoration:none}
 #settings-view .settings-row a:hover{text-decoration:underline}
 #settings-view .settings-ctl{display:flex;align-items:center;gap:10px;margin-left:auto}
+#settings-view .lang-opt{
+  padding:6px 14px;border:1px solid rgba(255,255,255,.12);border-radius:20px;
+  background:rgba(255,255,255,.04);color:#a9b0ab;font-size:12px;font-weight:600;
+  cursor:pointer;transition:background .15s,color .15s,border-color .15s;
+}
+#settings-view .lang-opt:hover{color:#fff;background:rgba(255,255,255,.08)}
+#settings-view .lang-opt.active{color:#000;background:#1db954;border-color:#1db954}
 #settings-view .settings-vol{flex:1 1 220px;min-width:90px}
 #settings-view .set-vol-label{min-width:38px;margin-left:auto;color:#b1b8b2;font-size:12px;text-align:right}
 #settings-view .set-btn{

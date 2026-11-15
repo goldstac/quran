@@ -1,5 +1,568 @@
 "use strict";
 const API = '';
+let uiLang = load('ns_lang', 'en') === 'ta' ? 'ta' : 'en';
+const I18N = {
+    en: {
+        'nav.search': 'Search',
+        'nav.library': 'Your Library',
+        'nav.recent': 'Recently Played',
+        'nav.favorites': 'Liked Nasheeds',
+        'nav.downloads': 'Downloads',
+        'nav.local': 'Your Nasheeds',
+        'nav.provided': 'Provided Nasheeds',
+        'nav.quran': 'Quran',
+        'nav.settings': 'Settings',
+        'sidebar.playlists': 'Playlists',
+        'sidebar.intent': 'Made for the Quran & nasheeds, not general music.',
+        'menu.open': 'Open menu',
+        'menu.close': 'Close menu',
+        'search.placeholder': 'Search',
+        'search.hint': 'What do you want to listen to?',
+        'search.recents': 'Recent searches',
+        'search.clear_all': 'Clear all',
+        'search.empty_title': 'Search for nasheeds',
+        'search.empty_sub1': 'Find and play nasheeds from YouTube',
+        'search.empty_sub2': 'Made for the Quran & nasheeds, not general music',
+        'search.searching': 'Searching...',
+        'search.no_results': 'No results found',
+        'search.failed': 'Search failed',
+        'search.no_recent': 'No recent searches',
+        'search.recent_one': 'Recent search',
+        'time.just_now': 'Just now',
+        'time.min_ago': '{n} min ago',
+        'time.hr_ago': '{n} hr ago',
+        'time.yesterday': 'Yesterday',
+        'time.days_ago': '{n} days ago',
+        'search.no_match': 'No results for "{q}"',
+        'search.aria': 'Search nasheeds',
+        'search.close': 'Close search',
+        'sort.added': 'Recently added',
+        'sort.title': 'Title A–Z',
+        'sort.channel': 'Channel',
+        'sort.label': 'Sort',
+        'lib.empty_title': 'Nothing here yet',
+        'lib.empty_sub': 'Search and save nasheeds to see them here',
+        'lib.empty_downloads_title': 'No downloads yet',
+        'lib.empty_downloads_sub': 'Hit the download button on any nasheed to save it for offline listening',
+        'lib.empty_local_title': 'No local nasheeds yet',
+        'lib.empty_local_sub': 'Add your own mp3 or mp4 files with the + button above',
+        'lib.count': '{n} nasheed{s}',
+        'lib.rename': 'Rename playlist',
+        'lib.delete': 'Delete playlist',
+        'lib.add_local': 'Add your own nasheeds',
+        'lib.play': 'Play',
+        'lib.shuffle': 'Shuffle play',
+        'lib.local_channel': 'Local nasheeds',
+        'provided.sub': 'Nasheeds provided by the Quran app',
+        'provided.refresh': 'Refresh provided nasheeds',
+        'provided.loading': 'Loading provided nasheeds...',
+        'provided.count': '{n} provided nasheed{s}',
+        'provided.empty_title': 'No provided nasheeds yet',
+        'provided.empty_sub': 'New nasheeds will appear here as they are added to the catalog.',
+        'provided.err_title': 'Catalog unavailable',
+        'provided.err_sub': 'Could not load provided nasheeds. Check your connection and try again.',
+        'quran.sub': 'Listen to the Quran',
+        'quran.play_all': 'Play all surahs',
+        'quran.shuffle': 'Shuffle play',
+        'quran.reciter': 'Reciter',
+        'quran.reciter_browse': 'Browse & search reciters',
+        'quran.reciter_prev': 'Previous reciter',
+        'quran.reciter_next': 'Next reciter',
+        'quran.reciter_aria': 'Choose reciter',
+        'quran.ayah_label': 'Ayah',
+        'quran.ayah_prev': 'Previous ayah',
+        'quran.ayah_next': 'Next ayah',
+        'quran.ayah_jump_aria': 'Go to ayah',
+        'quran.ayah_ph': 'Ayah',
+        'quran.ayah_go': 'Go to ayah',
+        'quran.pick': 'Choose surah',
+        'quran.hint': 'Choose a surah to read',
+        'quran.filter_ph': 'Filter surahs',
+        'quran.filter_clear': 'Clear filter',
+        'quran.unavailable': 'Quran unavailable',
+        'quran.load_err': 'Could not load surahs',
+        'quran.retry': 'Try again',
+        'quran.loading': 'Loading Quran...',
+        'quran.count': '{n} surahs',
+        'quran.count_reciter': '{n} surahs · {r}',
+        'quran.no_match': 'No surahs match "{q}"',
+        'quran.trans_off_arabic': 'Arabic only',
+        'quran.trans_err': 'Could not load ayahs',
+        'quran.trans_loading': 'Loading ayahs...',
+        'quran.makkah': 'Makkah',
+        'quran.madinah': 'Madinah',
+        'quran.n_ayahs': '{n} ayahs',
+        'quran.surah_has': 'Surah has {n} ayahs',
+        'quran.search_surahs': 'Search surahs…',
+        'quran.no_surahs': 'No surahs found',
+        'quran.count_of': '{a} of {b} surahs',
+        'quran.pick_reciter_title': 'Choose reciter',
+        'quran.search_reciters': 'Search reciters…',
+        'quran.no_reciters': 'No reciters found',
+        'quran.reciters_count': '{n} reciters',
+        'quran.reciters_count_of': '{a} of {b} reciters',
+        'player.idle': 'No track playing',
+        'player.shuffle': 'Shuffle',
+        'player.loop': 'Loop',
+        'player.prev': 'Previous',
+        'player.next': 'Next',
+        'player.stop': 'Stop',
+        'player.vol': 'Volume',
+        'player.seek': 'Seek',
+        'player.yt': 'See on YouTube',
+        'player.dl': 'Download for offline',
+        'player.dl_mp3': 'Download MP3',
+        'player.dl_active': 'Downloading, click to cancel',
+        'player.dl_done': 'Downloaded, click to remove',
+        'row.play': 'Play',
+        'row.like': 'Like',
+        'row.add_pl': 'Add to playlist',
+        'row.dl': 'Download for offline',
+        'row.yt': 'See on YouTube',
+        'row.disc_shown': 'Shown in Discord',
+        'row.disc_hidden': 'Hidden from Discord',
+        'row.read': 'Read',
+        'row.remove': 'Remove',
+        'row.remove_named': 'Remove {q}',
+        'modal.cancel': 'Cancel',
+        'modal.create': 'Create',
+        'modal.rename_ok': 'Rename',
+        'pl.new': 'New playlist',
+        'pl.new_ph': 'Playlist name',
+        'pl.rename': 'Rename playlist',
+        'pl.remove_title': 'Remove from playlist',
+        'pl.remove_q': 'Remove "{t}" from {p}?',
+        'pl.remove_lib_title': 'Remove from library',
+        'pl.remove_lib_q': 'Remove "{t}" from Your Library?',
+        'pl.delete_title': 'Delete playlist',
+        'pl.delete_q': 'Delete "{p}"? It will be removed from your playlists.',
+        'pl.created': 'Created playlist: {p}',
+        'pl.deleted': 'Deleted playlist: {p}',
+        'pl.rename_done': 'Renamed to {p}',
+        'pl.delete_fail': 'Could not delete playlist',
+        'pl.added': 'Added to {p}',
+        'pl.removed': 'Removed from {p}',
+        'pl.removed_lib': 'Removed from Your Library',
+        'fav.denied_quran': 'Quran cannot be liked',
+        'dl.canceled': 'Download canceled',
+        'dl.removed': 'Download removed',
+        'dl.start_fail': 'Could not start download',
+        'dl.done': 'Downloaded. Plays without wifi now',
+        'dl.failed': 'Download failed',
+        'dl.remove_title': 'Remove download',
+        'dl.remove_q': 'Remove the downloaded copy of "{t}"? It will need wifi to play again.',
+        'play.click_start': 'Click play to start',
+        'play.fail': 'Playback failed, try again',
+        'err.load_quran_audio': 'Could not load Quran audio',
+        'err.load_nasheed': 'Could not load nasheed',
+        'err.open_youtube': 'Could not open YouTube',
+        'set.settings_sub': 'Make Quran feel right for you.',
+        'set.language': 'Language',
+        'set.language_sub': 'Use Quran in English or Tamil. The whole app switches right away.',
+        'set.language_label': 'App language',
+        'set.section_ui': 'UI',
+        'set.section_ui_sub': 'App information and updates.',
+        'set.about': 'About',
+        'set.about_app': 'App',
+        'set.about_version': 'Version',
+        'set.about_repo': 'Repository',
+        'set.updates': 'Updates',
+        'set.updates_sub': 'Check for a newer release, or include early builds to try changes before they are stable.',
+        'set.latest': 'Latest release',
+        'set.unknown': 'Unknown',
+        'set.unknown_lower': 'unknown',
+        'set.prereleases': 'Pre-release builds',
+        'set.check_updates': 'Check for updates',
+        'set.update': 'Update',
+        'set.run_new': 'Run new version',
+        'set.app_note_title': 'About this app',
+        'set.app_note_sub': 'Made for the Quran and nasheeds. Your library and preferences stay on this device. Online features connect to services such as YouTube, GitHub, and Discord when you use them.',
+        'set.section_sound': 'Sound',
+        'set.section_sound_sub': 'Choose the default volume for playback.',
+        'set.sound_sub': 'Choose the volume used when Quran starts. You can still adjust it anytime in the player.',
+        'set.default_vol': 'Default volume',
+        'set.section_discord': 'Discord',
+        'set.section_discord_sub': 'Control profile presence and connect your bot.',
+        'set.presence': 'Discord presence',
+        'set.presence_sub': 'Show your current nasheed or Quran recitation on your Discord profile. Discord desktop needs to be open. Use the eye button on a nasheed row to hide it.',
+        'set.share_play': 'Share what I play',
+        'set.dc_connected': 'Connected',
+        'set.dc_connecting': 'Connecting...',
+        'set.dc_not_running': 'Discord not running',
+        'set.dc_err': 'Status unavailable',
+        'set.dc_off': 'Off',
+        'set.bot': 'Discord bot',
+        'set.bot_sub': 'Run `su!track link` in your server, then enter the code below. The bot URL points to your bot service. Use Test to check that Quran can reach it. Hidden nasheeds are not shared.',
+        'set.send_play': 'Send what I play',
+        'set.bot_url': 'Bot URL',
+        'set.bot_test': 'Test',
+        'set.link_code': 'Link code',
+        'set.link_ph': 'From su!track link',
+        'set.link': 'Link',
+        'set.unlink': 'Unlink',
+        'set.bot_linked': 'Linked',
+        'set.bot_linked_as': 'Linked as {name}',
+        'set.bot_paused': 'Paused',
+        'set.bot_paused_as': 'Paused as {name}',
+        'set.bot_not_linked': 'Not linked',
+        'set.section_data': 'Data',
+        'set.section_data_sub': 'Clear what the app remembers on this device.',
+        'set.history': 'History',
+        'set.history_sub': 'Your recent searches and the nasheeds you played recently. Clearing it leaves your library, playlists, downloads, and imported nasheeds alone.',
+        'set.recent_searches': 'Recent searches',
+        'set.recent_played': 'Recently played',
+        'set.clear_history': 'Clear history',
+        'set.history_cleared': 'History cleared.',
+        'set.lib_card': 'Library',
+        'set.lib_sub': 'Pick what gets removed, then clear. Anything you leave out stays on this device; history and cache are never touched.',
+        'set.nasheeds': 'Nasheeds',
+        'set.playlists': 'Playlists',
+        'set.downloads': 'Downloads',
+        'set.local_nasheeds': 'Local nasheeds',
+        'set.clear_library': 'Clear library',
+        'set.lib_cleared': 'Library cleared.',
+        'set.lib_clear_fail': 'Could not clear the library.',
+        'set.cache': 'Cache',
+        'set.cache_sub': 'Temporary data used to open streams, Quran text, and catalogs faster. Clearing it is safe: the app rebuilds it as you listen.',
+        'set.stored_entries': 'Stored entries',
+        'set.clear_cache': 'Clear cache',
+        'set.cache_cleared': 'Cache cleared.',
+        'set.cache_clear_fail': 'Could not clear the cache.',
+        'set.clear_confirm': 'Remove {what} from this device? This cannot be undone. Everything left switched off stays, and your history and cache are not touched.',
+        'set.part_nasheeds': 'your nasheeds and likes',
+        'set.part_playlists': 'your playlists',
+        'set.part_downloads': 'downloaded offline copies',
+        'set.part_local': 'your imported local nasheeds',
+        'set.word_and': 'and',
+        'upd.checking': 'Checking GitHub...',
+        'upd.no_installer': 'No installer available for this platform yet.',
+        'upd.newest': 'You are on the newest release.',
+        'upd.available': 'Version {tag} is available.',
+        'upd.cached_showing': 'Showing cached results. ',
+        'upd.reach_fail': 'Could not reach GitHub right now.',
+        'upd.downloading': 'Downloading {tag}...',
+        'upd.dl_progress': 'Downloading {a}{b}',
+        'upd.failed': 'Update failed: {err}',
+        'upd.check_first': 'Check for updates first.',
+        'upd.already': 'You already have {tag} installed.',
+        'upd.starting': 'Starting update to {tag}...',
+        'upd.start_fail': 'Could not start the update.',
+        'upd.reach_updater': 'Could not reach the updater.',
+        'bot.testing': 'Testing...',
+        'bot.reachable': 'Bot reachable, running v{v}',
+        'bot.no_response': 'No response from the bot',
+        'bot.last_fail': 'Last sync failed: {err}',
+        'bot.unreachable': 'bot unreachable',
+        'bot.backend_fail': 'Could not reach the app backend',
+        'bot.linked_ok': 'Discord bot linked',
+        'bot.unlinked_ok': 'Discord bot unlinked',
+    },
+    ta: {
+        'nav.search': 'தேடல்',
+        'nav.library': 'உங்கள் நூலகம்',
+        'nav.recent': 'சமீபத்தில் கேட்டவை',
+        'nav.favorites': 'பிடித்த நஷீத்கள்',
+        'nav.downloads': 'பதிவிறக்கங்கள்',
+        'nav.local': 'உங்கள் நஷீத்கள்',
+        'nav.provided': 'வழங்கப்பட்ட நஷீத்கள்',
+        'nav.quran': 'திருக்குர்ஆன்',
+        'nav.settings': 'அமைப்புகள்',
+        'sidebar.playlists': 'பிளேலிஸ்டுகள்',
+        'sidebar.intent': 'திருக்குர்ஆன் மற்றும் நஷீத்களுக்காக உருவாக்கப்பட்டது; பொது இசைக்கு அல்ல.',
+        'menu.open': 'பட்டியலைத் திற',
+        'menu.close': 'பட்டியலை மூடு',
+        'search.placeholder': 'தேடல்',
+        'search.hint': 'எதைக் கேட்க விரும்புகிறீர்கள்?',
+        'search.recents': 'சமீபத்திய தேடல்கள்',
+        'search.clear_all': 'அனைத்தையும் அழி',
+        'search.empty_title': 'நஷீத்களைத் தேடுங்கள்',
+        'search.empty_sub1': 'YouTube-ல் நஷீத்களைக் கண்டறிந்து கேளுங்கள்',
+        'search.empty_sub2': 'திருக்குர்ஆன் மற்றும் நஷீத்களுக்காக உருவாக்கப்பட்டது; பொது இசைக்கு அல்ல',
+        'search.searching': 'தேடுகிறது...',
+        'search.no_results': 'முடிவுகள் இல்லை',
+        'search.failed': 'தேடல் தோல்வி',
+        'search.no_recent': 'சமீபத்திய தேடல்கள் இல்லை',
+        'search.recent_one': 'சமீபத்திய தேடல்',
+        'time.just_now': 'இப்போது',
+        'time.min_ago': '{n} நிமிடம் முன்பு',
+        'time.hr_ago': '{n} மணி நேரம் முன்பு',
+        'time.yesterday': 'நேற்று',
+        'time.days_ago': '{n} நாட்களுக்கு முன்பு',
+        'search.no_match': '"{q}"க்கு முடிவுகள் இல்லை',
+        'search.aria': 'நஷீத்களைத் தேடு',
+        'search.close': 'தேடலை மூடு',
+        'sort.added': 'சமீபத்தில் சேர்க்கப்பட்டவை',
+        'sort.title': 'தலைப்பு A–Z',
+        'sort.channel': 'சேனல்',
+        'sort.label': 'வரிசைப்படுத்து',
+        'lib.empty_title': 'இங்கே இன்னும் எதுவும் இல்லை',
+        'lib.empty_sub': 'நஷீத்களைத் தேடிச் சேமித்தால் அவை இங்கே தோன்றும்',
+        'lib.empty_downloads_title': 'இன்னும் பதிவிறக்கங்கள் இல்லை',
+        'lib.empty_downloads_sub': 'இணையம் இல்லாமல் கேட்க எந்த நஷீத்தின் மேலும் பதிவிறக்கப் பொத்தானை அழுத்துங்கள்',
+        'lib.empty_local_title': 'இன்னும் உள்ளூர் நஷீத்கள் இல்லை',
+        'lib.empty_local_sub': 'மேலே உள்ள + பொத்தானால் உங்கள் mp3 அல்லது mp4 கோப்புகளைச் சேருங்கள்',
+        'lib.count': '{n} நஷீத்கள்',
+        'lib.rename': 'பிளேலிஸ்டை மறுபெயரிடு',
+        'lib.delete': 'பிளேலிஸ்டை நீக்கு',
+        'lib.add_local': 'உங்கள் நஷீத்களைச் சேர்',
+        'lib.play': 'இயக்கு',
+        'lib.shuffle': 'கலைத்து இயக்கு',
+        'lib.local_channel': 'உள்ளூர் நஷீத்கள்',
+        'provided.sub': 'திருக்குர்ஆன் செயலி வழங்கும் நஷீத்கள்',
+        'provided.refresh': 'வழங்கப்பட்ட நஷீத்களைப் புதுப்பி',
+        'provided.loading': 'வழங்கப்பட்ட நஷீத்கள் ஏற்றப்படுகின்றன...',
+        'provided.count': '{n} வழங்கப்பட்ட நஷீத்கள்',
+        'provided.empty_title': 'இன்னும் வழங்கப்பட்ட நஷீத்கள் இல்லை',
+        'provided.empty_sub': 'புதிய நஷீத்கள் பட்டியலில் சேர்க்கப்படும்போது இங்கே தோன்றும்.',
+        'provided.err_title': 'பட்டியல் கிடைக்கவில்லை',
+        'provided.err_sub': 'வழங்கப்பட்ட நஷீத்களை ஏற்ற முடியவில்லை. உங்கள் இணைப்பைச் சரிபார்த்து மீண்டும் முயற்சிக்கவும்.',
+        'quran.sub': 'திருக்குர்ஆனைக் கேளுங்கள்',
+        'quran.play_all': 'அனைத்து சூராக்களையும் இயக்கு',
+        'quran.shuffle': 'கலைத்து இயக்கு',
+        'quran.reciter': 'ஓதுபவர்',
+        'quran.reciter_browse': 'ஓதுபவர்களைத் தேடு',
+        'quran.reciter_prev': 'முந்தைய ஓதுபவர்',
+        'quran.reciter_next': 'அடுத்த ஓதுபவர்',
+        'quran.reciter_aria': 'ஓதுபவரைத் தேர்ந்தெடு',
+        'quran.ayah_label': 'வசனம்',
+        'quran.ayah_prev': 'முந்தைய வசனம்',
+        'quran.ayah_next': 'அடுத்த வசனம்',
+        'quran.ayah_jump_aria': 'வசனத்திற்குச் செல்',
+        'quran.ayah_ph': 'வசனம்',
+        'quran.ayah_go': 'வசனத்திற்குச் செல்',
+        'quran.pick': 'சூராவைத் தேர்ந்தெடு',
+        'quran.hint': 'படிக்க ஒரு சூராவைத் தேர்ந்தெடுங்கள்',
+        'quran.filter_ph': 'சூராக்களை வடிகட்டு',
+        'quran.filter_clear': 'வடிகட்டலை அழி',
+        'quran.unavailable': 'திருக்குர்ஆன் கிடைக்கவில்லை',
+        'quran.load_err': 'சூராக்களை ஏற்ற முடியவில்லை',
+        'quran.retry': 'மீண்டும் முயற்சிக்கவும்',
+        'quran.loading': 'திருக்குர்ஆன் ஏற்றப்படுகிறது...',
+        'quran.count': '{n} சூராக்கள்',
+        'quran.count_reciter': '{n} சூராக்கள் · {r}',
+        'quran.no_match': '"{q}" உடன் பொருந்தும் சூராக்கள் இல்லை',
+        'quran.trans_off_arabic': 'அரபு மட்டும்',
+        'quran.trans_err': 'வசனங்களை ஏற்ற முடியவில்லை',
+        'quran.trans_loading': 'வசனங்கள் ஏற்றப்படுகின்றன...',
+        'quran.makkah': 'மக்கா',
+        'quran.madinah': 'மதீனா',
+        'quran.n_ayahs': '{n} வசனங்கள்',
+        'quran.surah_has': 'இந்தச் சூராவில் {n} வசனங்கள்',
+        'quran.search_surahs': 'சூராக்களைத் தேடு…',
+        'quran.no_surahs': 'சூராக்கள் இல்லை',
+        'quran.count_of': '{b} சூராக்களில் {a}',
+        'quran.pick_reciter_title': 'ஓதுபவரைத் தேர்ந்தெடு',
+        'quran.search_reciters': 'ஓதுபவர்களைத் தேடு…',
+        'quran.no_reciters': 'ஓதுபவர்கள் இல்லை',
+        'quran.reciters_count': '{n} ஓதுபவர்கள்',
+        'quran.reciters_count_of': '{b} ஓதுபவர்களில் {a}',
+        'player.idle': 'எதுவும் இயங்கவில்லை',
+        'player.shuffle': 'கலைத்து இயக்கு',
+        'player.loop': 'மறுஇயக்கம்',
+        'player.prev': 'முந்தையது',
+        'player.next': 'அடுத்தது',
+        'player.stop': 'நிறுத்து',
+        'player.vol': 'ஒலி அளவு',
+        'player.seek': 'இடம் மாற்று',
+        'player.yt': 'YouTube-ல் பார்க்க',
+        'player.dl': 'இணையம் இல்லாமல் கேட்க பதிவிறக்கு',
+        'player.dl_mp3': 'MP3 பதிவிறக்கு',
+        'player.dl_active': 'பதிவிறக்குகிறது, ரத்து செய்ய அழுத்துங்கள்',
+        'player.dl_done': 'பதிவிறக்கம் முடிந்தது, நீக்க அழுத்துங்கள்',
+        'row.play': 'இயக்கு',
+        'row.like': 'பிடித்தது',
+        'row.add_pl': 'பிளேலிஸ்டில் சேர்',
+        'row.dl': 'இணையம் இல்லாமல் கேட்க பதிவிறக்கு',
+        'row.yt': 'YouTube-ல் பார்க்க',
+        'row.disc_shown': 'Discord-ல் காட்டப்படுகிறது',
+        'row.disc_hidden': 'Discord-ல் மறைக்கப்பட்டது',
+        'row.read': 'படி',
+        'row.remove': 'நீக்கு',
+        'row.remove_named': '{q} நீக்கு',
+        'modal.cancel': 'ரத்து',
+        'modal.create': 'உருவாக்கு',
+        'modal.rename_ok': 'மறுபெயரிடு',
+        'pl.new': 'புதிய பிளேலிஸ்ட்',
+        'pl.new_ph': 'பிளேலிஸ்ட் பெயர்',
+        'pl.rename': 'பிளேலிஸ்டை மறுபெயரிடு',
+        'pl.remove_title': 'பிளேலிஸ்டில் இருந்து நீக்கு',
+        'pl.remove_q': '"{t}" ஐ {p} இல் இருந்து நீக்கவா?',
+        'pl.remove_lib_title': 'நூலகத்தில் இருந்து நீக்கு',
+        'pl.remove_lib_q': '"{t}" ஐ உங்கள் நூலகத்தில் இருந்து நீக்கவா?',
+        'pl.delete_title': 'பிளேலிஸ்டை நீக்கு',
+        'pl.delete_q': '"{p}" ஐ நீக்கவா? உங்கள் பிளேலிஸ்டுகளில் இருந்து நீக்கப்படும்.',
+        'pl.created': 'பிளேலிஸ்ட் உருவாக்கப்பட்டது: {p}',
+        'pl.deleted': 'பிளேலிஸ்ட் நீக்கப்பட்டது: {p}',
+        'pl.rename_done': '{p} என மறுபெயரிடப்பட்டது',
+        'pl.delete_fail': 'பிளேலிஸ்டை நீக்க முடியவில்லை',
+        'pl.added': '{p} இல் சேர்க்கப்பட்டது',
+        'pl.removed': '{p} இல் இருந்து நீக்கப்பட்டது',
+        'pl.removed_lib': 'உங்கள் நூலகத்தில் இருந்து நீக்கப்பட்டது',
+        'fav.denied_quran': 'திருக்குர்ஆனைப் பிடித்தாகச் சேமிக்க முடியாது',
+        'dl.canceled': 'பதிவிறக்கம் ரத்து செய்யப்பட்டது',
+        'dl.removed': 'பதிவிறக்கம் நீக்கப்பட்டது',
+        'dl.start_fail': 'பதிவிறக்கத்தைத் தொடங்க முடியவில்லை',
+        'dl.done': 'பதிவிறக்கம் முடிந்தது. இணையம் இல்லாமல் இப்போது கேட்கலாம்',
+        'dl.failed': 'பதிவிறக்கம் தோல்வி',
+        'dl.remove_title': 'பதிவிறக்கத்தை நீக்கு',
+        'dl.remove_q': '"{t}" இன் பதிவிறக்கப்பட்ட நகலை நீக்கவா? மீண்டும் கேக்க இணையம் தேவைப்படும்.',
+        'play.click_start': 'தொடங்க இயக்கை அழுத்துங்கள்',
+        'play.fail': 'இயக்கம் தோல்வி, மீண்டும் முயற்சிக்கவும்',
+        'err.load_quran_audio': 'திருக்குர்ஆன் ஒலியை ஏற்ற முடியவில்லை',
+        'err.load_nasheed': 'நஷீத்தை ஏற்ற முடியவில்லை',
+        'err.open_youtube': 'YouTube-ஐத் திறக்க முடியவில்லை',
+        'set.settings_sub': 'செயலியை உங்களுக்கு ஏற்ப மாற்றுங்கள்.',
+        'set.language': 'மொழி',
+        'set.language_sub': 'இந்தச் செயலியை ஆங்கிலம் அல்லது தமிழில் பயன்படுத்துங்கள். மாற்றும்போது முழு செயலியும் உடனே மாறும்.',
+        'set.language_label': 'செயலி மொழி',
+        'set.section_ui': 'இடைமுகம்',
+        'set.section_ui_sub': 'செயலி தகவல் மற்றும் புதுப்பிப்புகள்.',
+        'set.about': 'பற்றி',
+        'set.about_app': 'செயலி',
+        'set.about_version': 'பதிப்பு',
+        'set.about_repo': 'களஞ்சியம்',
+        'set.updates': 'புதுப்பிப்புகள்',
+        'set.updates_sub': 'புதிய பதிப்பு இருக்கிறதா எனப் பாருங்கள்; நிலையானதாக மாறும் முன்பே மாற்றங்களை முயற்சிக்க ஆரம்ப உருவாக்கங்களையும் சேர்க்கலாம்.',
+        'set.latest': 'சமீபத்திய பதிப்பு',
+        'set.unknown': 'தெரியவில்லை',
+        'set.unknown_lower': 'தெரியவில்லை',
+        'set.prereleases': 'ஆரம்ப கட்ட உருவாக்கங்கள்',
+        'set.check_updates': 'புதுப்பிப்புகளைச் சரிபார்',
+        'set.update': 'புதுப்பி',
+        'set.run_new': 'புதிய பதிப்பை இயக்கு',
+        'set.app_note_title': 'இந்தச் செயலியைப் பற்றி',
+        'set.app_note_sub': 'திருக்குர்ஆன் மற்றும் நஷீத்களுக்காக உருவாக்கப்பட்டது. உங்கள் நூலகமும் விருப்பங்களும் இந்தச் சாதனத்திலேயே இருக்கும். நீங்கள் பயன்படுத்தும்போது YouTube, GitHub, Discord போன்ற சேவைகளுடன் இணைக்கிறது.',
+        'set.section_sound': 'ஒலி',
+        'set.section_sound_sub': 'இயக்கத்திற்கான இயல்புநிலை ஒலி அளவைத் தேர்ந்தெடுங்கள்.',
+        'set.sound_sub': 'செயலி தொடங்கும்போது பயன்படுத்தும் ஒலி அளவைத் தேர்ந்தெடுங்கள். பிளேயரில் எப்போது வேண்டுமானாலும் மாற்றலாம்.',
+        'set.default_vol': 'இயல்புநிலை ஒலி அளவு',
+        'set.section_discord': 'Discord',
+        'set.section_discord_sub': 'உங்கள் சுயவிவர இருப்பைக் கட்டுப்படுத்தி பாட்டை இணைக்கவும்.',
+        'set.presence': 'Discord இருப்பு',
+        'set.presence_sub': 'நீங்கள் இப்போது கேட்கும் நஷீத் அல்லது திருக்குர்ஆன் ஓதலை உங்கள் Discord சுயவிவரத்தில் காட்டுங்கள். Discord டெஸ்க்டாப் திறந்திருக்க வேண்டும். ஒரு நஷீத்தை மறைக்க அதன் வரிசையில் உள்ள கண் பொத்தானைப் பயன்படுத்துங்கள்.',
+        'set.share_play': 'நான் கேட்பதைப் பகிர்',
+        'set.dc_connected': 'இணைக்கப்பட்டது',
+        'set.dc_connecting': 'இணைக்கிறது...',
+        'set.dc_not_running': 'Discord இயங்கவில்லை',
+        'set.dc_err': 'நிலை தெரியவில்லை',
+        'set.dc_off': 'அணைவில்லை',
+        'set.bot': 'Discord பாட்',
+        'set.bot_sub': 'உங்கள் சர்வரில் `su!track link` என இயக்கி, கீழே குறியீட்டை உள்ளிடுங்கள். பாட் URL உங்கள் பாட் சேவையைச் சுட்டுகிறது. இணைப்பு வேலை செய்கிறதா என சோதனை பொத்தானால் பாருங்கள். மறைக்கப்பட்ட நஷீத்கள் பகிரப்படா.',
+        'set.send_play': 'நான் கேட்பதை அனுப்பு',
+        'set.bot_url': 'பாட் URL',
+        'set.bot_test': 'சோதனை',
+        'set.link_code': 'இணைப்புக் குறியீடு',
+        'set.link_ph': 'su!track link-ல் கிடைத்தது',
+        'set.link': 'இணை',
+        'set.unlink': 'இணைப்பை நீக்கு',
+        'set.bot_linked': 'இணைக்கப்பட்டது',
+        'set.bot_linked_as': '{name} ஆக இணைக்கப்பட்டது',
+        'set.bot_paused': 'இடைநிறுத்தப்பட்டது',
+        'set.bot_paused_as': '{name} ஆக இடைநிறுத்தப்பட்டது',
+        'set.bot_not_linked': 'இணைக்கவில்லை',
+        'set.section_data': 'தரவு',
+        'set.section_data_sub': 'செயலி இந்தச் சாதனத்தில் நினைவில் வைப்பவற்றை அழிக்கவும்.',
+        'set.history': 'வரலாறு',
+        'set.history_sub': 'உங்கள் சமீபத்திய தேடல்களும் சமீபத்தில் கேட்ட நஷீத்களும். இதை அழிப்பது நூலகம், பிளேலிஸ்டுகள், பதிவிறக்கங்கள், இறக்குமதி நஷீத்களைத் தொடாது.',
+        'set.recent_searches': 'சமீபத்திய தேடல்கள்',
+        'set.recent_played': 'சமீபத்தில் கேட்டவை',
+        'set.clear_history': 'வரலாற்றை அழி',
+        'set.history_cleared': 'வரலாறு அழிக்கப்பட்டது.',
+        'set.lib_card': 'நூலகம்',
+        'set.lib_sub': 'எதை நீக்க வேண்டும் என்று தேர்ந்தெடுத்து அழிக்கவும். நீங்கள் விட்டுவிடுவது இந்தச் சாதனத்திலேயே இருக்கும்; வரலாறும் தற்காலிக சேமிப்பும் தொடப்படா.',
+        'set.nasheeds': 'நஷீத்கள்',
+        'set.playlists': 'பிளேலிஸ்டுகள்',
+        'set.downloads': 'பதிவிறக்கங்கள்',
+        'set.local_nasheeds': 'உள்ளூர் நஷீத்கள்',
+        'set.clear_library': 'நூலகத்தை அழி',
+        'set.lib_cleared': 'நூலகம் அழிக்கப்பட்டது.',
+        'set.lib_clear_fail': 'நூலகத்தை அழிக்க முடியவில்லை.',
+        'set.cache': 'தற்காலிக சேமிப்பு',
+        'set.cache_sub': 'ஸ்ட்ரீம்கள், திருக்குர்ஆன் உரை, பட்டியல்களை விரைவாகத் திறக்கப் பயன்படும் தற்காலிக தரவு. இதை அழிப்பது பாதுகாப்பானது: கேட்கும்போது செயலி அதை மீண்டும் உருவாக்குகிறது.',
+        'set.stored_entries': 'சேமித்த உருப்படிகள்',
+        'set.clear_cache': 'தற்காலிக சேமிப்பை அழி',
+        'set.cache_cleared': 'தற்காலிக சேமிப்பு அழிக்கப்பட்டது.',
+        'set.cache_clear_fail': 'தற்காலிக சேமிப்பை அழிக்க முடியவில்லை.',
+        'set.clear_confirm': 'இந்தச் சாதனத்தில் இருந்து {what} நீக்கவா? இதை மீட்டல் முடியாது. அணைச்சலாக விட்டவை அப்படியே இருக்கும்; வரலாறும் தற்காலிக சேமிப்பும் தொடப்படா.',
+        'set.part_nasheeds': 'உங்கள் நஷீத்களும் பிடித்தவையும்',
+        'set.part_playlists': 'உங்கள் பிளேலிஸ்டுகள்',
+        'set.part_downloads': 'பதிவிறக்கிய இணையமில்லா நகல்கள்',
+        'set.part_local': 'நீங்கள் இறக்குமதி செய்த உள்ளூர் நஷீத்கள்',
+        'set.word_and': 'மற்றும்',
+        'upd.checking': 'GitHub-ஐச் சரிபார்க்கிறது...',
+        'upd.no_installer': 'இந்தத் தளத்திற்கு இன்னும் நிறுவி கிடைக்கவில்லை.',
+        'upd.newest': 'நீங்கள் சமீபத்திய பதிப்பில் இருக்கிறீர்கள்.',
+        'upd.available': '{tag} பதிப்பு கிடைக்கிறது.',
+        'upd.cached_showing': 'சேமித்த முடிவுகளைக் காட்டுகிறது. ',
+        'upd.reach_fail': 'இப்போது GitHub-ஐ அடைய முடியவில்லை.',
+        'upd.downloading': '{tag} பதிவிறக்குகிறது...',
+        'upd.dl_progress': '{a}{b} பதிவிறக்குகிறது',
+        'upd.failed': 'புதுப்பிப்பு தோல்வி: {err}',
+        'upd.check_first': 'முதலில் புதுப்பிப்புகளைச் சரிபாருங்கள்.',
+        'upd.already': '{tag} ஏற்கனவே நிறுவப்பட்டுள்ளது.',
+        'upd.starting': '{tag} புதுப்பிப்பைத் தொடங்குகிறது...',
+        'upd.start_fail': 'புதுப்பிப்பைத் தொடங்க முடியவில்லை.',
+        'upd.reach_updater': 'புதுப்பிப்பாளரை அடைய முடியவில்லை.',
+        'bot.testing': 'சோதிக்கிறது...',
+        'bot.reachable': 'பாட் அணுகலாம், v{v} இயங்குகிறது',
+        'bot.no_response': 'பாட்டிலிருந்து பதில் இல்லை',
+        'bot.last_fail': 'கடைசி ஒத்திசைவு தோல்வி: {err}',
+        'bot.unreachable': 'பாட் அணுக முடியவில்லை',
+        'bot.backend_fail': 'செயலி பின்புலத்தை அடைய முடியவில்லை',
+        'bot.linked_ok': 'Discord பாட் இணைக்கப்பட்டது',
+        'bot.unlinked_ok': 'Discord பாட் இணைப்பு நீக்கப்பட்டது',
+    },
+};
+function t(key, vars) {
+    let s = I18N[uiLang][key];
+    if (s == null)
+        s = I18N.en[key];
+    if (s == null)
+        s = key;
+    if (vars) {
+        s = s.replace(/\{(\w+)\}/g, (_, k) => (vars[k] == null ? '{' + k + '}' : String(vars[k])));
+    }
+    return s;
+}
+function applyStaticI18n() {
+    document.documentElement.lang = uiLang;
+    $$('[data-i18n]').forEach((el) => {
+        el.textContent = t(el.dataset.i18n);
+    });
+    $$('[data-i18n-title]').forEach((el) => {
+        el.setAttribute('title', t(el.dataset.i18nTitle));
+    });
+    $$('[data-i18n-aria]').forEach((el) => {
+        el.setAttribute('aria-label', t(el.dataset.i18nAria));
+    });
+    $$('[data-i18n-ph]').forEach((el) => {
+        el.placeholder = t(el.dataset.i18nPh);
+    });
+    $$('.lang-opt').forEach((b) => {
+        const on = b.dataset.uiLang === uiLang;
+        b.classList.toggle('active', on);
+        b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+}
+function refreshForLang() {
+    applyStaticI18n();
+    $('#player-title').textContent = currentSong ? currentSong.title : t('player.idle');
+    renderQuranList();
+    renderQuranReadHead();
+    syncQuranTranslation();
+    scRenderRows(false);
+    loadLibraryCounts();
+    loadCacheCount();
+    loadBot();
+    if (discordEnabled)
+        pollDiscordStatus();
+    else
+        setDiscordStatus('off');
+    void loadLib(currentLibMode ?? 'library');
+    loadPlaylists();
+    if (currentSong)
+        updatePlayer();
+}
 const audio = new Audio();
 let queue = [];
 let queueIdx = -1;
@@ -18,11 +581,6 @@ let buffering = false;
 const downloadedIds = new Set();
 const dlActive = new Set();
 let dlPollTimer;
-const SORT_LABELS = {
-    added: 'Recently added',
-    title: 'Title A–Z',
-    channel: 'Channel',
-};
 function $(s) {
     const el = document.querySelector(s);
     if (!el)
@@ -127,7 +685,7 @@ function promptText(title, placeholder, okLabel, value = '') {
         input.spellcheck = false;
         const cancel = document.createElement('button');
         cancel.className = 'modal-btn';
-        cancel.textContent = 'Cancel';
+        cancel.textContent = t('modal.cancel');
         const ok = document.createElement('button');
         ok.className = 'modal-btn modal-btn-primary';
         ok.textContent = okLabel;
@@ -174,7 +732,7 @@ function confirmDialog(title, message) {
         row.className = 'modal-actions';
         const cancel = document.createElement('button');
         cancel.className = 'modal-btn';
-        cancel.textContent = 'Cancel';
+        cancel.textContent = t('modal.cancel');
         const del = document.createElement('button');
         del.className = 'modal-btn modal-btn-danger';
         del.innerHTML = '<i class="fa-solid fa-trash" style="margin-right:6px"></i>Delete';
@@ -227,7 +785,7 @@ async function showPlaylistPicker() {
         newBtn.className = 'modal-btn modal-btn-primary';
         newBtn.innerHTML = '<i class="fa-solid fa-plus" style="margin-right:6px"></i>New playlist';
         newBtn.addEventListener('click', async () => {
-            const name = await promptText('New playlist', 'Playlist name', 'Create');
+            const name = await promptText(t('pl.new'), t('pl.new_ph'), t('modal.create'));
             if (!name) {
                 finish(null);
                 return;
@@ -242,7 +800,7 @@ async function showPlaylistPicker() {
         });
         newRow.append(newBtn);
         content.append(list, sep, newRow);
-        const m = new Modal('Add to playlist', content, () => finish(null));
+        const m = new Modal(t('row.add_pl'), content, () => finish(null));
     });
 }
 function showReciterPicker() {
@@ -260,7 +818,7 @@ function showReciterPicker() {
     const input = document.createElement('input');
     input.type = 'text';
     input.className = 'modal-input';
-    input.placeholder = 'Search reciters…';
+    input.placeholder = t('quran.search_reciters');
     input.spellcheck = false;
     const count = document.createElement('div');
     count.className = 'modal-hint reciter-picker-count';
@@ -276,7 +834,7 @@ function showReciterPicker() {
         if (!items.length) {
             const h = document.createElement('div');
             h.className = 'modal-hint';
-            h.innerHTML = '<i class="fa-solid fa-magnifying-glass" style="margin-right:8px"></i>No reciters found';
+            h.innerHTML = `<i class="fa-solid fa-magnifying-glass" style="margin-right:8px"></i>${esc(t('quran.no_reciters'))}`;
             list.appendChild(h);
         }
         else {
@@ -299,8 +857,8 @@ function showReciterPicker() {
             });
         }
         count.textContent = term
-            ? `${items.length} of ${quranReciters.length} reciters`
-            : `${quranReciters.length} reciters`;
+            ? t('quran.reciters_count_of', { a: items.length, b: quranReciters.length })
+            : t('quran.reciters_count', { n: quranReciters.length });
     };
     input.addEventListener('input', () => render(input.value));
     input.addEventListener('keydown', (e) => {
@@ -313,7 +871,7 @@ function showReciterPicker() {
         }
     });
     content.append(input, count, list);
-    const m = new Modal('Choose reciter', content, () => finish(), 'modal-reciter');
+    const m = new Modal(t('quran.pick_reciter_title'), content, () => finish(), 'modal-reciter');
     render('');
     window.setTimeout(() => input.focus(), 30);
 }
@@ -503,13 +1061,13 @@ function renderQuranList() {
         $('#quran-list').style.display = 'none';
         $('#quran-empty').style.display = term ? 'none' : '';
         $('#quran-actions').classList.add('hidden');
-        $('#quran-subtitle').textContent = term ? `No surahs match "${term}"` : 'Listen to the Quran';
+        $('#quran-subtitle').textContent = term ? t('quran.no_match', { q: term }) : t('quran.sub');
         return;
     }
     $('#quran-empty').style.display = 'none';
     $('#quran-list').style.display = '';
     $('#quran-actions').classList.remove('hidden');
-    $('#quran-subtitle').textContent = `${songs.length} surahs · ${quranReciterName(quranReciterId)}`;
+    $('#quran-subtitle').textContent = t('quran.count_reciter', { n: songs.length, r: quranReciterName(quranReciterId) });
     renderList('quran-list', songs, 'quran');
 }
 function syncQuranReciterUI(scrollIntoView = false) {
@@ -672,8 +1230,10 @@ function renderQuranReadHead() {
     $('#quran-read-num').textContent = String(ch.id);
     $('#quran-read-name').textContent = ch.name_simple;
     $('#quran-read-arabic').textContent = ch.name_arabic;
-    const place = ch.revelation_place ? ch.revelation_place[0].toUpperCase() + ch.revelation_place.slice(1) : '';
-    const bits = [ch.translated_name?.name || ch.name_complex || '', place, `${ch.verses_count} ayahs`].filter(Boolean);
+    const place = ch.revelation_place
+        ? t(ch.revelation_place.toLowerCase() === 'makkah' ? 'quran.makkah' : 'quran.madinah')
+        : '';
+    const bits = [ch.translated_name?.name || ch.name_complex || '', place, t('quran.n_ayahs', { n: ch.verses_count })].filter(Boolean);
     $('#quran-read-meta').textContent = bits.join(' · ');
 }
 function showSurahPicker() {
@@ -691,7 +1251,7 @@ function showSurahPicker() {
     const input = document.createElement('input');
     input.type = 'text';
     input.className = 'modal-input';
-    input.placeholder = 'Search surahs…';
+    input.placeholder = t('quran.search_surahs');
     input.spellcheck = false;
     const count = document.createElement('div');
     count.className = 'modal-hint reciter-picker-count';
@@ -709,7 +1269,7 @@ function showSurahPicker() {
         if (!items.length) {
             const h = document.createElement('div');
             h.className = 'modal-hint';
-            h.innerHTML = '<i class="fa-solid fa-magnifying-glass" style="margin-right:8px"></i>No surahs found';
+            h.innerHTML = `<i class="fa-solid fa-magnifying-glass" style="margin-right:8px"></i>${esc(t('quran.no_surahs'))}`;
             list.appendChild(h);
         }
         else {
@@ -733,8 +1293,8 @@ function showSurahPicker() {
             });
         }
         count.textContent = term
-            ? `${items.length} of ${quranChapters.length} surahs`
-            : `${quranChapters.length} surahs`;
+            ? t('quran.count_of', { a: items.length, b: quranChapters.length })
+            : t('quran.count', { n: quranChapters.length });
     };
     input.addEventListener('input', () => render(input.value));
     input.addEventListener('keydown', (e) => {
@@ -747,7 +1307,7 @@ function showSurahPicker() {
         }
     });
     content.append(input, count, list);
-    const m = new Modal('Choose surah', content, () => finish(), 'modal-reciter');
+    const m = new Modal(t('quran.pick'), content, () => finish(), 'modal-reciter');
     render('');
     window.setTimeout(() => input.focus(), 30);
 }
@@ -789,7 +1349,7 @@ function syncQuranTranslation() {
     if (!ch) {
         transLoadedKey = '';
         transAyahIdx = -1;
-        transHint('Choose a surah to read');
+        transHint(t('quran.hint'));
         return;
     }
     const dataLang = transLang === 'off' ? transDataLang : transLang;
@@ -803,16 +1363,16 @@ function syncQuranTranslation() {
     $('#quran-ayah-pos').textContent = '';
     $('#ayah-prev').toggleAttribute('disabled', true);
     $('#ayah-next').toggleAttribute('disabled', true);
-    body.innerHTML = '<div class="quran-trans-hint">Loading ayahs...</div>';
+    body.innerHTML = `<div class="quran-trans-hint">${esc(t('quran.trans_loading'))}</div>`;
     const render = (data) => {
         if (transLoadedKey !== key)
             return;
         if (!data.verses.length) {
             transLoadedKey = '';
-            transHint('Could not load ayahs');
+            transHint(t('quran.trans_err'));
             return;
         }
-        $('#quran-trans-src').textContent = transLang === 'off' ? 'Arabic only' : data.name;
+        $('#quran-trans-src').textContent = transLang === 'off' ? t('quran.trans_off_arabic') : data.name;
         body.classList.toggle('hide-tr', transLang === 'off');
         body.innerHTML = '';
         if (ch !== 1 && ch !== 9) {
@@ -851,7 +1411,7 @@ function syncQuranTranslation() {
         catch {
             if (transLoadedKey === key) {
                 transLoadedKey = '';
-                transHint('Could not load ayahs');
+                transHint(t('quran.trans_err'));
             }
         }
     })();
@@ -890,7 +1450,7 @@ function jumpToAyah() {
     const num = Math.floor(Number(el.value));
     el.value = '';
     if (!num || num < 1 || num > ch.verses_count) {
-        toast(`Surah has ${ch.verses_count} ayahs`);
+        toast(t('quran.surah_has', { n: ch.verses_count }));
         return;
     }
     if (playingReadChapter())
@@ -1119,19 +1679,19 @@ function saveRecentQ(q) {
     list.unshift({ q, t: Date.now() });
     store('ns_recentq', list.slice(0, 8));
 }
-function scAgo(t) {
-    if (!t)
-        return 'Recent search';
-    const d = Date.now() - t;
+function scAgo(ts) {
+    if (!ts)
+        return t('search.recent_one');
+    const d = Date.now() - ts;
     if (d < 60000)
-        return 'Just now';
+        return t('time.just_now');
     if (d < 3600000)
-        return Math.max(1, Math.floor(d / 60000)) + ' min ago';
+        return t('time.min_ago', { n: Math.max(1, Math.floor(d / 60000)) });
     if (d < 86400000)
-        return Math.floor(d / 3600000) + ' hr ago';
+        return t('time.hr_ago', { n: Math.floor(d / 3600000) });
     if (d < 172800000)
-        return 'Yesterday';
-    return Math.floor(d / 86400000) + ' days ago';
+        return t('time.yesterday');
+    return t('time.days_ago', { n: Math.floor(d / 86400000) });
 }
 function scTile(q) {
     const ch = (q.trim().charAt(0) || '#').toUpperCase();
@@ -1141,7 +1701,7 @@ function scTile(q) {
 function scSyncAction() {
     scAction.classList.toggle('hidden', !scItems.length && !scCleared.length);
     if (scItems.length) {
-        scAction.textContent = 'Clear all';
+        scAction.textContent = t('search.clear_all');
         scAction.setAttribute('aria-label', 'Clear all recent searches');
     }
     else {
@@ -1163,7 +1723,7 @@ function scApplyFilter() {
         empty.classList.toggle('hidden', n > 0);
         const d = empty.firstElementChild;
         if (d)
-            d.textContent = scItems.length ? `No results for "${scInput.value.trim()}"` : 'No recent searches';
+            d.textContent = scItems.length ? t('search.no_match', { q: scInput.value.trim() }) : t('search.no_recent');
     }
     scSyncBodyHeight();
 }
@@ -1184,8 +1744,8 @@ function scRenderRows(animate) {
                 `<div class="psearch__row-sub">${esc(scAgo(it.t))}</div>` +
                 '</div>' +
                 '<div class="psearch__remove-slot">' +
-                `<button type="button" class="psearch__remove" aria-label="Remove ${esc(it.q)}">${SC_TRASH}` +
-                `<span class="psearch__tip" role="tooltip">Remove<span class="psearch__tip-arrow"></span></span></button>` +
+                `<button type="button" class="psearch__remove" aria-label="${esc(t('row.remove_named', { q: it.q }))}">${SC_TRASH}` +
+                `<span class="psearch__tip" role="tooltip">${esc(t('row.remove'))}<span class="psearch__tip-arrow"></span></span></button>` +
                 '</div></div></li>';
     });
     html += '<li class="psearch__empty hidden"><div></div></li>';
@@ -1273,7 +1833,7 @@ function scOpenCard() {
     scOpen = true;
     scCard.classList.add('psearch__card--open');
     scRoot.classList.add('psearch--open');
-    scInput.placeholder = 'What do you want to listen to?';
+    scInput.placeholder = t('search.hint');
     scRenderRows(true);
     scSetBody(true);
 }
@@ -1282,7 +1842,7 @@ function scCloseCard() {
     scOpen = false;
     scCard.classList.remove('psearch__card--open');
     scRoot.classList.remove('psearch--open');
-    scInput.placeholder = 'Search';
+    scInput.placeholder = t('search.placeholder');
     scSheetHide();
     if (wasOpen)
         scSetBody(false);
@@ -1455,7 +2015,7 @@ async function doSearch(q) {
         if (scOpen)
             scRenderRows(false);
         if (!data.length) {
-            showEmpty('No results found');
+            showEmpty('search.no_results');
             return;
         }
         queue = data;
@@ -1464,18 +2024,16 @@ async function doSearch(q) {
         show('results');
     }
     catch {
-        showEmpty('Search failed');
+        showEmpty('search.failed');
     }
 }
-function showEmpty(msg) {
+function showEmpty(msgKey) {
     $('#search-loading').style.display = 'none';
     $('#search-results').style.display = 'none';
     $('#search-empty').style.display = '';
-    if (msg) {
-        const t = $('#search-empty').querySelector('.empty-title');
-        if (t)
-            t.textContent = msg;
-    }
+    const title = $('#search-empty').querySelector('.empty-title');
+    if (title)
+        title.textContent = msgKey ? t(msgKey) : t('search.empty_title');
 }
 function show(what) {
     $('#search-empty').style.display = what === 'empty' ? '' : 'none';
@@ -1523,14 +2081,14 @@ function makeRow(song, idx, ctx) {
     </div>
     ${song.duration_string ? `<span class="track-dur">${esc(song.duration_string)}</span>` : ''}
     <div class="track-actions">
-      <button class="track-act play-act" title="Play"><i class="fa-solid fa-play"></i></button>
-      ${isQuran ? '<button class="track-act read-act" title="Read"><i class="fa-solid fa-book-open"></i></button>' : ''}
-      ${canRemove ? '<button class="track-act rem-act" title="Remove"><i class="fa-solid fa-trash"></i></button>' : ''}
-      ${isQuran ? '' : `<button class="track-act fav-act" title="Like"><i class="${heart}"></i></button>
-      <button class="track-act pl-act" title="Add to playlist"><i class="fa-solid fa-plus"></i></button>
-      ${isProvided ? `<a class="track-act provided-download-act" href="/api/provided/audio/${encodeURIComponent(song.id)}?download=1" download title="Download MP3" aria-label="Download ${esc(song.title)} MP3"><i class="fa-solid fa-download"></i></a>` : isLocal ? '' : '<button class="track-act dl-act" title="Download for offline"><i class="fa-solid fa-download"></i></button>'}
-      ${isLocal || isProvided ? '' : '<button class="track-act yt-act" title="See on YouTube"><i class="fa-brands fa-youtube"></i></button>'}
-      <button class="track-act disc-act" title="Shown in Discord"><i class="fa-solid fa-eye"></i></button>`}
+      <button class="track-act play-act" title="${esc(t('row.play'))}"><i class="fa-solid fa-play"></i></button>
+      ${isQuran ? `<button class="track-act read-act" title="${esc(t('row.read'))}"><i class="fa-solid fa-book-open"></i></button>` : ''}
+      ${canRemove ? `<button class="track-act rem-act" title="${esc(t('row.remove'))}"><i class="fa-solid fa-trash"></i></button>` : ''}
+      ${isQuran ? '' : `<button class="track-act fav-act" title="${esc(t('row.like'))}"><i class="${heart}"></i></button>
+      <button class="track-act pl-act" title="${esc(t('row.add_pl'))}"><i class="fa-solid fa-plus"></i></button>
+      ${isProvided ? `<a class="track-act provided-download-act" href="/api/provided/audio/${encodeURIComponent(song.id)}?download=1" download title="${esc(t('player.dl_mp3'))}" aria-label="${esc(t('player.dl_mp3'))}"><i class="fa-solid fa-download"></i></a>` : isLocal ? '' : `<button class="track-act dl-act" title="${esc(t('row.dl'))}"><i class="fa-solid fa-download"></i></button>`}
+      ${isLocal || isProvided ? '' : `<button class="track-act yt-act" title="${esc(t('row.yt'))}"><i class="fa-brands fa-youtube"></i></button>`}
+      <button class="track-act disc-act" title="${esc(t('row.disc_shown'))}"><i class="fa-solid fa-eye"></i></button>`}
     </div>`;
     const rowImg = r.querySelector('img.track-thumb');
     if (rowImg) {
@@ -1586,7 +2144,7 @@ function makeRow(song, idx, ctx) {
             if (icon)
                 icon.className = hidden ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
             discBtn.classList.toggle('disc-hide', hidden);
-            discBtn.title = hidden ? 'Hidden from Discord' : 'Shown in Discord';
+            discBtn.title = hidden ? t('row.disc_hidden') : t('row.disc_shown');
             discBtn.addEventListener('click', (e) => { e.stopPropagation(); discToggleSong(song); });
         }
     }
@@ -1622,7 +2180,7 @@ function dlBtnUi(btn, id) {
                 ? 'fa-solid fa-circle-check'
                 : 'fa-solid fa-download';
     }
-    btn.title = active ? 'Downloading, click to cancel' : done ? 'Downloaded, click to remove' : 'Download for offline';
+    btn.title = active ? t('player.dl_active') : done ? t('player.dl_done') : t('player.dl');
 }
 function refreshDl(id) {
     $$(`.track-row[data-id="${CSS.escape(id)}"] .dl-act`).forEach((b) => dlBtnUi(b, id));
@@ -1649,11 +2207,11 @@ async function dlAction(song) {
         }).catch(() => undefined);
         dlActive.delete(song.id);
         refreshDl(song.id);
-        toast('Download canceled');
+        toast(t('dl.canceled'));
         return;
     }
     if (downloadedIds.has(song.id)) {
-        const ok = await confirmDialog('Remove download', `Remove the downloaded copy of "${song.title}"? It will need wifi to play again.`);
+        const ok = await confirmDialog(t('dl.remove_title'), t('dl.remove_q', { t: song.title }));
         if (!ok)
             return;
         await getJSON(`${API}/api/download/remove`, {
@@ -1665,7 +2223,7 @@ async function dlAction(song) {
         if (currentSong && currentSong.id === song.id)
             currentSong.downloaded = false;
         refreshDl(song.id);
-        toast('Download removed');
+        toast(t('dl.removed'));
         return;
     }
     await getJSON(`${API}/api/library/add`, {
@@ -1679,7 +2237,7 @@ async function dlAction(song) {
         body: JSON.stringify({ id: song.id }),
     }).catch(() => ({ error: 'failed' }));
     if (r.error || r.ok === false) {
-        toast('Could not start download');
+        toast(t('dl.start_fail'));
         return;
     }
     dlActive.add(song.id);
@@ -1708,7 +2266,7 @@ async function pollDownloads() {
         }
         else if (st.state === 'done') {
             if (dlActive.has(id))
-                toast('Downloaded. Plays without wifi now');
+                toast(t('dl.done'));
             dlActive.delete(id);
             downloadedIds.add(id);
             if (currentSong && currentSong.id === id)
@@ -1717,7 +2275,7 @@ async function pollDownloads() {
         }
         else if (st.state === 'error') {
             if (dlActive.has(id))
-                toast('Download failed' + (st.error ? `: ${st.error}` : ''));
+                toast(t('dl.failed') + (st.error ? `: ${st.error}` : ''));
             dlActive.delete(id);
             refreshDl(id);
         }
@@ -1754,10 +2312,10 @@ function playError(e) {
         return;
     setBuffering(false);
     if (name === 'NotAllowedError') {
-        toast('Click play to start');
+        toast(t('play.click_start'));
         return;
     }
-    toast('Playback failed, try again');
+    toast(t('play.fail'));
 }
 function songSrc(song) {
     if (song.kind === 'quran') {
@@ -1838,7 +2396,7 @@ async function playSong(song, idx, _ctx, keepQueue = false) {
     catch {
         startingId = null;
         setBuffering(false);
-        toast('Could not load Quran audio');
+        toast(t('err.load_quran_audio'));
         return;
     }
     if (song.kind !== 'quran') {
@@ -1878,7 +2436,7 @@ function updatePlayer() {
     if (canDownload) {
         dlBtnUi(dlBtn, currentSong.id);
         if (isProvided)
-            dlBtn.title = 'Download MP3';
+            dlBtn.title = t('player.dl_mp3');
     }
     syncQuranTranslation();
     if ('mediaSession' in navigator) {
@@ -1905,7 +2463,7 @@ $('#fav-btn').addEventListener('click', () => {
     if (!currentSong)
         return;
     if (currentSong.kind === 'quran') {
-        toast('Quran cannot be liked');
+        toast(t('fav.denied_quran'));
         return;
     }
     void toggleFav(currentSong);
@@ -1944,7 +2502,7 @@ function setShuffle(on) {
     store('ns_shuffle', on);
     const btn = $('#shuffle-btn');
     btn.classList.toggle('active', on);
-    btn.title = on ? 'Shuffle: on' : 'Shuffle: off';
+    btn.title = on ? t('player.shuffle') : t('player.shuffle');
     const cur = currentSong;
     if (!cur || !queue.length)
         return;
@@ -1965,7 +2523,7 @@ $('#loop-btn').addEventListener('click', () => {
     store('ns_loop', loopMode);
     const btn = $('#loop-btn');
     btn.classList.toggle('active', loopMode !== 'off');
-    btn.title = loopMode === 'one' ? 'Loop: one' : 'Loop: off';
+    btn.title = t('player.loop');
     toast(loopMode === 'one' ? 'Loop on' : 'Loop off');
 });
 function nextTrack() {
@@ -2033,7 +2591,7 @@ function resetPlayer() {
     startingId = null;
     pendingAyahSeek = null;
     setBuffering(false);
-    $('#player-title').textContent = 'No track playing';
+    $('#player-title').textContent = t('player.idle');
     $('#player-artist').textContent = '';
     $('#player-thumb').style.display = 'none';
     $('#player-thumb-ph').style.display = 'flex';
@@ -2177,24 +2735,24 @@ function applyLibSort(src) {
     return s;
 }
 function syncSortUI() {
-    $('#lib-sort-label').textContent = SORT_LABELS[sortMode];
+    $('#lib-sort-label').textContent = t('sort.' + sortMode);
     $$('.lib-sort-opt').forEach((o) => o.classList.toggle('active', o.dataset.sort === sortMode));
 }
 async function loadProvided(force = false) {
     $('#provided-list').style.display = 'none';
     $('#provided-empty').style.display = 'none';
     $('#provided-loading').style.display = '';
-    $('#provided-subtitle').textContent = 'Nasheeds provided by the Quran app';
+    $('#provided-subtitle').textContent = t('provided.sub');
     try {
         const response = await fetch(`${API}/api/provided${force ? '?refresh=1' : ''}`);
         if (!response.ok)
             throw new Error('catalog unavailable');
         const songs = await response.json();
         $('#provided-loading').style.display = 'none';
-        $('#provided-subtitle').textContent = `${songs.length} provided nasheed${songs.length === 1 ? '' : 's'}`;
+        $('#provided-subtitle').textContent = t('provided.count', { n: songs.length, s: songs.length === 1 ? '' : 's' });
         if (!songs.length) {
-            $('#provided-empty-title').textContent = 'No provided nasheeds yet';
-            $('#provided-empty-sub').textContent = 'New nasheeds will appear here as they are added to the catalog.';
+            $('#provided-empty-title').textContent = t('provided.empty_title');
+            $('#provided-empty-sub').textContent = t('provided.empty_sub');
             $('#provided-empty').style.display = '';
             return;
         }
@@ -2203,8 +2761,8 @@ async function loadProvided(force = false) {
     }
     catch {
         $('#provided-loading').style.display = 'none';
-        $('#provided-empty-title').textContent = 'Catalog unavailable';
-        $('#provided-empty-sub').textContent = 'Could not load provided nasheeds. Check your connection and try again.';
+        $('#provided-empty-title').textContent = t('provided.err_title');
+        $('#provided-empty-sub').textContent = t('provided.err_sub');
         $('#provided-empty').style.display = '';
     }
 }
@@ -2212,23 +2770,23 @@ $('#provided-refresh').addEventListener('click', () => void loadProvided(true));
 async function loadLib(mode) {
     const lib = await getJSON(`${API}/api/library`);
     let songs = [];
-    let title = 'Your Library';
+    let title = t('nav.library');
     let isPlaylist = false;
     if (mode === 'all' || mode === 'library') {
         songs = [...(lib.songs || [])].reverse();
-        title = 'Your Library';
+        title = t('nav.library');
     }
     else if (mode === 'favorites') {
         songs = (lib.songs || []).filter((s) => s.favorite).reverse();
-        title = 'Liked Nasheeds';
+        title = t('nav.favorites');
     }
     else if (mode === 'downloads') {
         songs = (lib.songs || []).filter((s) => s.downloaded).reverse();
-        title = 'Downloads';
+        title = t('nav.downloads');
     }
     else if (mode === 'local') {
         songs = (lib.songs || []).filter((s) => s.local).reverse();
-        title = 'Your Nasheeds';
+        title = t('nav.local');
     }
     else if (mode === 'recent') {
         const stored = load('ns_recent', []);
@@ -2236,7 +2794,7 @@ async function loadLib(mode) {
             const inLib = (lib.songs || []).find((s) => s.id === r.id);
             return { ...r, favorite: inLib ? inLib.favorite : false };
         });
-        title = 'Recently Played';
+        title = t('nav.recent');
     }
     else if (mode && mode.startsWith('playlist:')) {
         const n = mode.slice('playlist:'.length);
@@ -2254,19 +2812,19 @@ async function loadLib(mode) {
     $('#lib-rename').classList.toggle('hidden', !isPlaylist);
     $('#local-add').classList.toggle('hidden', mode !== 'local');
     $('#lib-title').textContent = title;
-    $('#lib-subtitle').textContent = `${songs.length} nasheed${songs.length !== 1 ? 's' : ''}`;
+    $('#lib-subtitle').textContent = t('lib.count', { n: songs.length, s: songs.length !== 1 ? 's' : '' });
     $('#lib-actions').classList.toggle('hidden', !songs.length);
-    const emptyCopy = {
-        downloads: ['No downloads yet', 'Hit the download button on any nasheed to save it for offline listening'],
-        local: ['No local nasheeds yet', 'Add your own mp3 or mp4 files with the + button above'],
+    const emptyKeys = {
+        downloads: ['lib.empty_downloads_title', 'lib.empty_downloads_sub'],
+        local: ['lib.empty_local_title', 'lib.empty_local_sub'],
     };
-    const [emptyTitle, emptySub] = emptyCopy[mode ?? ''] ?? ['Nothing here yet', 'Search and save nasheeds to see them here'];
+    const [titleKey, subKey] = emptyKeys[mode ?? ''] ?? ['lib.empty_title', 'lib.empty_sub'];
     const et = $('#lib-empty').querySelector('.empty-title');
     if (et)
-        et.textContent = emptyTitle;
+        et.textContent = t(titleKey);
     const es = $('#lib-empty').querySelector('.empty-sub');
     if (es)
-        es.textContent = emptySub;
+        es.textContent = t(subKey);
     if (!songs.length) {
         $('#lib-list').style.display = 'none';
         $('#lib-empty').style.display = '';
@@ -2327,25 +2885,25 @@ $('#local-file').addEventListener('change', () => {
 async function removeFromList(song) {
     if (currentPlaylistName && currentLibMode && currentLibMode.startsWith('playlist:')) {
         const plName = currentPlaylistName;
-        const ok = await confirmDialog('Remove from playlist', `Remove "${song.title}" from ${plName}?`);
+        const ok = await confirmDialog(t('pl.remove_title'), t('pl.remove_q', { t: song.title, p: plName }));
         if (!ok)
             return;
         await getJSON(`${API}/api/playlists/${encodeURIComponent(plName)}/remove/${encodeURIComponent(song.id)}`, { method: 'POST' });
-        toast('Removed from ' + plName);
+        toast(t('pl.removed', { p: plName }));
         loadLib('playlist:' + plName);
     }
     else {
-        const ok = await confirmDialog('Remove from library', `Remove "${song.title}" from Your Library?`);
+        const ok = await confirmDialog(t('pl.remove_lib_title'), t('pl.remove_lib_q', { t: song.title }));
         if (!ok)
             return;
         await getJSON(`${API}/api/library/remove/${encodeURIComponent(song.id)}`, { method: 'POST' });
-        toast('Removed from Your Library');
+        toast(t('pl.removed_lib'));
         loadLib(currentLibMode ?? 'library');
     }
 }
 async function toggleFav(song) {
     if (song.kind === 'quran') {
-        toast('Quran cannot be liked');
+        toast(t('fav.denied_quran'));
         return;
     }
     await getJSON(`${API}/api/library/add`, {
@@ -2378,7 +2936,7 @@ async function addToPl(song) {
         body: JSON.stringify(song),
     });
     loadPlaylists();
-    toast('Added to ' + name);
+    toast(t('pl.added', { p: name }));
 }
 function seeOnYouTube(song) {
     if (song.provided || song.id.startsWith('provided-'))
@@ -2389,8 +2947,8 @@ function seeOnYouTube(song) {
         body: JSON.stringify({ url: `https://www.youtube.com/watch?v=${encodeURIComponent(song.id)}` }),
     }).then((r) => {
         if (!r.ok)
-            toast('Could not open YouTube');
-    }).catch(() => toast('Could not open YouTube'));
+            toast(t('err.open_youtube'));
+    }).catch(() => toast(t('err.open_youtube')));
 }
 // --- PLAYLISTS ---
 async function deletePlaylist(name) {
@@ -2427,19 +2985,19 @@ async function loadPlaylists() {
         });
         const del = document.createElement('button');
         del.className = 'pl-del';
-        del.title = 'Delete playlist';
+        del.title = t('lib.delete');
         del.innerHTML = '<i class="fa-solid fa-trash"></i>';
         del.addEventListener('click', async (e) => {
             e.stopPropagation();
-            const ok = await confirmDialog('Delete playlist', `Delete "${pl.name}"? It will be removed from your playlists.`);
+            const ok = await confirmDialog(t('pl.delete_title'), t('pl.delete_q', { p: pl.name }));
             if (!ok)
                 return;
             if (!(await deletePlaylist(pl.name))) {
-                toast('Could not delete playlist');
+                toast(t('pl.delete_fail'));
                 return;
             }
             loadPlaylists();
-            toast('Deleted playlist: ' + pl.name);
+            toast(t('pl.deleted', { p: pl.name }));
             if (currentPlaylistName === pl.name && $('#library-view').classList.contains('active'))
                 gotoLibrary();
         });
@@ -2451,23 +3009,23 @@ $('#lib-del').addEventListener('click', async () => {
     const name = currentPlaylistName;
     if (!name)
         return;
-    const ok = await confirmDialog('Delete playlist', `Delete "${name}"? It will be removed from your playlists.`);
+    const ok = await confirmDialog(t('pl.delete_title'), t('pl.delete_q', { p: name }));
     if (!ok)
         return;
     if (!(await deletePlaylist(name))) {
-        toast('Could not delete playlist');
+        toast(t('pl.delete_fail'));
         return;
     }
     currentPlaylistName = null;
     loadPlaylists();
-    toast('Deleted playlist: ' + name);
+    toast(t('pl.deleted', { p: name }));
     gotoLibrary();
 });
 $('#lib-rename').addEventListener('click', async () => {
     const oldName = currentPlaylistName;
     if (!oldName)
         return;
-    const newName = await promptText('Rename playlist', 'Playlist name', 'Rename', oldName);
+    const newName = await promptText(t('pl.rename'), t('pl.new_ph'), t('modal.rename_ok'), oldName);
     if (!newName || newName === oldName)
         return;
     const d = await getJSON(`${API}/api/playlists/rename`, {
@@ -2480,7 +3038,7 @@ $('#lib-rename').addEventListener('click', async () => {
         return;
     }
     loadPlaylists();
-    toast('Renamed to ' + newName);
+    toast(t('pl.rename_done', { p: newName }));
     loadLib('playlist:' + newName);
 });
 $('#pl-play').addEventListener('click', () => {
@@ -2515,7 +3073,7 @@ document.addEventListener('click', (e) => {
         $('#lib-sort-menu').classList.add('hidden');
 });
 $('#add-pl-btn').addEventListener('click', async () => {
-    const name = await promptText('New playlist', 'Playlist name', 'Create');
+    const name = await promptText(t('pl.new'), t('pl.new_ph'), t('modal.create'));
     if (!name)
         return;
     await getJSON(`${API}/api/playlists/create`, {
@@ -2524,7 +3082,7 @@ $('#add-pl-btn').addEventListener('click', async () => {
         body: JSON.stringify({ name }),
     });
     loadPlaylists();
-    toast('Created playlist: ' + name);
+    toast(t('pl.created', { p: name }));
 });
 // --- DISCORD PRESENCE ---
 let discordEnabled = load('ns_discord', false);
@@ -2558,7 +3116,7 @@ function syncDiscBtns(id) {
         if (icon)
             icon.className = hidden ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
         b.classList.toggle('disc-hide', hidden);
-        b.title = hidden ? 'Hidden from Discord' : 'Shown in Discord';
+        b.title = hidden ? t('row.disc_hidden') : t('row.disc_shown');
     });
 }
 function syncAllDiscBtns() {
@@ -2583,23 +3141,23 @@ function setDiscordStatus(state) {
         return;
     el.classList.remove('ok', 'warn', 'err');
     if (state === 'connected') {
-        el.textContent = 'Connected';
+        el.textContent = t('set.dc_connected');
         el.classList.add('ok');
     }
     else if (state === 'connecting') {
-        el.textContent = 'Connecting...';
+        el.textContent = t('set.dc_connecting');
         el.classList.add('warn');
     }
     else if (state === 'not-running') {
-        el.textContent = 'Discord not running';
+        el.textContent = t('set.dc_not_running');
         el.classList.add('warn');
     }
     else if (state === 'error') {
-        el.textContent = 'Status unavailable';
+        el.textContent = t('set.dc_err');
         el.classList.add('err');
     }
     else {
-        el.textContent = 'Off';
+        el.textContent = t('set.dc_off');
     }
 }
 function dcActivity(paused = false) {
@@ -2757,14 +3315,14 @@ function syncBotUI(info) {
         $('#bot-url').value = info.url;
     $('#bot-unlink').disabled = !botLinked;
     if (botLinked) {
-        const name = info.user?.name ? ' as ' + info.user.name : '';
+        const name = info.user?.name || '';
         if (botEnabled)
-            setBotStatus('Linked' + name, 'ok');
+            setBotStatus(name ? t('set.bot_linked_as', { name }) : t('set.bot_linked'), 'ok');
         else
-            setBotStatus('Paused' + name, 'warn');
+            setBotStatus(name ? t('set.bot_paused_as', { name }) : t('set.bot_paused'), 'warn');
     }
     else {
-        setBotStatus('Not linked', '');
+        setBotStatus(t('set.bot_not_linked'), '');
     }
 }
 async function loadBot() {
@@ -2772,11 +3330,11 @@ async function loadBot() {
         const info = await getJSON(`${API}/api/bot`);
         syncBotUI(info);
         if (botLinked && botEnabled && info.last && info.last.ok === false) {
-            botNote('Last sync failed: ' + (info.last.error || 'bot unreachable'));
+            botNote(t('bot.last_fail', { err: info.last.error || t('bot.unreachable') }));
         }
     }
     catch {
-        setBotStatus('Status unavailable', 'err');
+        setBotStatus(t('set.dc_err'), 'err');
     }
 }
 function reportEvent(event, song) {
@@ -2831,10 +3389,10 @@ $('#bot-link').addEventListener('click', () => {
     const code = $('#bot-code').value.trim();
     const url = $('#bot-url').value.trim();
     if (!code) {
-        botNote('Run su!track link in Discord and paste the code here.');
+        botNote(t('set.bot_sub'));
         return;
     }
-    botNote('Linking...');
+    botNote(t('bot.testing'));
     void botPost({ code, url }, '/api/bot/link')
         .then((d) => {
         if (!d.ok) {
@@ -2843,33 +3401,33 @@ $('#bot-link').addEventListener('click', () => {
         }
         $('#bot-code').value = '';
         const name = d.user?.name;
-        botNote('Linked' + (name ? ' as ' + name : '') + '. Play something and try su!track');
-        toast('Discord bot linked');
+        botNote(name ? t('set.bot_linked_as', { name }) + '. ' + t('set.send_play') : t('set.bot_linked'));
+        toast(t('bot.linked_ok'));
         void loadBot();
     })
-        .catch(() => botNote('Could not reach the app backend'));
+        .catch(() => botNote(t('bot.backend_fail')));
 });
 $('#bot-unlink').addEventListener('click', () => {
     void botPost({}, '/api/bot/unlink')
         .then(() => {
-        botNote('Unlinked. Run su!track link for a fresh code.');
-        toast('Discord bot unlinked');
+        botNote(t('set.bot_sub'));
+        toast(t('bot.unlinked_ok'));
         void loadBot();
     })
-        .catch(() => botNote('Could not reach the app backend'));
+        .catch(() => botNote(t('bot.backend_fail')));
 });
 $('#bot-test').addEventListener('click', () => {
     const url = $('#bot-url').value.trim();
-    botNote('Testing...');
+    botNote(t('bot.testing'));
     void botPost({ url })
         .then(() => getJSON(`${API}/api/bot/test`, { method: 'POST' }))
         .then((d) => {
         if (d.ok)
-            botNote('Bot reachable, running v' + (d.version || 'unknown'));
+            botNote(t('bot.reachable', { v: d.version || t('set.unknown_lower') }));
         else
-            botNote(String(d.error || 'No response from the bot'));
+            botNote(String(d.error || t('bot.no_response')));
     })
-        .catch(() => botNote('No response from the bot'));
+        .catch(() => botNote(t('bot.no_response')));
 });
 window.addEventListener('pagehide', () => {
     if (!botEnabled || !botLinked || !navigator.sendBeacon)
@@ -2907,7 +3465,7 @@ async function loadCacheCount() {
         $('#set-cache-entries').textContent = String(d.entries);
     }
     catch {
-        $('#set-cache-entries').textContent = 'unknown';
+        $('#set-cache-entries').textContent = t('set.unknown_lower');
     }
 }
 async function loadLibraryCounts() {
@@ -2920,10 +3478,10 @@ async function loadLibraryCounts() {
         $('#set-local-count').textContent = String(d.songs.filter((s) => s.local).length);
     }
     catch {
-        $('#set-lib-count').textContent = 'unknown';
-        $('#set-pl-count').textContent = 'unknown';
-        $('#set-dl-count').textContent = 'unknown';
-        $('#set-local-count').textContent = 'unknown';
+        $('#set-lib-count').textContent = t('set.unknown_lower');
+        $('#set-pl-count').textContent = t('set.unknown_lower');
+        $('#set-dl-count').textContent = t('set.unknown_lower');
+        $('#set-local-count').textContent = t('set.unknown_lower');
     }
 }
 const clearOptIds = [
@@ -2961,7 +3519,7 @@ async function loadSettings() {
         $('#set-version').textContent = appVersion ? 'v' + appVersion : 'unknown';
     }
     catch {
-        $('#set-version').textContent = 'unknown';
+        $('#set-version').textContent = t('set.unknown_lower');
     }
     applyPrereleaseChannel();
     syncHistoryCounts();
@@ -2981,22 +3539,22 @@ $('#set-clear-history').addEventListener('click', async () => {
     if (currentLibMode === 'recent')
         loadLib('recent');
     syncHistoryCounts();
-    $('#set-history-note').textContent = 'History cleared.';
-    toast('History cleared');
+    $('#set-history-note').textContent = t('set.history_cleared');
+    toast(t('set.history_cleared'));
 });
 $('#set-clear-library').addEventListener('click', async () => {
     const o = readClearOpts();
     const parts = [];
     if (o.nasheeds)
-        parts.push('your nasheeds and likes');
+        parts.push(t('set.part_nasheeds'));
     if (o.playlists)
-        parts.push('your playlists');
+        parts.push(t('set.part_playlists'));
     if (o.downloads)
-        parts.push('downloaded offline copies');
+        parts.push(t('set.part_downloads'));
     if (o.local)
-        parts.push('your imported local nasheeds');
-    const what = parts.length > 1 ? parts.slice(0, -1).join(', ') + ' and ' + parts[parts.length - 1] : parts[0];
-    const ok = await confirmDialog('Clear library', `Remove ${what} from this device? This cannot be undone. Everything left switched off stays, and your history and cache are not touched.`);
+        parts.push(t('set.part_local'));
+    const what = parts.length > 1 ? parts.slice(0, -1).join(', ') + ' ' + t('set.word_and') + ' ' + parts[parts.length - 1] : parts[0];
+    const ok = await confirmDialog(t('set.clear_library'), t('set.clear_confirm', { what }));
     if (!ok)
         return;
     try {
@@ -3009,12 +3567,12 @@ $('#set-clear-library').addEventListener('click', async () => {
         void loadPlaylists();
         if (currentLibMode)
             void loadLib(currentLibMode);
-        $('#set-lib-note').textContent = 'Library cleared.';
-        toast('Library cleared');
+        $('#set-lib-note').textContent = t('set.lib_cleared');
+        toast(t('set.lib_cleared'));
     }
     catch {
-        $('#set-lib-note').textContent = 'Could not clear the library.';
-        toast('Could not clear library');
+        $('#set-lib-note').textContent = t('set.lib_clear_fail');
+        toast(t('set.lib_clear_fail'));
     }
 });
 $('#set-clear-cache').addEventListener('click', async () => {
@@ -3028,12 +3586,12 @@ $('#set-clear-cache').addEventListener('click', async () => {
             body: '{}',
         });
         $('#set-cache-entries').textContent = String(d.entries);
-        $('#set-cache-note').textContent = 'Cache cleared.';
-        toast('Cache cleared');
+        $('#set-cache-note').textContent = t('set.cache_cleared');
+        toast(t('set.cache_cleared'));
     }
     catch {
-        $('#set-cache-note').textContent = 'Could not clear the cache.';
-        toast('Could not clear cache');
+        $('#set-cache-note').textContent = t('set.cache_clear_fail');
+        toast(t('set.cache_clear_fail'));
     }
 });
 async function loadSidebarVersion() {
@@ -3110,7 +3668,7 @@ function cmpSemver(a, b) {
 }
 async function loadReleases(refresh) {
     const note = $('#set-check-note');
-    note.textContent = 'Checking GitHub...';
+    note.textContent = t('upd.checking');
     if (refresh)
         $('#set-update').setAttribute('disabled', '');
     try {
@@ -3118,25 +3676,25 @@ async function loadReleases(refresh) {
         const rels = d.releases || [];
         const cur = d.current || '';
         const installable = rels.find((r) => r.asset && (includePrerelease || !r.prerelease));
-        $('#set-latest').textContent = rels[0] ? rels[0].tag : 'unknown';
+        $('#set-latest').textContent = rels[0] ? rels[0].tag : t('set.unknown_lower');
         if (!installable) {
             latestTag = '';
-            note.textContent = 'No installer available for this platform yet.';
+            note.textContent = t('upd.no_installer');
             $('#set-update').setAttribute('disabled', '');
             return;
         }
         latestTag = installable.tag;
         if (cmpSemver(installable.tag, cur) <= 0) {
-            note.textContent = 'You are on the newest release.';
+            note.textContent = t('upd.newest');
             $('#set-update').setAttribute('disabled', '');
         }
         else {
-            note.textContent = (d.error ? 'Showing cached results. ' : '') + 'Version ' + esc(installable.tag) + ' is available.';
+            note.textContent = (d.error ? t('upd.cached_showing') : '') + t('upd.available', { tag: installable.tag });
             $('#set-update').removeAttribute('disabled');
         }
     }
     catch {
-        note.textContent = 'Could not reach GitHub right now.';
+        note.textContent = t('upd.reach_fail');
     }
 }
 function applyPrereleaseChannel() {
@@ -3179,8 +3737,8 @@ async function pollUpdate() {
         runBtn.hidden = true;
         const pct = s.total ? Math.round((s.downloaded / s.total) * 100) : 0;
         fill.style.width = pct + '%';
-        text.textContent = 'Downloading ' + s.asset + '  ' + (fmtMB(s.downloaded) + (s.total ? ' / ' + fmtMB(s.total) : '')) + (s.total ? ' (' + pct + '%)' : '');
-        note.textContent = 'Downloading ' + s.tag + '...';
+        text.textContent = t('upd.dl_progress', { a: fmtMB(s.downloaded) + (s.total ? ' / ' + fmtMB(s.total) : ''), b: s.total ? ' (' + pct + '%)' : '' });
+        note.textContent = t('upd.downloading', { tag: s.tag });
         setUpdateBusy(true);
         return;
     }
@@ -3204,7 +3762,7 @@ async function pollUpdate() {
     else if (s.state === 'error') {
         wrap.hidden = true;
         runBtn.hidden = true;
-        note.textContent = 'Update failed: ' + (s.error || 'unknown error');
+        note.textContent = t('upd.failed', { err: s.error || t('set.unknown_lower') });
     }
 }
 $('#set-update').addEventListener('click', async () => {
@@ -3213,16 +3771,16 @@ $('#set-update').addEventListener('click', async () => {
     const tag = latestTag;
     const note = $('#set-check-note');
     if (!tag) {
-        note.textContent = 'Check for updates first.';
+        note.textContent = t('upd.check_first');
         return;
     }
     const cur = appVersion;
     if (cmpSemver(tag, cur) <= 0) {
-        note.textContent = 'You already have ' + tag + ' installed.';
+        note.textContent = t('upd.already', { tag });
         return;
     }
     setUpdateBusy(true);
-    note.textContent = 'Starting update to ' + tag + '...';
+    note.textContent = t('upd.starting', { tag });
     try {
         const r = await fetch(`${API}/api/update`, {
             method: 'POST',
@@ -3231,14 +3789,14 @@ $('#set-update').addEventListener('click', async () => {
         });
         const d = (await r.json());
         if (!r.ok || !d.ok) {
-            note.textContent = d.error || 'Could not start the update.';
+            note.textContent = d.error || t('upd.start_fail');
             setUpdateBusy(false);
             return;
         }
         startUpdatePoll();
     }
     catch {
-        note.textContent = 'Could not reach the updater.';
+        note.textContent = t('upd.reach_updater');
         setUpdateBusy(false);
     }
 });
@@ -3246,8 +3804,16 @@ $('#set-run').addEventListener('click', async () => {
     const r = await fetch(`${API}/api/update/run`, { method: 'POST' });
     const d = (await r.json());
     if (!d.ok)
-        toast(d.error || 'Could not start it');
+        toast(d.error || t('upd.start_fail'));
 });
+$$('.lang-opt').forEach((b) => b.addEventListener('click', () => {
+    const lang = b.dataset.uiLang;
+    if (!lang || lang === uiLang)
+        return;
+    uiLang = lang;
+    store('ns_lang', uiLang);
+    refreshForLang();
+}));
 try {
     if ('mediaSession' in navigator) {
         navigator.mediaSession.setActionHandler('play', () => {
@@ -3263,13 +3829,14 @@ try {
 catch { }
 loopMode = load('ns_loop', 'off');
 $('#loop-btn').classList.toggle('active', loopMode !== 'off');
-$('#loop-btn').title = loopMode === 'one' ? 'Loop: one' : 'Loop: off';
+$('#loop-btn').title = t('player.loop');
 shuffleOn = load('ns_shuffle', false);
 $('#shuffle-btn').classList.toggle('active', shuffleOn);
-$('#shuffle-btn').title = shuffleOn ? 'Shuffle: on' : 'Shuffle: off';
+$('#shuffle-btn').title = t('player.shuffle');
 sortMode = load('ns_sort', 'added');
 syncSortUI();
 updateVolIcon();
+applyStaticI18n();
 scItems = scLoadRecents();
 scRenderRows(false);
 if (/Mac|iPhone|iPad/.test(navigator.platform))
