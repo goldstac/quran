@@ -2395,7 +2395,7 @@ dependencies = [
 
 [[package]]
 name = "quran-player"
-version = "1.2.1-pre-alpha.7"
+version = "1.2.2-alpha.1"
 dependencies = [
  "serde",
  "serde_json",
