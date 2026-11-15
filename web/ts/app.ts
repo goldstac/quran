@@ -3691,6 +3691,10 @@ function cmpSemver(a: string, b: string): number {
   if (pa.pre.length === 0 && pb.pre.length === 0) return 0;
   if (pa.pre.length === 0) return 1;
   if (pb.pre.length === 0) return -1;
+  const STAGE_RANK: Record<string, number> = { 'pre-alpha': 0, alpha: 1, beta: 2, rc: 3 };
+  const ra = pa.pre[0] ? STAGE_RANK[pa.pre[0]] : undefined;
+  const rb = pb.pre[0] ? STAGE_RANK[pb.pre[0]] : undefined;
+  if (ra !== undefined && rb !== undefined && ra !== rb) return ra < rb ? -1 : 1;
   const plen = Math.max(pa.pre.length, pb.pre.length);
   for (let i = 0; i < plen; i++) {
     const sa = pa.pre[i];
