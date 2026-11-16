@@ -13,6 +13,7 @@ const YT_KEY: &str = "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8";
 const ANDROID_UA: &str = "com.google.android.youtube/20.10.38 (Linux; U; Android 14) gzip";
 const VISIONOS_UA: &str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_7_3) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15";
 const UA: &str = "quran-app/1.0";
+const MAX_BODY: usize = 2 * 1024 * 1024 * 1024;
 const INDEX_HTML: &[u8] =
     include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../web/templates/index.html"));
 const APP_JS: &[u8] = include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../web/static/app.js"));
@@ -194,9 +195,29 @@ fn handle(mut stream: TcpStream, state: &Arc<State>) -> std::io::Result<()> {
         }
     }
 
-    let mut body = vec![0u8; content_length];
+    let mut body: Vec<u8> = Vec::new();
     if content_length > 0 {
-        reader.read_exact(&mut body)?;
+        if content_length > MAX_BODY || body.try_reserve_exact(content_length).is_err() {
+            return send_raw(
+                &mut stream,
+                "413 Payload Too Large",
+                "text/plain",
+                b"request body too large",
+                !method.eq_ignore_ascii_case("HEAD"),
+            );
+        }
+        let mut remaining = content_length;
+        let mut chunk = [0u8; 65536];
+        while remaining > 0 {
+            let want = chunk.len().min(remaining);
+            match reader.read(&mut chunk[..want])? {
+                0 => break,
+                n => {
+                    body.extend_from_slice(&chunk[..n]);
+                    remaining -= n;
+                }
+            }
+        }
     }
 
     let (path, query) = match target.split_once('?') {
