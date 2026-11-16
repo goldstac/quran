@@ -192,6 +192,11 @@ def save_lib(data):
     os.replace(tmp, LIB_FILE)
 
 
+def _json_obj():
+    data = request.get_json(silent=True)
+    return data if isinstance(data, dict) else None
+
+
 @app.route("/")
 def index():
     return render_template("index.html")
@@ -268,7 +273,7 @@ def api_version():
 
 @app.route("/api/open", methods=["POST"])
 def api_open():
-    url = (request.json or {}).get("url", "")
+    url = (_json_obj() or {}).get("url", "")
     parsed = urllib.parse.urlparse(url)
     host = (parsed.hostname or "").lower()
     if parsed.scheme != "https" or host not in (
@@ -520,7 +525,7 @@ def _download_worker(sid):
 
 @app.route("/api/download", methods=["POST"])
 def api_download():
-    sid = (request.json or {}).get("id", "")
+    sid = (_json_obj() or {}).get("id", "")
     song = find_lib_song(sid)
     if not song:
         return jsonify({"error": "not found"}), 404
@@ -553,7 +558,7 @@ def api_download_status():
 
 @app.route("/api/download/remove", methods=["POST"])
 def api_download_remove():
-    sid = (request.json or {}).get("id", "")
+    sid = (_json_obj() or {}).get("id", "")
     with _dl_lock:
         st = _downloads.get(sid)
     if st and st.get("state") == "downloading":
@@ -793,7 +798,7 @@ def api_playlists():
 
 @app.route("/api/playlists/create", methods=["POST"])
 def api_pl_create():
-    name = request.json.get("name", "").strip()
+    name = (_json_obj() or {}).get("name", "").strip()
     if not name:
         return jsonify({"error": "name required"}), 400
     with _lib_lock:
@@ -834,7 +839,7 @@ def api_pl_remove(name, sid):
 
 @app.route("/api/playlists/delete", methods=["POST"])
 def api_pl_delete():
-    name = request.json.get("name", "").strip()
+    name = (_json_obj() or {}).get("name", "").strip()
     if not name:
         return jsonify({"error": "name required"}), 400
     with _lib_lock:
@@ -849,8 +854,8 @@ def api_pl_delete():
 
 @app.route("/api/playlists/rename", methods=["POST"])
 def api_pl_rename():
-    old = request.json.get("old", "").strip()
-    new = request.json.get("new", "").strip()
+    old = (_json_obj() or {}).get("old", "").strip()
+    new = (_json_obj() or {}).get("new", "").strip()
     if not old or not new:
         return jsonify({"error": "name required"}), 400
     with _lib_lock:
@@ -1464,7 +1469,7 @@ def _discord_clean_hidden(raw):
 
 @app.route("/api/discord", methods=["POST"])
 def api_discord():
-    data = request.json or {}
+    data = _json_obj() or {}
     _discord.set(bool(data.get("enabled")), data.get("activity"))
     if data.get("remember"):
         _discord_pref_save({"enabled": bool(data.get("enabled"))})
@@ -1473,7 +1478,7 @@ def api_discord():
 
 @app.route("/api/discord/hidden", methods=["POST"])
 def api_discord_hidden():
-    hidden = _discord_clean_hidden((request.json or {}).get("ids"))
+    hidden = _discord_clean_hidden((_json_obj() or {}).get("ids"))
     if hidden is None:
         return jsonify({"ok": False, "error": "ids must be a list"}), 400
     if not _discord_pref_save({"hidden": hidden}):
@@ -1578,7 +1583,7 @@ def _clean_bot_url(raw):
 
 @app.route("/api/bot", methods=["POST"])
 def api_bot_set():
-    data = request.json or {}
+    data = _json_obj() or {}
     cfg = _bot_read()
     if "enabled" in data:
         cfg["enabled"] = bool(data["enabled"])
@@ -1593,7 +1598,7 @@ def api_bot_set():
 
 @app.route("/api/bot/link", methods=["POST"])
 def api_bot_link():
-    data = request.json or {}
+    data = _json_obj() or {}
     code = str(data.get("code") or "").strip()
     if not code:
         return jsonify({"error": "Paste the code from su!track link"}), 400
@@ -1638,7 +1643,7 @@ def api_bot_test():
 
 @app.route("/api/report", methods=["POST"])
 def api_report():
-    data = request.json or {}
+    data = _json_obj() or {}
     cfg = _bot_read()
     if not cfg.get("enabled") or not cfg.get("token"):
         return jsonify({"ok": True, "skipped": True})
@@ -1748,7 +1753,7 @@ def api_updates():
 
 @app.route("/api/update", methods=["POST"])
 def api_update():
-    data = request.json or {}
+    data = _json_obj() or {}
     tag = (data.get("tag") or "").strip()
     if not tag:
         return jsonify({"ok": False, "error": "No version selected"}), 400
