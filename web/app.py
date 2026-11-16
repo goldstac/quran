@@ -164,9 +164,9 @@ def find_ytdlp():
 
     # Check PATH
     if sys.platform == "win32":
-        result = subprocess.run(["where", "yt-dlp"], capture_output=True, text=True)
+        result = subprocess.run(["where", "yt-dlp"], capture_output=True, text=True, timeout=15)
     else:
-        result = subprocess.run(["which", "yt-dlp"], capture_output=True, text=True)
+        result = subprocess.run(["which", "yt-dlp"], capture_output=True, text=True, timeout=15)
     if result.returncode == 0:
         return result.stdout.strip()
 
