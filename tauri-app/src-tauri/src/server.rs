@@ -1215,16 +1215,27 @@ fn capped_json(resp: ureq::Response) -> Result<Value, String> {
     serde_json::from_str(&text).map_err(|e| e.to_string())
 }
 
+const CACHE_MAX: usize = 96;
+
+fn cache_insert<V>(map: &mut HashMap<String, V>, key: String, value: V) {
+    if map.len() >= CACHE_MAX {
+        if let Some(old) = map.keys().next().cloned() {
+            map.remove(&old);
+        }
+    }
+    map.insert(key, value);
+}
+
 fn resolve(state: &State, video_id: &str) -> Result<String, String> {
     if let Some(url) = state.stream_cache.lock().unwrap().get(video_id) {
         return Ok(url.clone());
     }
     let url = resolve_visionos(video_id).or_else(|_| resolve_android(video_id))?;
-    state
-        .stream_cache
-        .lock()
-        .unwrap()
-        .insert(video_id.to_string(), url.clone());
+    cache_insert(
+        &mut state.stream_cache.lock().unwrap(),
+        video_id.to_string(),
+        url.clone(),
+    );
     Ok(url)
 }
 
@@ -1542,11 +1553,11 @@ fn quran_get(state: &State, url: &str, key: &str) -> Result<Value, String> {
         .call()
         .map_err(|e| e.to_string())?;
     let data: Value = capped_json(resp)?;
-    state
-        .quran_cache
-        .lock()
-        .unwrap()
-        .insert(key.to_string(), data.clone());
+    cache_insert(
+        &mut state.quran_cache.lock().unwrap(),
+        key.to_string(),
+        data.clone(),
+    );
     Ok(data)
 }
 
@@ -1669,11 +1680,7 @@ fn quran_chapter_audio(state: &State, moshaf: i64, chapter: i64) -> Result<Value
         return Err("reciter not found".into());
     };
     let payload = json!({"url": format!("{}{:03}.mp3", server, chapter), "format": "mp3"});
-    state
-        .quran_cache
-        .lock()
-        .unwrap()
-        .insert(key, payload.clone());
+    cache_insert(&mut state.quran_cache.lock().unwrap(), key, payload.clone());
     Ok(payload)
 }
 
