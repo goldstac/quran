@@ -10,16 +10,28 @@ _BIND = os.environ.get("QURAN_BIND", "127.0.0.1")
 _ALLOWED_ORIGIN = re.compile(r"^(?:https?://(?:127\.0\.0\.1|localhost|\[::1\])(?::\d+)?|tauri://localhost|http://tauri\.localhost)$")
 
 
+def _is_ip_literal(host):
+    for fam in (socket.AF_INET, socket.AF_INET6):
+        try:
+            socket.inet_pton(fam, host)
+            return True
+        except (OSError, ValueError):
+            pass
+    return False
+
+
 @app.before_request
 def _same_origin_guard():
-    if _BIND != "127.0.0.1":
-        return None
     hostname = request.host.split(":")[0].strip("[]")
-    if hostname not in ("127.0.0.1", "localhost", "::1"):
+    if hostname not in ("127.0.0.1", "localhost", "::1") and not _is_ip_literal(hostname):
         return jsonify({"error": "forbidden"}), 403
     origin = request.headers.get("Origin")
     if origin is not None and not _ALLOWED_ORIGIN.match(origin):
-        return jsonify({"error": "forbidden"}), 403
+        if _BIND == "127.0.0.1":
+            return jsonify({"error": "forbidden"}), 403
+        m = re.match(r"^(?:https?)://([^/?#]+)$", origin)
+        if not m or m.group(1) != request.host:
+            return jsonify({"error": "forbidden"}), 403
     return None
 
 

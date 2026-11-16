@@ -263,3 +263,31 @@ def test_open_blocks_non_youtube(client):
         r = client.post("/api/open", json={"url": url})
         assert r.status_code == 400, url
         assert r.get_json() == {"ok": False, "error": "blocked"}
+
+
+def test_origin_guard_allows_loopback(client):
+    r = client.get("/api/version", headers={"Origin": "http://127.0.0.1:5000"})
+    assert r.status_code == 200
+    r = client.get("/api/version", headers={"Host": "localhost:5000", "Origin": "tauri://localhost"})
+    assert r.status_code == 200
+
+
+def test_origin_guard_blocks_cross_origin(client):
+    r = client.get("/api/version", headers={"Origin": "https://evil.example.com"})
+    assert r.status_code == 403
+    r = client.get("/api/version", headers={"Host": "attacker.example:5000"})
+    assert r.status_code == 403
+
+
+def test_origin_guard_allows_lan_ip_host_when_bound_wide(monkeypatch):
+    monkeypatch.setattr(backend, "_BIND", "0.0.0.0")
+    r = backend.app.test_client().get(
+        "/api/version", headers={"Host": "192.168.1.20:5000", "Origin": "http://192.168.1.20:5000"}
+    )
+    assert r.status_code == 200
+    r = backend.app.test_client().get(
+        "/api/version", headers={"Host": "192.168.1.20:5000", "Origin": "http://192.168.1.99:5000"}
+    )
+    assert r.status_code == 403
+    r = backend.app.test_client().get("/api/version", headers={"Host": "rebind.example:5000"})
+    assert r.status_code == 403
