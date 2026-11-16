@@ -1190,6 +1190,8 @@ def api_quran_reciters():
 
 @app.route("/api/quran/chapter_audio/<int:moshaf_id>/<int:chapter_id>")
 def api_quran_chapter_audio(moshaf_id, chapter_id):
+    if not 1 <= chapter_id <= 114:
+        return jsonify({"error": "bad chapter"}), 400
     key = f"audio:{moshaf_id}:{chapter_id}"
     if key in _quran_cache:
         return jsonify(_quran_cache[key])
