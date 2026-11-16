@@ -2154,8 +2154,20 @@ fn serve_local_file(
     };
     let len = file.metadata().map(|m| m.len()).unwrap_or(0);
     let mime = mime_for_path(path);
-    let (status, start, end) = match range.and_then(|r| parse_range(r, len)) {
-        Some((s, e)) => ("206 Partial Content", s, e),
+    let (status, start, end) = match range {
+        Some(r) => match parse_range(r, len) {
+            Some((s, e)) => ("206 Partial Content", s, e),
+            None => {
+                if len > 0 {
+                    let header = format!(
+                        "HTTP/1.1 416 Range Not Satisfiable\r\nContent-Type: {mime}\r\nContent-Range: bytes */{len}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+                    );
+                    stream.write_all(header.as_bytes())?;
+                    return stream.flush();
+                }
+                ("200 OK", 0u64, 0)
+            }
+        },
         None => ("200 OK", 0u64, len.saturating_sub(1)),
     };
     let clen = if len == 0 { 0 } else { end - start + 1 };
