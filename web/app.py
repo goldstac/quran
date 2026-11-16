@@ -546,6 +546,8 @@ def api_download():
         return jsonify({"error": "not found"}), 404
     if song.get("local"):
         return jsonify({"error": "already local"}), 400
+    if song.get("provided"):
+        return jsonify({"error": "provided nasheeds are already available offline"}), 400
     if song_file_path(song) and song.get("downloaded"):
         return jsonify({"ok": True, "already": True})
     with _dl_lock:
