@@ -247,8 +247,8 @@ def api_search():
             except json.JSONDecodeError:
                 continue
         return jsonify(results)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    except Exception:
+        return jsonify({"error": "search failed, try again"}), 500
     finally:
         _yt_sem.release()
 
@@ -296,8 +296,8 @@ def api_open():
     try:
         webbrowser.open(url)
         return jsonify({"ok": True})
-    except Exception as e:
-        return jsonify({"ok": False, "error": str(e)}), 500
+    except Exception:
+        return jsonify({"ok": False, "error": "could not open the link"}), 500
 
 
 def _clean_song(raw):
@@ -750,8 +750,8 @@ def api_local():
     path = os.path.join(LOCAL_DIR, sid + ext)
     try:
         f.save(path)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    except Exception:
+        return jsonify({"error": "could not save the file"}), 500
     title = os.path.splitext(os.path.basename(f.filename))[0].strip() or "Local nasheed"
     dur = file_duration(path)
     song = {
@@ -1057,8 +1057,8 @@ def api_warm(video_id):
     try:
         resolve_stream(video_id)
         return "", 204
-    except Exception as e:
-        return str(e), 500
+    except Exception:
+        return "audio unavailable", 500
 
 
 @app.route("/api/proxy/<video_id>")
@@ -1068,8 +1068,8 @@ def api_proxy(video_id):
         return serve_song_file(local_path)
     try:
         url = resolve_stream(video_id)
-    except Exception as e:
-        return str(e), 500
+    except Exception:
+        return "audio unavailable", 500
 
     range_header = request.headers.get("Range")
 
@@ -1107,7 +1107,7 @@ def api_proxy(video_id):
         return app.response_class(generate(), status=status, headers=resp_headers)
     except Exception as e:
         _stream_cache.pop(video_id, None)
-        return str(e), 500
+        return "audio unavailable", 500
 
 
 _quran_cache: dict[str, object] = {}
@@ -1146,8 +1146,8 @@ def _quran_style_score(name):
 def api_quran_chapters():
     try:
         return jsonify(_quran_get("https://api.quran.com/api/v4/chapters?language=en", "chapters"))
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    except Exception:
+        return jsonify({"error": "Quran service unavailable"}), 500
 
 
 @app.route("/api/quran/reciters")
@@ -1184,8 +1184,8 @@ def api_quran_reciters():
             })
         out.sort(key=lambda r: r["reciter_name"].lower())
         return jsonify({"recitations": out, "source": "mp3quran"})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    except Exception:
+        return jsonify({"error": "Quran service unavailable"}), 500
 
 
 @app.route("/api/quran/chapter_audio/<int:moshaf_id>/<int:chapter_id>")
@@ -1213,7 +1213,7 @@ def api_quran_chapter_audio(moshaf_id, chapter_id):
         return jsonify(payload)
     except Exception as e:
         _quran_cache.pop(key, None)
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": "Quran service unavailable"}), 500
 
 
 _QURAN_TRANS_IDS = {"en": 20, "ta": 133}
@@ -1249,8 +1249,8 @@ def api_quran_translation(chapter_id):
                 "text": _strip_verse_html(trs[0].get("text") if trs else ""),
             })
         return jsonify({"lang": lang, "name": _QURAN_TRANS_NAMES[lang], "verses": verses})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    except Exception:
+        return jsonify({"error": "Quran service unavailable"}), 500
 
 
 _DISCORD_CLIENT_ID = "1558502162080858172"
