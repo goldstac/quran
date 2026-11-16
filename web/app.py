@@ -175,6 +175,7 @@ def find_ytdlp():
 
 YTDLP_PATH = find_ytdlp()
 _yt_sem = threading.Semaphore(4)
+_lib_lock = threading.Lock()
 
 
 def load_lib():
@@ -321,21 +322,23 @@ def api_add():
     song = _clean_song(request.json)
     if not song:
         return jsonify({"error": "invalid song"}), 400
-    lib = load_lib()
-    if not any(s["id"] == song["id"] for s in lib["songs"]):
-        lib["songs"].append(song)
-        save_lib(lib)
+    with _lib_lock:
+        lib = load_lib()
+        if not any(s["id"] == song["id"] for s in lib["songs"]):
+            lib["songs"].append(song)
+            save_lib(lib)
     return jsonify({"ok": True})
 
 
 @app.route("/api/library/fav/<sid>", methods=["POST"])
 def api_fav(sid):
-    lib = load_lib()
-    for s in lib["songs"]:
-        if s["id"] == sid:
-            s["favorite"] = not s.get("favorite", False)
-            save_lib(lib)
-            return jsonify({"favorite": s["favorite"]})
+    with _lib_lock:
+        lib = load_lib()
+        for s in lib["songs"]:
+            if s["id"] == sid:
+                s["favorite"] = not s.get("favorite", False)
+                save_lib(lib)
+                return jsonify({"favorite": s["favorite"]})
     return jsonify({"error": "not found"}), 404
 
 
@@ -505,13 +508,14 @@ def _download_worker(sid):
             entry["state"] = "error"
             entry["error"] = err or "download failed"
     if proc.returncode == 0 and produced:
-        lib = load_lib()
-        for s in lib["songs"]:
-            if s["id"] == sid:
-                s["downloaded"] = True
-                s["filepath"] = produced
-                break
-        save_lib(lib)
+        with _lib_lock:
+            lib = load_lib()
+            for s in lib["songs"]:
+                if s["id"] == sid:
+                    s["downloaded"] = True
+                    s["filepath"] = produced
+                    break
+            save_lib(lib)
 
 
 @app.route("/api/download", methods=["POST"])
@@ -562,14 +566,15 @@ def api_download_remove():
         with _dl_lock:
             _downloads.pop(sid, None)
         return jsonify({"ok": True, "canceled": True})
-    lib = load_lib()
-    for s in lib["songs"]:
-        if s["id"] == sid:
-            delete_song_file(s)
-            s.pop("filepath", None)
-            s.pop("downloaded", None)
-            save_lib(lib)
-            break
+    with _lib_lock:
+        lib = load_lib()
+        for s in lib["songs"]:
+            if s["id"] == sid:
+                delete_song_file(s)
+                s.pop("filepath", None)
+                s.pop("downloaded", None)
+                save_lib(lib)
+                break
     with _dl_lock:
         _downloads.pop(sid, None)
     return jsonify({"ok": True})
@@ -684,21 +689,22 @@ def attach_local_art(song):
 
 
 def backfill_local_art():
-    lib = load_lib()
-    changed = False
-    for s in lib.get("songs", []):
-        if not s.get("local") or "artfile" in s:
-            continue
-        attach_local_art(s)
-        fp = s.get("filepath") or ""
-        if fp and os.path.isfile(fp) and not s.get("duration"):
-            d = file_duration(fp)
-            if d:
-                s["duration"] = d
-                s["duration_string"] = fmt_duration(d)
-        changed = True
-    if changed:
-        save_lib(lib)
+    with _lib_lock:
+        lib = load_lib()
+        changed = False
+        for s in lib.get("songs", []):
+            if not s.get("local") or "artfile" in s:
+                continue
+            attach_local_art(s)
+            fp = s.get("filepath") or ""
+            if fp and os.path.isfile(fp) and not s.get("duration"):
+                d = file_duration(fp)
+                if d:
+                    s["duration"] = d
+                    s["duration_string"] = fmt_duration(d)
+            changed = True
+        if changed:
+            save_lib(lib)
 
 
 backfill_local_art()
@@ -734,9 +740,10 @@ def api_local():
         "filepath": path,
     }
     attach_local_art(song)
-    lib = load_lib()
-    lib["songs"].append(song)
-    save_lib(lib)
+    with _lib_lock:
+        lib = load_lib()
+        lib["songs"].append(song)
+        save_lib(lib)
     return jsonify({"ok": True, "song": song})
 
 
@@ -751,12 +758,13 @@ def api_local_thumb(sid):
 
 @app.route("/api/library/remove/<sid>", methods=["POST"])
 def api_remove(sid):
-    lib = load_lib()
-    removed = [s for s in lib["songs"] if s["id"] == sid]
-    lib["songs"] = [s for s in lib["songs"] if s["id"] != sid]
-    for pl in lib["playlists"]:
-        pl["songs"] = [s for s in pl["songs"] if s["id"] != sid]
-    save_lib(lib)
+    with _lib_lock:
+        lib = load_lib()
+        removed = [s for s in lib["songs"] if s["id"] == sid]
+        lib["songs"] = [s for s in lib["songs"] if s["id"] != sid]
+        for pl in lib["playlists"]:
+            pl["songs"] = [s for s in pl["songs"] if s["id"] != sid]
+        save_lib(lib)
     for s in removed:
         delete_song_file(s)
         ap = s.get("artfile") or ""
@@ -780,10 +788,11 @@ def api_pl_create():
     name = request.json.get("name", "").strip()
     if not name:
         return jsonify({"error": "name required"}), 400
-    lib = load_lib()
-    if not any(p["name"] == name for p in lib["playlists"]):
-        lib["playlists"].append({"name": name, "songs": []})
-        save_lib(lib)
+    with _lib_lock:
+        lib = load_lib()
+        if not any(p["name"] == name for p in lib["playlists"]):
+            lib["playlists"].append({"name": name, "songs": []})
+            save_lib(lib)
     return jsonify({"ok": True})
 
 
@@ -792,24 +801,26 @@ def api_pl_add(name):
     song = _clean_song(request.json)
     if not song:
         return jsonify({"error": "invalid song"}), 400
-    lib = load_lib()
-    for pl in lib["playlists"]:
-        if pl["name"] == name:
-            if not any(s["id"] == song["id"] for s in pl["songs"]):
-                pl["songs"].append(song)
-                save_lib(lib)
-            return jsonify({"ok": True})
+    with _lib_lock:
+        lib = load_lib()
+        for pl in lib["playlists"]:
+            if pl["name"] == name:
+                if not any(s["id"] == song["id"] for s in pl["songs"]):
+                    pl["songs"].append(song)
+                    save_lib(lib)
+                return jsonify({"ok": True})
     return jsonify({"error": "not found"}), 404
 
 
 @app.route("/api/playlists/<name>/remove/<sid>", methods=["POST"])
 def api_pl_remove(name, sid):
-    lib = load_lib()
-    for pl in lib["playlists"]:
-        if pl["name"] == name:
-            pl["songs"] = [s for s in pl["songs"] if s["id"] != sid]
-            save_lib(lib)
-            return jsonify({"ok": True})
+    with _lib_lock:
+        lib = load_lib()
+        for pl in lib["playlists"]:
+            if pl["name"] == name:
+                pl["songs"] = [s for s in pl["songs"] if s["id"] != sid]
+                save_lib(lib)
+                return jsonify({"ok": True})
     return jsonify({"error": "not found"}), 404
 
 
@@ -818,12 +829,13 @@ def api_pl_delete():
     name = request.json.get("name", "").strip()
     if not name:
         return jsonify({"error": "name required"}), 400
-    lib = load_lib()
-    before = len(lib["playlists"])
-    lib["playlists"] = [p for p in lib["playlists"] if p["name"] != name]
-    if len(lib["playlists"]) == before:
-        return jsonify({"error": "not found"}), 404
-    save_lib(lib)
+    with _lib_lock:
+        lib = load_lib()
+        before = len(lib["playlists"])
+        lib["playlists"] = [p for p in lib["playlists"] if p["name"] != name]
+        if len(lib["playlists"]) == before:
+            return jsonify({"error": "not found"}), 404
+        save_lib(lib)
     return jsonify({"ok": True})
 
 
@@ -833,16 +845,17 @@ def api_pl_rename():
     new = request.json.get("new", "").strip()
     if not old or not new:
         return jsonify({"error": "name required"}), 400
-    lib = load_lib()
-    pl = next((p for p in lib["playlists"] if p["name"] == old), None)
-    if pl is None:
-        return jsonify({"error": "not found"}), 404
-    if old == new:
-        return jsonify({"ok": True})
-    if any(p["name"] == new for p in lib["playlists"]):
-        return jsonify({"error": "exists"}), 409
-    pl["name"] = new
-    save_lib(lib)
+    with _lib_lock:
+        lib = load_lib()
+        pl = next((p for p in lib["playlists"] if p["name"] == old), None)
+        if pl is None:
+            return jsonify({"error": "not found"}), 404
+        if old == new:
+            return jsonify({"ok": True})
+        if any(p["name"] == new for p in lib["playlists"]):
+            return jsonify({"error": "exists"}), 409
+        pl["name"] = new
+        save_lib(lib)
     return jsonify({"ok": True})
 
 
@@ -1893,68 +1906,69 @@ def api_library_clear():
         if not isinstance(v, bool):
             return jsonify({"error": "bad options"}), 400
         opts[key] = v
-    lib = load_lib()
-    removed = 0
-    playlists_removed = 0
-    if opts["playlists"]:
-        playlists_removed = len(lib.get("playlists", []))
-        lib["playlists"] = []
-    kept = []
-    files = 0
-    for s in lib.get("songs", []):
-        is_local = bool(s.get("local"))
-        drop = opts["local"] if is_local else opts["nasheeds"]
-        if drop:
-            removed += 1
-            p = s.get("filepath") or ""
-            if p and os.path.isfile(p) and (in_dir(p, DOWNLOAD_DIR) or in_dir(p, LOCAL_DIR)):
-                try:
-                    os.remove(p)
-                    files += 1
-                except OSError:
-                    pass
-            ap = s.get("artfile") or ""
-            if ap and os.path.isfile(ap) and in_dir(ap, LOCAL_DIR):
-                try:
-                    os.remove(ap)
-                    files += 1
-                except OSError:
-                    pass
-            continue
-        if not is_local and opts["downloads"] and (s.get("downloaded") or s.get("filepath")):
-            p = s.get("filepath") or ""
-            if p and os.path.isfile(p) and (in_dir(p, DOWNLOAD_DIR) or in_dir(p, LOCAL_DIR)):
-                try:
-                    os.remove(p)
-                    files += 1
-                except OSError:
-                    pass
-            s.pop("filepath", None)
-            s.pop("downloaded", None)
-        kept.append(s)
-    if opts["nasheeds"] or opts["downloads"]:
-        with _dl_lock:
-            for st in _downloads.values():
-                if st.get("state") == "downloading":
-                    proc = st.get("proc")
-                    if proc:
-                        try:
-                            proc.kill()
-                        except OSError:
-                            pass
-            _downloads.clear()
-    for flag, directory in ((opts["downloads"], DOWNLOAD_DIR), (opts["local"], LOCAL_DIR)):
-        if not flag or not os.path.isdir(directory):
-            continue
-        for f in os.listdir(directory):
-            p = os.path.join(directory, f)
-            if not os.path.isfile(p):
+    with _lib_lock:
+        lib = load_lib()
+        removed = 0
+        playlists_removed = 0
+        if opts["playlists"]:
+            playlists_removed = len(lib.get("playlists", []))
+            lib["playlists"] = []
+        kept = []
+        files = 0
+        for s in lib.get("songs", []):
+            is_local = bool(s.get("local"))
+            drop = opts["local"] if is_local else opts["nasheeds"]
+            if drop:
+                removed += 1
+                p = s.get("filepath") or ""
+                if p and os.path.isfile(p) and (in_dir(p, DOWNLOAD_DIR) or in_dir(p, LOCAL_DIR)):
+                    try:
+                        os.remove(p)
+                        files += 1
+                    except OSError:
+                        pass
+                ap = s.get("artfile") or ""
+                if ap and os.path.isfile(ap) and in_dir(ap, LOCAL_DIR):
+                    try:
+                        os.remove(ap)
+                        files += 1
+                    except OSError:
+                        pass
                 continue
-            try:
-                os.remove(p)
-                files += 1
-            except OSError:
-                pass
+            if not is_local and opts["downloads"] and (s.get("downloaded") or s.get("filepath")):
+                p = s.get("filepath") or ""
+                if p and os.path.isfile(p) and (in_dir(p, DOWNLOAD_DIR) or in_dir(p, LOCAL_DIR)):
+                    try:
+                        os.remove(p)
+                        files += 1
+                    except OSError:
+                        pass
+                s.pop("filepath", None)
+                s.pop("downloaded", None)
+            kept.append(s)
+        if opts["nasheeds"] or opts["downloads"]:
+            with _dl_lock:
+                for st in _downloads.values():
+                    if st.get("state") == "downloading":
+                        proc = st.get("proc")
+                        if proc:
+                            try:
+                                proc.kill()
+                            except OSError:
+                                pass
+                _downloads.clear()
+        for flag, directory in ((opts["downloads"], DOWNLOAD_DIR), (opts["local"], LOCAL_DIR)):
+            if not flag or not os.path.isdir(directory):
+                continue
+            for f in os.listdir(directory):
+                p = os.path.join(directory, f)
+                if not os.path.isfile(p):
+                    continue
+                try:
+                    os.remove(p)
+                    files += 1
+                except OSError:
+                    pass
     lib["songs"] = kept
     save_lib(lib)
     return jsonify({"ok": True, "songs": removed, "playlists": playlists_removed, "files": files})
