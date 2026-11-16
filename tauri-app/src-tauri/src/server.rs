@@ -2242,6 +2242,10 @@ fn run_download(state: Arc<State>, sid: String) {
     let canceled = result.as_ref().err().map(|e| e == "canceled").unwrap_or(false);
     match result {
         Ok(()) => {
+            if cancel.load(Ordering::Relaxed) {
+                let _ = fs::remove_file(&out_path);
+                return;
+            }
             let mut lib = state.library.lock().unwrap().clone();
             if let Some(songs) = lib["songs"].as_array_mut() {
                 if let Some(song) = songs
