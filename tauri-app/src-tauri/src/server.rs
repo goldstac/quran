@@ -194,9 +194,14 @@ fn write_library(lib_path: &Path, lib: &Value) {
 }
 
 fn handle(mut stream: TcpStream, state: &Arc<State>) -> std::io::Result<()> {
+    let _ = stream.set_read_timeout(Some(Duration::from_secs(30)));
+    let _ = stream.set_write_timeout(Some(Duration::from_secs(60)));
     let mut reader = BufReader::new(stream.try_clone()?);
     let mut request_line = String::new();
     if reader.read_line(&mut request_line)? == 0 {
+        return Ok(());
+    }
+    if request_line.len() > 8192 {
         return Ok(());
     }
     let mut parts = request_line.split_whitespace();
@@ -208,10 +213,15 @@ fn handle(mut stream: TcpStream, state: &Arc<State>) -> std::io::Result<()> {
     let mut content_type: Option<String> = None;
     let mut host_header: Option<String> = None;
     let mut origin_header: Option<String> = None;
+    let mut header_bytes: usize = 0;
     loop {
         let mut line = String::new();
         if reader.read_line(&mut line)? == 0 {
             break;
+        }
+        header_bytes += line.len();
+        if header_bytes > 32768 {
+            return Ok(());
         }
         let line = line.trim_end_matches(['\r', '\n']);
         if line.is_empty() {
