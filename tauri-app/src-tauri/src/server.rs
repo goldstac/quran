@@ -369,23 +369,22 @@ fn handle(mut stream: TcpStream, state: &Arc<State>) -> std::io::Result<()> {
             send_json(&mut stream, "200 OK", &lib, send_body)
         }
         ["api", "library", "add"] if method_post => {
-            let Ok(song) = parse_body(&body) else {
-                return send_json(
-                    &mut stream,
-                    "400 Bad Request",
-                    &json!({"error": "invalid json"}),
-                    send_body,
-                );
+            let song = match parse_body(&body).ok().and_then(|v| clean_song(&v)) {
+                Some(song) => song,
+                None => {
+                    return send_json(
+                        &mut stream,
+                        "400 Bad Request",
+                        &json!({"error": "invalid song"}),
+                        send_body,
+                    )
+                }
             };
-            let Some(id) = song.get("id").and_then(|v| v.as_str()) else {
-                return send_json(
-                    &mut stream,
-                    "400 Bad Request",
-                    &json!({"error": "id required"}),
-                    send_body,
-                );
-            };
-            let id = id.to_string();
+            let id = song
+                .get("id")
+                .and_then(|v| v.as_str())
+                .unwrap_or_default()
+                .to_string();
             {
                 let mut lib = state.library.lock().unwrap();
                 let songs = lib["songs"].as_array_mut();
@@ -575,22 +574,22 @@ fn handle(mut stream: TcpStream, state: &Arc<State>) -> std::io::Result<()> {
             }
         }
         ["api", "playlists", name, "add"] if method_post => {
-            let Ok(song) = parse_body(&body) else {
-                return send_json(
-                    &mut stream,
-                    "400 Bad Request",
-                    &json!({"error": "invalid json"}),
-                    send_body,
-                );
+            let song = match parse_body(&body).ok().and_then(|v| clean_song(&v)) {
+                Some(song) => song,
+                None => {
+                    return send_json(
+                        &mut stream,
+                        "400 Bad Request",
+                        &json!({"error": "invalid song"}),
+                        send_body,
+                    )
+                }
             };
-            let Some(id) = song.get("id").and_then(|v| v.as_str()).map(str::to_string) else {
-                return send_json(
-                    &mut stream,
-                    "400 Bad Request",
-                    &json!({"error": "id required"}),
-                    send_body,
-                );
-            };
+            let id = song
+                .get("id")
+                .and_then(|v| v.as_str())
+                .unwrap_or_default()
+                .to_string();
             let name = *name;
             let mut outcome: Result<(), u16> = Err(404);
             {
@@ -782,7 +781,7 @@ fn handle(mut stream: TcpStream, state: &Arc<State>) -> std::io::Result<()> {
         ),
         ["api", "download"] if method_post => {
             let sid = body_field_str(&body, "id");
-            if sid.is_empty() {
+            if !valid_sid(&sid) {
                 return send_json(
                     &mut stream,
                     "404 Not Found",
@@ -868,6 +867,14 @@ fn handle(mut stream: TcpStream, state: &Arc<State>) -> std::io::Result<()> {
         }
         ["api", "download", "remove"] if method_post => {
             let sid = body_field_str(&body, "id");
+            if !valid_sid(&sid) {
+                return send_json(
+                    &mut stream,
+                    "400 Bad Request",
+                    &json!({"error": "bad id"}),
+                    send_body,
+                );
+            }
             let mut canceled = false;
             {
                 let mut dls = state.downloads.lock().unwrap();
@@ -965,6 +972,58 @@ fn body_field_str(body: &[u8], field: &str) -> String {
                 .map(|s| s.trim().to_string())
         })
         .unwrap_or_default()
+}
+
+fn valid_sid(sid: &str) -> bool {
+    (1..=64).contains(&sid.len())
+        && sid
+            .chars()
+            .all(|c| c.is_ascii_alphanumeric() || c == '_' || c == '-')
+}
+
+fn song_text(raw: &Value, key: &str, cap: usize) -> String {
+    raw.get(key)
+        .and_then(|v| v.as_str())
+        .map(|v| v.trim().chars().take(cap).collect())
+        .unwrap_or_default()
+}
+
+fn clean_song(raw: &Value) -> Option<Value> {
+    let sid = raw.get("id").and_then(|v| v.as_str()).unwrap_or("");
+    if !valid_sid(sid) {
+        return None;
+    }
+    let mut thumb = song_text(raw, "thumbnail", 1024);
+    let thumb_ok = thumb.is_empty()
+        || thumb.starts_with('/')
+        || thumb.starts_with("http://")
+        || thumb.starts_with("https://");
+    if !thumb_ok {
+        thumb = String::new();
+    }
+    let mut url = song_text(raw, "url", 512);
+    if !url.is_empty() && !url.starts_with("http://") && !url.starts_with("https://") {
+        url = String::new();
+    }
+    let duration = match raw.get("duration") {
+        Some(Value::Bool(_)) | None => Value::Null,
+        Some(v) if v.is_i64() || v.is_u64() || v.is_f64() => v.clone(),
+        _ => Value::Null,
+    };
+    let title = song_text(raw, "title", 300);
+    Some(json!({
+        "id": sid,
+        "title": if title.is_empty() { json!(sid) } else { json!(title) },
+        "channel": song_text(raw, "channel", 200),
+        "thumbnail": thumb,
+        "duration": duration,
+        "duration_string": song_text(raw, "duration_string", 32),
+        "url": url,
+        "favorite": raw.get("favorite").and_then(|v| v.as_bool()).unwrap_or(false),
+        "local": raw.get("local").and_then(|v| v.as_bool()).unwrap_or(false),
+        "downloaded": raw.get("downloaded").and_then(|v| v.as_bool()).unwrap_or(false),
+        "provided": raw.get("provided").and_then(|v| v.as_bool()).unwrap_or(false),
+    }))
 }
 
 fn pct_decode(s: &str) -> String {
