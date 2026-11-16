@@ -436,7 +436,8 @@ def _run_download(sid):
 
 def _download_worker(sid):
     if not YTDLP_PATH:
-        _downloads[sid] = {"state": "error", "error": "yt-dlp not found"}
+        with _dl_lock:
+            _downloads[sid] = {"state": "error", "error": "yt-dlp not found"}
         return
     ensure_dirs()
     for f in os.listdir(DOWNLOAD_DIR):
@@ -461,24 +462,48 @@ def _download_worker(sid):
             text=True,
         )
     except Exception as e:
-        _downloads[sid] = {"state": "error", "error": str(e)}
+        with _dl_lock:
+            _downloads[sid] = {"state": "error", "error": str(e)}
         return
-    _downloads[sid]["proc"] = proc
+    with _dl_lock:
+        entry = _downloads.get(sid)
+        if entry is None or entry.get("state") != "downloading":
+            try:
+                proc.kill()
+            except OSError:
+                pass
+            return
+        entry["proc"] = proc
     assert proc.stdout is not None
     for line in proc.stdout:
         m = re.search(r"\[download\]\s+([\d.]+)%", line)
         if m:
-            _downloads[sid]["progress"] = float(m.group(1))
+            with _dl_lock:
+                entry["progress"] = float(m.group(1))
         if "ERROR" in line:
             err = line.strip()
     proc.wait()
-    if _downloads.get(sid, {}).get("state") != "downloading":
-        return
-    produced = None
-    for f in os.listdir(DOWNLOAD_DIR):
-        if f.startswith(sid + ".") and not f.endswith(".part"):
-            produced = os.path.join(DOWNLOAD_DIR, f)
-            break
+    with _dl_lock:
+        entry = _downloads.get(sid)
+        if entry is None or entry.get("state") != "downloading":
+            return
+        produced = None
+        for f in os.listdir(DOWNLOAD_DIR):
+            if f.startswith(sid + ".") and not f.endswith(".part"):
+                produced = os.path.join(DOWNLOAD_DIR, f)
+                break
+        if proc.returncode == 0 and produced:
+            entry["state"] = "done"
+            entry["progress"] = 100
+            entry.pop("error", None)
+        else:
+            if produced:
+                try:
+                    os.remove(produced)
+                except OSError:
+                    pass
+            entry["state"] = "error"
+            entry["error"] = err or "download failed"
     if proc.returncode == 0 and produced:
         lib = load_lib()
         for s in lib["songs"]:
@@ -487,14 +512,6 @@ def _download_worker(sid):
                 s["filepath"] = produced
                 break
         save_lib(lib)
-        _downloads[sid] = {"state": "done", "progress": 100}
-    else:
-        if produced:
-            try:
-                os.remove(produced)
-            except OSError:
-                pass
-        _downloads[sid] = {"state": "error", "error": err or "download failed"}
 
 
 @app.route("/api/download", methods=["POST"])
