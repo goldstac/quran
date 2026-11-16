@@ -1454,6 +1454,8 @@ def _discord_send_frame(sock, opcode, payload):
 _discord = DiscordBridge()
 _DISCORD_PREF_FILE = os.path.join(DATA_DIR, "discord.json")
 
+_discord_pref_lock = threading.Lock()
+
 
 def _discord_prefs():
     try:
@@ -1465,11 +1467,14 @@ def _discord_prefs():
 
 
 def _discord_pref_save(changes):
-    data = _discord_prefs()
-    data.update(changes)
     try:
-        with open(_DISCORD_PREF_FILE, "w") as f:
-            json.dump(data, f)
+        with _discord_pref_lock:
+            data = _discord_prefs()
+            data.update(changes)
+            tmp = _DISCORD_PREF_FILE + ".tmp"
+            with open(tmp, "w") as f:
+                json.dump(data, f)
+            os.replace(tmp, _DISCORD_PREF_FILE)
         return True
     except Exception:
         return False
@@ -1523,6 +1528,8 @@ def api_discord_status():
 import urllib.error
 
 _BOT_FILE = os.path.join(DATA_DIR, "bot.json")
+
+_bot_lock = threading.Lock()
 _BOT_DEFAULT_URL = "http://127.0.0.1:3000"
 _bot_last = {"at": 0, "ok": None, "error": ""}
 
@@ -1538,8 +1545,12 @@ def _bot_read():
 
 def _bot_write(cfg):
     try:
-        with open(_BOT_FILE, "w") as f:
-            json.dump(cfg, f, indent=2)
+        with _bot_lock:
+            tmp = _BOT_FILE + ".tmp"
+            with open(tmp, "w") as f:
+                json.dump(cfg, f, indent=2)
+            os.chmod(tmp, 0o600)
+            os.replace(tmp, _BOT_FILE)
     except Exception:
         pass
 
