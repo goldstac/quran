@@ -2091,7 +2091,7 @@ const FILE_MIMES: [(&str, &str); 10] = [
     (".mp4", "audio/mp4"),
     (".mp3", "audio/mpeg"),
     (".webm", "audio/webm"),
-    (".opus", "audio/opus"),
+    (".opus", "audio/ogg; codecs=opus"),
     (".ogg", "audio/ogg"),
     (".oga", "audio/ogg"),
     (".wav", "audio/wav"),
