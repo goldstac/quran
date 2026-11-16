@@ -291,3 +291,22 @@ def test_origin_guard_allows_lan_ip_host_when_bound_wide(monkeypatch):
     assert r.status_code == 403
     r = backend.app.test_client().get("/api/version", headers={"Host": "rebind.example:5000"})
     assert r.status_code == 403
+
+
+def test_load_lib_recovers_from_corrupt_file():
+    with open(backend.LIB_FILE, "w") as f:
+        f.write("{not json")
+    lib = backend.load_lib()
+    assert lib["songs"] == []
+    assert any(p["name"] == "Favorites" for p in lib["playlists"])
+    assert os.path.exists(backend.LIB_FILE + ".bad-0") or any(
+        n.startswith("library.json.bad-") for n in os.listdir(os.path.dirname(backend.LIB_FILE))
+    )
+
+
+def test_load_lib_recovers_from_non_object():
+    with open(backend.LIB_FILE, "w") as f:
+        f.write("[1, 2, 3]")
+    lib = backend.load_lib()
+    assert isinstance(lib, dict)
+    assert lib["songs"] == []

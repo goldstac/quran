@@ -180,8 +180,21 @@ _lib_lock = threading.Lock()
 
 def load_lib():
     if os.path.exists(LIB_FILE):
-        with open(LIB_FILE) as f:
-            return json.load(f)
+        try:
+            with open(LIB_FILE) as f:
+                data = json.load(f)
+        except (OSError, ValueError):
+            try:
+                os.replace(LIB_FILE, LIB_FILE + ".bad-" + str(int(time.time())))
+            except OSError:
+                pass
+            data = None
+        if isinstance(data, dict):
+            if not isinstance(data.get("songs"), list):
+                data["songs"] = []
+            if not isinstance(data.get("playlists"), list):
+                data["playlists"] = []
+            return data
     return {"songs": [], "playlists": [{"name": "Favorites", "songs": []}]}
 
 
