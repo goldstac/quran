@@ -1093,11 +1093,14 @@ def api_proxy(video_id):
         status = resp.status if resp.status in (200, 206) else 200
 
         def generate():
-            while True:
-                chunk = resp.read(65536)
-                if not chunk:
-                    break
-                yield chunk
+            try:
+                while True:
+                    chunk = resp.read(65536)
+                    if not chunk:
+                        break
+                    yield chunk
+            finally:
+                resp.close()
 
         return app.response_class(generate(), status=status, headers=resp_headers)
     except Exception as e:
