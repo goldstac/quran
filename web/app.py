@@ -458,7 +458,7 @@ def _run_download(sid):
 def _download_worker(sid):
     if not YTDLP_PATH:
         with _dl_lock:
-            _downloads[sid] = {"state": "error", "error": "yt-dlp not found"}
+            _downloads[sid] = {"state": "error", "error": "yt-dlp not found", "at": time.time()}
         return
     ensure_dirs()
     for f in os.listdir(DOWNLOAD_DIR):
@@ -484,7 +484,7 @@ def _download_worker(sid):
         )
     except Exception as e:
         with _dl_lock:
-            _downloads[sid] = {"state": "error", "error": str(e)}
+            _downloads[sid] = {"state": "error", "error": str(e), "at": time.time()}
         return
     with _dl_lock:
         entry = _downloads.get(sid)
@@ -517,6 +517,7 @@ def _download_worker(sid):
             entry["state"] = "done"
             entry["progress"] = 100
             entry.pop("error", None)
+            entry["at"] = time.time()
         else:
             if produced:
                 try:
@@ -525,6 +526,7 @@ def _download_worker(sid):
                     pass
             entry["state"] = "error"
             entry["error"] = err or "download failed"
+            entry["at"] = time.time()
     if proc.returncode == 0 and produced:
         with _lib_lock:
             lib = load_lib()
@@ -557,7 +559,12 @@ def api_download():
 
 @app.route("/api/download/status")
 def api_download_status():
+    now = time.time()
     with _dl_lock:
+        for sid, st in list(_downloads.items()):
+            at = st.get("at") or 0
+            if st.get("state") != "downloading" and now - at > 300:
+                _downloads.pop(sid, None)
         out = {
             sid: {
                 "state": st.get("state"),
