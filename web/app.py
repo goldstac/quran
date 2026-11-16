@@ -4,7 +4,7 @@ from flask import Flask, render_template, jsonify, request, send_file
 
 app = Flask(__name__)
 app.config["TEMPLATES_AUTO_RELOAD"] = True
-app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024 * 1024
+app.config["MAX_CONTENT_LENGTH"] = 1024 * 1024 * 1024
 
 _BIND = os.environ.get("QURAN_BIND", "127.0.0.1")
 _ALLOWED_ORIGIN = re.compile(r"^(?:https?://(?:127\.0\.0\.1|localhost|\[::1\])(?::\d+)?|tauri://localhost|http://tauri\.localhost)$")
