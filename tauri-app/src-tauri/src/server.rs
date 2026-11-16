@@ -141,14 +141,21 @@ fn load_json_file(path: &Path) -> Value {
         .unwrap_or_else(|| json!({}))
 }
 
+fn write_json_atomic(path: &Path, body: &str) {
+    if let Some(parent) = path.parent() {
+        let _ = fs::create_dir_all(parent);
+    }
+    let tmp = path.with_extension("tmp");
+    if fs::write(&tmp, body).is_ok() {
+        let _ = fs::rename(&tmp, path);
+    }
+}
+
 fn save_json_file(path: &Path, value: &Value) {
     let Ok(body) = serde_json::to_string_pretty(value) else {
         return;
     };
-    if let Some(parent) = path.parent() {
-        let _ = fs::create_dir_all(parent);
-    }
-    let _ = fs::write(path, body);
+    write_json_atomic(path, &body);
 }
 
 fn serve_loop(listener: TcpListener, state: Arc<State>) {
@@ -187,10 +194,7 @@ fn write_library(lib_path: &Path, lib: &Value) {
     let Ok(body) = serde_json::to_string_pretty(lib) else {
         return;
     };
-    if let Some(parent) = lib_path.parent() {
-        let _ = fs::create_dir_all(parent);
-    }
-    let _ = fs::write(lib_path, body);
+    write_json_atomic(lib_path, &body);
 }
 
 fn handle(mut stream: TcpStream, state: &Arc<State>) -> std::io::Result<()> {
