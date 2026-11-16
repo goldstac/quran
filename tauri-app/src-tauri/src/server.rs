@@ -383,12 +383,16 @@ fn handle(mut stream: TcpStream, state: &Arc<State>) -> std::io::Result<()> {
                 .parse::<i64>()
                 .ok()
                 .zip(chapter.parse::<i64>().ok())
-                .ok_or_else(|| "bad ids".to_string())
+                .filter(|(_, c)| (1..=114).contains(c))
+                .ok_or_else(|| "bad chapter".to_string())
                 .and_then(|(m, c)| quran_chapter_audio(state, m, c));
             match result {
                 Ok(data) => send_json(&mut stream, "200 OK", &data, send_body),
                 Err(e) if e == "reciter not found" => {
                     send_json(&mut stream, "404 Not Found", &json!({"error": e}), send_body)
+                }
+                Err(e) if e == "bad chapter" => {
+                    send_json(&mut stream, "400 Bad Request", &json!({"error": e}), send_body)
                 }
                 Err(e) => send_json(&mut stream, "500 Internal Server Error", &json!({"error": e}), send_body),
             }
