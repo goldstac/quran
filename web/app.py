@@ -1664,6 +1664,9 @@ def api_bot_test():
         return jsonify({"ok": False, "error": f"No response from {url}"}), 502
 
 
+_report_sem = threading.Semaphore(4)
+
+
 @app.route("/api/report", methods=["POST"])
 def api_report():
     data = _json_obj() or {}
@@ -1676,9 +1679,16 @@ def api_report():
         "songId": str(data.get("songId") or ""),
         "song": data.get("song"),
     }
-    threading.Thread(
-        target=_bot_post_event, args=(_bot_url(cfg), cfg["token"], payload), daemon=True
-    ).start()
+    if not _report_sem.acquire(blocking=False):
+        return jsonify({"ok": True, "skipped": True})
+
+    def run():
+        try:
+            _bot_post_event(_bot_url(cfg), cfg["token"], payload)
+        finally:
+            _report_sem.release()
+
+    threading.Thread(target=run, daemon=True).start()
     return jsonify({"ok": True})
 
 
