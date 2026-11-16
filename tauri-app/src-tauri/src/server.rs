@@ -13,7 +13,7 @@ const YT_KEY: &str = "AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8";
 const ANDROID_UA: &str = "com.google.android.youtube/20.10.38 (Linux; U; Android 14) gzip";
 const VISIONOS_UA: &str = "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_7_3) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15";
 const UA: &str = "quran-app/1.0";
-const MAX_BODY: usize = 2 * 1024 * 1024 * 1024;
+const MAX_BODY: usize = 1024 * 1024 * 1024;
 const INDEX_HTML: &[u8] =
     include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../web/templates/index.html"));
 const APP_JS: &[u8] = include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../web/static/app.js"));
