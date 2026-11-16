@@ -2281,17 +2281,26 @@ fn multipart_file(body: &[u8], content_type: &str) -> Option<(Vec<u8>, String)> 
     let delim = format!("--{boundary}");
     let mut pos = find_slice(body, delim.as_bytes())? + delim.len();
     loop {
+        if pos >= body.len() {
+            return None;
+        }
         if body[pos..].starts_with(b"--") {
             return None;
         }
         if body[pos..].starts_with(b"\r\n") {
             pos += 2;
         }
+        if pos >= body.len() {
+            return None;
+        }
         let headers_end = find_slice(&body[pos..], b"\r\n\r\n")? + pos;
         let headers = String::from_utf8_lossy(&body[pos..headers_end]).into_owned();
         let data_start = headers_end + 4;
+        if data_start > body.len() {
+            return None;
+        }
         let next = find_slice(&body[data_start..], delim.as_bytes())? + data_start;
-        let data_end = next.saturating_sub(2);
+        let data_end = next.saturating_sub(2).max(data_start);
         let is_file = headers.to_ascii_lowercase().contains("filename=");
         if is_file {
             return Some((body[data_start..data_end].to_vec(), filename_of(&headers)));
