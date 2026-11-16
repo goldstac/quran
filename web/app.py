@@ -1746,9 +1746,6 @@ def api_update():
         return jsonify({"ok": False, "error": "No version selected"}), 400
     if not tag.startswith("v"):
         tag = "v" + tag
-    with _update_lock:
-        if _update_state["state"] == "downloading":
-            return jsonify({"ok": False, "error": "An update is already downloading"}), 409
     releases, _ = _releases()
     rel = next((r for r in releases if r.get("tag") == tag), None)
     if rel is None:
@@ -1756,6 +1753,13 @@ def api_update():
     asset = rel.get("asset")
     if not asset:
         return jsonify({"ok": False, "error": f"{tag} has no installer for this platform"}), 400
+    with _update_lock:
+        if _update_state["state"] == "downloading":
+            return jsonify({"ok": False, "error": "An update is already downloading"}), 409
+        _update_state.update(
+            state="downloading", tag=tag, asset=asset["name"], downloaded=0,
+            total=asset.get("size", 0), path="", error="",
+        )
     threading.Thread(
         target=_run_update,
         args=(rel["tag"], asset["url"], asset["name"], asset["size"], asset.get("digest", "")),
