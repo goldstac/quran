@@ -774,6 +774,14 @@ def api_remove(sid):
             except OSError:
                 pass
     with _dl_lock:
+        st = _downloads.get(sid)
+        if st and st.get("state") == "downloading":
+            proc = st.get("proc")
+            if proc:
+                try:
+                    proc.kill()
+                except OSError:
+                    pass
         _downloads.pop(sid, None)
     return jsonify({"ok": True})
 
