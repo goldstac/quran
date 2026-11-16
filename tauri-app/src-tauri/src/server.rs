@@ -655,6 +655,9 @@ fn handle(mut stream: TcpStream, state: &Arc<State>) -> std::io::Result<()> {
                 let mut lib = state.library.lock().unwrap();
                 if let Some(pls) = lib["playlists"].as_array_mut() {
                     if let Some(pl) = pls.iter_mut().find(|p| p.get("name").and_then(|v| v.as_str()) == Some(name)) {
+                        if pl["songs"].as_array_mut().is_none() {
+                            pl["songs"] = json!([]);
+                        }
                         let songs = pl["songs"].as_array_mut().unwrap();
                         if !songs.iter().any(|s| s.get("id").and_then(|v| v.as_str()) == Some(id.as_str())) {
                             songs.push(song);
