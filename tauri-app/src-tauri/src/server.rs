@@ -1194,7 +1194,16 @@ fn innertube_post(url: &str, body: &Value, ua: &str) -> Result<Value, String> {
         .set("User-Agent", ua)
         .send_json(body.clone())
         .map_err(|e| e.to_string())?;
-    resp.into_json().map_err(|e| e.to_string())
+    capped_json(resp)
+}
+
+fn capped_json(resp: ureq::Response) -> Result<Value, String> {
+    let mut text = String::new();
+    resp.into_reader()
+        .take(10 * 1024 * 1024 + 1)
+        .read_to_string(&mut text)
+        .map_err(|e| e.to_string())?;
+    serde_json::from_str(&text).map_err(|e| e.to_string())
 }
 
 fn resolve(state: &State, video_id: &str) -> Result<String, String> {
@@ -1269,7 +1278,7 @@ fn resolve_visionos(video_id: &str) -> Result<String, String> {
         .set("X-Goog-Visitor-Id", &visitor)
         .send_json(body)
         .map_err(|e| e.to_string())?;
-    let data: Value = resp.into_json().map_err(|e| e.to_string())?;
+    let data: Value = capped_json(resp)?;
     pick_audio_url(&data)
 }
 
@@ -1523,7 +1532,7 @@ fn quran_get(state: &State, url: &str, key: &str) -> Result<Value, String> {
         .set("User-Agent", UA)
         .call()
         .map_err(|e| e.to_string())?;
-    let data: Value = resp.into_json().map_err(|e| e.to_string())?;
+    let data: Value = capped_json(resp)?;
     state
         .quran_cache
         .lock()
@@ -1769,7 +1778,7 @@ fn provided_catalog(state: &State, force: bool) -> Result<Vec<ProvidedItem>, Str
         .set("User-Agent", UA)
         .call()
         .map_err(|e| e.to_string())?;
-    let raw: Value = resp.into_json().map_err(|e| e.to_string())?;
+    let raw: Value = capped_json(resp)?;
     let empty: Vec<Value> = Vec::new();
     let entries = raw
         .get("nasheeds")
