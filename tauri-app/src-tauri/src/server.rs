@@ -52,6 +52,7 @@ struct DownloadState {
     progress: f64,
     error: String,
     cancel: Arc<AtomicBool>,
+    finished_at: u64,
 }
 
 pub struct State {
@@ -907,6 +908,7 @@ fn handle(mut stream: TcpStream, state: &Arc<State>) -> std::io::Result<()> {
                             progress: 0.0,
                             error: String::new(),
                             cancel: Arc::new(AtomicBool::new(false)),
+                            finished_at: 0,
                         },
                     );
                     start = true;
@@ -927,7 +929,11 @@ fn handle(mut stream: TcpStream, state: &Arc<State>) -> std::io::Result<()> {
             }
         }
         ["api", "download", "status"] if method_get => {
-            let dls = state.downloads.lock().unwrap();
+            let mut dls = state.downloads.lock().unwrap();
+            let now = now_secs() as u64;
+            dls.retain(|_, d| {
+                d.state == "downloading" || d.finished_at == 0 || now.saturating_sub(d.finished_at) < 300
+            });
             let mut out = serde_json::Map::new();
             for (id, d) in dls.iter() {
                 out.insert(
@@ -2191,6 +2197,7 @@ fn run_download(state: Arc<State>, sid: String) {
             progress: 0.0,
             error: String::new(),
             cancel: Arc::new(AtomicBool::new(false)),
+            finished_at: 0,
         });
         st.cancel.clone()
     };
@@ -2275,6 +2282,7 @@ fn run_download(state: Arc<State>, sid: String) {
                 d.state = "done".into();
                 d.progress = 100.0;
                 d.error = String::new();
+                d.finished_at = now_secs() as u64;
             }
         }
         Err(e) => {
@@ -2286,6 +2294,7 @@ fn run_download(state: Arc<State>, sid: String) {
                 d.state = "error".into();
                 d.progress = 0.0;
                 d.error = if e.is_empty() { "download failed".into() } else { e };
+                d.finished_at = now_secs() as u64;
             }
         }
     }
