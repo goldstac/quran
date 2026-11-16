@@ -99,6 +99,40 @@ fn now_secs() -> f64 {
         .unwrap_or(0.0)
 }
 
+fn host_allowed(host: &str) -> bool {
+    let hostname = host.split(':').next().unwrap_or("");
+    let hostname = hostname.trim_matches(|c| c == '[' || c == ']');
+    matches!(hostname, "127.0.0.1" | "localhost" | "::1")
+}
+
+fn origin_allowed(origin: &str) -> bool {
+    if origin == "tauri://localhost" || origin == "http://tauri.localhost" {
+        return true;
+    }
+    let Some((scheme, rest)) = origin.split_once("://") else {
+        return false;
+    };
+    if scheme != "http" && scheme != "https" {
+        return false;
+    }
+    let host = match rest.find('/') {
+        Some(i) => &rest[..i],
+        None => rest,
+    };
+    let bare = if let Some(stripped) = host.strip_prefix('[') {
+        match stripped.find(']') {
+            Some(i) => &stripped[..i],
+            None => stripped,
+        }
+    } else {
+        match host.rfind(':') {
+            Some(i) => &host[..i],
+            None => host,
+        }
+    };
+    matches!(bare, "127.0.0.1" | "localhost" | "::1")
+}
+
 fn load_json_file(path: &Path) -> Value {
     fs::read_to_string(path)
         .ok()
@@ -172,6 +206,8 @@ fn handle(mut stream: TcpStream, state: &Arc<State>) -> std::io::Result<()> {
     let mut content_length: usize = 0;
     let mut range_header: Option<String> = None;
     let mut content_type: Option<String> = None;
+    let mut host_header: Option<String> = None;
+    let mut origin_header: Option<String> = None;
     loop {
         let mut line = String::new();
         if reader.read_line(&mut line)? == 0 {
@@ -192,6 +228,10 @@ fn handle(mut stream: TcpStream, state: &Arc<State>) -> std::io::Result<()> {
             range_header = Some(value.to_string());
         } else if lname == "content-type" {
             content_type = Some(value.to_string());
+        } else if lname == "host" {
+            host_header = Some(value.to_string());
+        } else if lname == "origin" {
+            origin_header = Some(value.to_string());
         }
     }
 
@@ -225,6 +265,25 @@ fn handle(mut stream: TcpStream, state: &Arc<State>) -> std::io::Result<()> {
         None => (target.clone(), String::new()),
     };
     let send_body = !method.eq_ignore_ascii_case("HEAD");
+
+    if !host_allowed(host_header.as_deref().unwrap_or("")) {
+        return send_json(
+            &mut stream,
+            "403 Forbidden",
+            &json!({"error": "forbidden"}),
+            send_body,
+        );
+    }
+    if let Some(origin) = origin_header.as_deref() {
+        if !origin_allowed(origin) {
+            return send_json(
+                &mut stream,
+                "403 Forbidden",
+                &json!({"error": "forbidden"}),
+                send_body,
+            );
+        }
+    }
 
     if method.eq_ignore_ascii_case("OPTIONS") {
         return send_raw(
