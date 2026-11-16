@@ -967,7 +967,7 @@ fn handle(mut stream: TcpStream, state: &Arc<State>) -> std::io::Result<()> {
                 dls.remove(&sid);
             }
             if !canceled {
-                let mut lib = state.library.lock().unwrap().clone();
+                let mut lib = state.library.lock().unwrap();
                 let mut changed = false;
                 if let Some(songs) = lib["songs"].as_array_mut() {
                     if let Some(song) = songs
@@ -984,7 +984,6 @@ fn handle(mut stream: TcpStream, state: &Arc<State>) -> std::io::Result<()> {
                 }
                 if changed {
                     write_library(&state.lib_path, &lib);
-                    *state.library.lock().unwrap() = lib;
                 }
             }
             send_json(
@@ -1944,7 +1943,7 @@ fn remove_inside(path_str: &str, data_dir: &Path, subdirs: &[&str]) -> bool {
 }
 
 fn clear_library(state: &State, opts: &ClearOpts) -> Value {
-    let mut lib = state.library.lock().unwrap().clone();
+    let mut lib = state.library.lock().unwrap();
     let mut removed = 0usize;
     let mut playlists_removed = 0usize;
     let mut files = 0usize;
@@ -2015,8 +2014,8 @@ fn clear_library(state: &State, opts: &ClearOpts) -> Value {
         }
     }
     lib["songs"] = Value::Array(kept);
-    *state.library.lock().unwrap() = lib.clone();
     write_library(&state.lib_path, &lib);
+    drop(lib);
     json!({
         "ok": true,
         "songs": removed,
@@ -2259,7 +2258,7 @@ fn run_download(state: Arc<State>, sid: String) {
                 let _ = fs::remove_file(&out_path);
                 return;
             }
-            let mut lib = state.library.lock().unwrap().clone();
+            let mut lib = state.library.lock().unwrap();
             if let Some(songs) = lib["songs"].as_array_mut() {
                 if let Some(song) = songs
                     .iter_mut()
@@ -2270,7 +2269,7 @@ fn run_download(state: Arc<State>, sid: String) {
                 }
             }
             write_library(&state.lib_path, &lib);
-            *state.library.lock().unwrap() = lib;
+            drop(lib);
             let mut dls = state.downloads.lock().unwrap();
             if let Some(d) = dls.get_mut(&sid) {
                 d.state = "done".into();
