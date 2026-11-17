@@ -2093,11 +2093,15 @@ scCloseBtn.addEventListener('click', (e) => {
   scDismiss();
 });
 
+let searchGen = 0;
+
 async function doSearch(q: string) {
+  const gen = ++searchGen;
   show('loading');
   $('#search-status').textContent = '';
   try {
     const data = await getJSON<Song[]>(`${API}/api/search?q=${encodeURIComponent(q)}`);
+    if (gen !== searchGen) return;
     saveRecentQ(q);
     scItems = scLoadRecents();
     if (scOpen) scRenderRows(false);
@@ -2110,7 +2114,7 @@ async function doSearch(q: string) {
     renderList('search-results', data, 'search');
     show('results');
   } catch {
-    showEmpty('search.failed');
+    if (gen === searchGen) showEmpty('search.failed');
   }
 }
 

@@ -2014,11 +2014,15 @@ scCloseBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     scDismiss();
 });
+let searchGen = 0;
 async function doSearch(q) {
+    const gen = ++searchGen;
     show('loading');
     $('#search-status').textContent = '';
     try {
         const data = await getJSON(`${API}/api/search?q=${encodeURIComponent(q)}`);
+        if (gen !== searchGen)
+            return;
         saveRecentQ(q);
         scItems = scLoadRecents();
         if (scOpen)
@@ -2033,7 +2037,8 @@ async function doSearch(q) {
         show('results');
     }
     catch {
-        showEmpty('search.failed');
+        if (gen === searchGen)
+            showEmpty('search.failed');
     }
 }
 function showEmpty(msgKey) {
