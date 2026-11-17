@@ -65,10 +65,12 @@ echo
 LOADED=""
 STUCK=""
 NO_SERVER=""
+GOT_DUMP=""
 i=0
 while [ $i -lt 30 ]; do
   adb shell uiautomator dump /sdcard/ui.xml >/dev/null 2>&1
   if adb pull /sdcard/ui.xml /tmp/ui.xml >/dev/null 2>&1; then
+    GOT_DUMP=1
     if grep -q "Search for nasheeds" /tmp/ui.xml \
        || grep -q "Find and play nasheeds" /tmp/ui.xml \
        || grep -q "Your Library" /tmp/ui.xml; then
@@ -94,14 +96,22 @@ fi
 if [ -z "$LOADED" ] && [ -n "$STUCK" ]; then
   fail "the window never left the loading page"
 fi
+if [ -z "$LOADED" ] && [ -z "$GOT_DUMP" ]; then
+  fail "uiautomator never produced a readable view tree, the UI check could not run"
+fi
 if [ -z "$LOADED" ]; then
-  echo "::warning::could not read the view tree, the UI check was skipped"
+  echo "::warning::the view tree never matched the expected app content"
 fi
 echo "webview loaded the app: ${LOADED:-unknown}"
 
-if adb logcat -d -b crash 2>/dev/null | grep -q "com.goldstac.quran"; then
-  adb logcat -d -b crash | tail -n 100
-  fail "the app crashed"
+if adb logcat -d -b crash >/tmp/crash.log 2>/dev/null; then
+  if grep -q "com.goldstac.quran" /tmp/crash.log; then
+    tail -n 100 /tmp/crash.log
+    fail "the app crashed"
+  fi
+else
+  dump_log
+  fail "could not read the crash buffer"
 fi
 
 adb shell am force-stop com.goldstac.quran
