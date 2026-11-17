@@ -71,13 +71,6 @@ matching section and note the platform when it is not cross-platform.
   `cargo check` passes in `tauri-app/src-tauri`; the backend routes were
   exercised live (see the finished item below). Nothing is pushed yet, so
   origin does not have the mobile fixes.
-- [ ] The Provided Nasheeds catalog only exists on the `development` branch
-  (`catalog/index.json` is not on `main`), and both backends point at it:
-  `web/app.py` `_PROVIDED_BASE` and the Rust server's `PROVIDED_BASE` hardcode
-  `development`. That is correct for testing (packaged builds fetch the public
-  repo), but both must be switched to `main` before a stable release, and
-  `main` must first receive the catalog. Tracked so release day does not ship
-  an empty Provided Nasheeds page.
 - [ ] AI release notes for every tag (added, needs the secret + the first tag to
   prove it): the `release` job no longer hardcodes the description. A
   `Write release notes` step diffs the new tag against the previous `v*` tag
@@ -323,6 +316,22 @@ matching section and note the platform when it is not cross-platform.
 
 ## Done
 
+- [x] Preparing `v1.2.1-alpha.2` (2026-11-18): version bumped in `package.json`,
+  `tauri-app/src-tauri/Cargo.toml`, `Cargo.lock` and `tauri.conf.json`. The
+  release is mainly so the phone download page gets the clickable installer
+  links from the item below. The sibling website repo
+  `~/Documents/GitHub/quran-app-website` should advertise this release, its
+  session owns that copy. No tag was created in this step, pending the CI
+  notes gate. Local checks all passed: import, 28 pytest tests, mypy, npm
+  build with `web/static/app.js` unchanged, and the release notes smoke test.
+- [x] Packaged builds now read the Provided Nasheeds catalog from `main`
+  (2026-11-18). `web/app.py` already used `main`; the Rust mobile server's
+  `PROVIDED_BASE` still used `development`, so it was switched to `main`.
+  Verified `raw.githubusercontent.com/goldstac/quran/main/catalog/index.json`
+  returned 404 before the change, so the whole tracked `catalog/` tree was
+  published to `main` as well to avoid shipping an empty Provided Nasheeds
+  page on Android.
+- [x] GitHub release notes now have clickable download links (2026-11-18, uncommitted on `development`, `.github/scripts/write-release-notes.sh` and `.github/scripts/release-notes-smoke-test.sh`). The author tapped the Android line on his phone and nothing happened because the `## Downloads` section was plain text. It now builds five real per-tag asset URLs from the release tag: Linux AppImage + Debian, macOS aarch64 DMG, Windows x64 EXE, and the fixed-name universal signed APK. Filenames follow Tauri's `Quran_<version>_<arch>.<ext>` pattern, with the leading `v` stripped from the tag for the filename, and the APK stays `app-universal-release.apk`. The smoke test now asserts each exact link in both the Groq and fallback notes plus a five-link count, so a wrong filename fails the run. Verified: all five URLs return HTTP 200 with the right content type for `v1.2.1-alpha.1`, the full smoke test passes end to end (Groq call stubbed locally because this machine has no `GROQ_API_KEY`; CI uses the real key), and a deliberately broken APK name makes the smoke test fail with two link errors. No commit made, the owner has not asked for one.
 - [x] Self-updater asset name/URL sanitization (2026-11-18): `web/app.py`
   `_run_update()` no longer trusts the GitHub
   manifest's asset name as a write destination. New `_update_asset_error()`
