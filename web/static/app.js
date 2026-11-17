@@ -2915,6 +2915,10 @@ async function removeFromList(song) {
         if (!ok)
             return;
         await getJSON(`${API}/api/library/remove/${encodeURIComponent(song.id)}`, { method: 'POST' });
+        downloadedIds.delete(song.id);
+        dlActive.delete(song.id);
+        if (currentSong && currentSong.id === song.id)
+            currentSong.downloaded = false;
         toast(t('pl.removed_lib'));
         loadLib(currentLibMode ?? 'library');
     }
@@ -3602,6 +3606,20 @@ $('#set-clear-library').addEventListener('click', async () => {
         });
         void loadLibraryCounts();
         void loadPlaylists();
+        downloadedIds.clear();
+        dlActive.clear();
+        void (async () => {
+            try {
+                const lib = await getJSON(`${API}/api/library`);
+                (lib.songs || []).forEach((s) => {
+                    if (s.downloaded || s.local)
+                        downloadedIds.add(s.id);
+                });
+                if (currentSong)
+                    currentSong.downloaded = downloadedIds.has(currentSong.id);
+            }
+            catch { }
+        })();
         if (currentLibMode)
             void loadLib(currentLibMode);
         $('#set-lib-note').textContent = t('set.lib_cleared');
