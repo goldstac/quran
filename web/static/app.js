@@ -2294,7 +2294,8 @@ async function initDownloads() {
         });
     }
     catch { }
-    void pollDownloads();
+    await pollDownloads();
+    startDlPoll();
 }
 function syncIcons() {
     const paused = audio.paused;

@@ -2365,7 +2365,8 @@ async function initDownloads() {
       if (s.downloaded || s.local) downloadedIds.add(s.id);
     });
   } catch {}
-  void pollDownloads();
+  await pollDownloads();
+  startDlPoll();
 }
 
 function syncIcons() {
