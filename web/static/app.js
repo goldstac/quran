@@ -572,6 +572,7 @@ function refreshForLang() {
     renderQuranList();
     renderQuranReadHead();
     syncQuranTranslation();
+    syncSortUI();
     scRenderRows(false);
     loadLibraryCounts();
     loadCacheCount();
@@ -582,8 +583,17 @@ function refreshForLang() {
         setDiscordStatus('off');
     void loadLib(currentLibMode ?? 'library');
     loadPlaylists();
+    if ($('#search-view').classList.contains('active')) {
+        const results = $('#search-results');
+        if (results && results.style.display !== 'none' && queue.length && currentList === queue) {
+            renderList('search-results', queue, 'search');
+        }
+    }
+    if ($('#provided-view').classList.contains('active'))
+        void loadProvided();
     if (currentSong)
         updatePlayer();
+    void loadReleases(false);
 }
 const audio = new Audio();
 let queue = [];
