@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import hashlib
 import os
 import platform
 import sys
@@ -30,6 +31,15 @@ def rust_target_triple() -> str:
     raise RuntimeError(f"Unsupported platform: {system} {machine}")
 
 
+YTDLP_VERSION = "2026.10.26"
+YTDLP_SHA256 = {
+    "yt-dlp_linux": "767ba9dce7052aa196f8b12652f433d76de128ba168966fa84b6394d5e6c6795",
+    "yt-dlp_linux_aarch64": "e87e9533e89fe5889abaa21f5114dfe7756d6aa6219b83551add04d48b18e483",
+    "yt-dlp_macos": "0f922c15ccc0b83eefa1c8bc9104e434318c4bf16e408e1ee93b7745a6efe0aa",
+    "yt-dlp.exe": "f5389d3698ecde4ef06f4e6b1ce0294fe9ac1396228c8990b8d3416d6d177a7d",
+}
+
+
 def get_ytdlp_download_url() -> str:
     """Get the direct download URL for the yt-dlp standalone binary for this platform."""
     system = platform.system().lower()
@@ -47,18 +57,23 @@ def get_ytdlp_download_url() -> str:
     else:
         raise RuntimeError(f"Unsupported platform: {system} {machine}")
 
-    return f"https://github.com/yt-dlp/yt-dlp/releases/latest/download/{asset}"
+    return f"https://github.com/yt-dlp/yt-dlp/releases/download/{YTDLP_VERSION}/{asset}"
 
 
 def download_ytdlp(url: str, dest: Path) -> None:
-    """Download yt-dlp binary from the URL."""
+    """Download yt-dlp binary from the URL and verify its pinned sha256."""
     print(f"Downloading yt-dlp from {url}...")
     req = urllib.request.Request(url, headers={"User-Agent": "quran-app-builder"})
     with urllib.request.urlopen(req, timeout=60) as resp:
-        with open(dest, "wb") as f:
-            f.write(resp.read())
+        data = resp.read()
+    expected = YTDLP_SHA256[url.rsplit("/", 1)[-1]]
+    actual = hashlib.sha256(data).hexdigest()
+    if actual != expected:
+        raise RuntimeError(f"yt-dlp checksum mismatch: expected {expected}, got {actual}")
+    with open(dest, "wb") as f:
+        f.write(data)
     os.chmod(dest, 0o755)
-    print(f"Downloaded to {dest}")
+    print(f"Downloaded to {dest} (sha256 ok)")
 
 
 if __name__ == "__main__":

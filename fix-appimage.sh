@@ -51,7 +51,22 @@ perl -pi -e 's/GST_PLUGIN_SYSTEM_PATH/XST_PLUGIN_SYSTEM_PATH/g' "$WRAPPED"
 
 ARCH="$(uname -m)"
 TOOL="$WORK/appimagetool.AppImage"
-curl -fsSL -o "$TOOL" "https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-$ARCH.AppImage"
+case "$ARCH" in
+  x86_64)
+    TOOL_URL="https://github.com/AppImage/AppImageKit/releases/download/12/appimagetool-x86_64.AppImage"
+    TOOL_SHA256="d918b4df547b388ef253f3c9e7f6529ca81a885395c31f619d9aaf7030499a13"
+    ;;
+  aarch64)
+    TOOL_URL="https://github.com/AppImage/AppImageKit/releases/download/12/appimagetool-aarch64.AppImage"
+    TOOL_SHA256="c9d058310a4e04b9fbbd81340fff2b5fb44943a630b31881e321719f271bd41a"
+    ;;
+  *)
+    echo "error: unsupported arch $ARCH" >&2
+    exit 1
+    ;;
+esac
+curl -fsSL -o "$TOOL" "$TOOL_URL"
+echo "$TOOL_SHA256  $TOOL" | sha256sum -c - >/dev/null || { echo "error: appimagetool checksum mismatch" >&2; exit 1; }
 chmod +x "$TOOL"
 
 OUT="$WORK/fixed.AppImage"
