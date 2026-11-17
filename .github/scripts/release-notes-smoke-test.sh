@@ -11,6 +11,11 @@ ok() { echo "ok: $1"; }
 problem() { echo "::error::$1"; problems=$((problems + 1)); }
 fail() { echo "::error::$1"; exit 1; }
 
+DL_TAG="${NOTES_TAG:-${GITHUB_REF_NAME:-}}"
+[ -n "$DL_TAG" ] || fail "no version given to the smoke test"
+DL_VER="${DL_TAG#v}"
+DL_BASE="https://github.com/goldstac/quran/releases/download/$DL_TAG"
+
 echo "== groq =="
 [ -n "${GROQ_API_KEY:-}" ] || fail "GROQ_API_KEY is not set, this run cannot prove the groq path"
 echo "model: ${GROQ_MODEL:-llama-3.3-70b-versatile}"
@@ -37,10 +42,12 @@ check_structure() {
   [ -s "$f" ] || { problem "$label: no notes were written"; return; }
   [ "$(grep -c '^## Changes$' "$f")" = "1" ] || problem "$label: expected exactly one '## Changes' heading"
   [ "$(grep -c '^## Downloads$' "$f")" = "1" ] || problem "$label: expected exactly one '## Downloads' heading"
-  grep -q '^- Linux: AppImage and Debian package$' "$f" || problem "$label: missing the Linux download line"
-  grep -q '^- macOS: DMG$' "$f" || problem "$label: missing the macOS download line"
-  grep -q '^- Windows: EXE$' "$f" || problem "$label: missing the Windows download line"
-  grep -q '^- Android: APK (arm64 + armeabi-v7a + x86 + x86_64 universal, signed)$' "$f" || problem "$label: missing the Android download line"
+  grep -Fq -- "- Linux: [AppImage]($DL_BASE/Quran_${DL_VER}_amd64.AppImage) and [Debian package]($DL_BASE/Quran_${DL_VER}_amd64.deb)" "$f" || problem "$label: missing the Linux download links"
+  grep -Fq -- "- macOS: [DMG]($DL_BASE/Quran_${DL_VER}_aarch64.dmg)" "$f" || problem "$label: missing the macOS download link"
+  grep -Fq -- "- Windows: [EXE]($DL_BASE/Quran_${DL_VER}_x64-setup.exe)" "$f" || problem "$label: missing the Windows download link"
+  grep -Fq -- "- Android: [APK]($DL_BASE/app-universal-release.apk) (arm64 + armeabi-v7a + x86 + x86_64 universal, signed)" "$f" || problem "$label: missing the Android download link"
+  LINKS=$(grep -o '](https://github.com/goldstac/quran/releases/download/[^)]*)' "$f" | wc -l)
+  [ "$LINKS" -eq 5 ] || problem "$label: expected 5 clickable asset links, got $LINKS"
   if grep -qE '[‐‑‒–—―−]' "$f"; then problem "$label: contains a dash that is not an ascii hyphen"; fi
 }
 

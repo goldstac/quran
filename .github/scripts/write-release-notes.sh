@@ -16,6 +16,8 @@ if [ -n "$PREV" ]; then RANGE="$PREV..$REF"; else RANGE="$REF"; fi
 
 OUT="${1:-release-notes.md}"
 TMP="${RUNNER_TEMP:-${TMPDIR:-/tmp}}"
+DL_BASE="https://github.com/goldstac/quran/releases/download/$TAG"
+VER="${TAG#v}"
 
 ALL=$(git log --no-merges --max-count=150 --pretty=format:'- %s' "$RANGE" | head -c 8000)
 CHANGES=$(printf '%s\n' "$ALL" | grep -E '^- (feat|fix|perf|revert|refactor)' || true)
@@ -28,7 +30,7 @@ You write the top of the release description for Quran, an open source Islamic a
 You get the version and the list of changes since the previous release. Write exactly two parts and nothing else:
 1. A TL;DR: one or two plain sentences, no heading in front of them, in user language, saying what this release is mostly about.
 2. Then a "## What's new" heading with 3 to 6 short bullets of the changes users will care about. When the change list has fewer than 3 entries, write one bullet per entry instead of padding, and never invent extras.
-Both sections after yours are appended by the pipeline: a "## Changes" section holding the verbatim commit list, and a "## Downloads" section with the installer lines. Never write those two headings yourself, never repeat the Downloads lines, never link anywhere.
+Both sections after yours are appended by the pipeline: a "## Changes" section holding the verbatim commit list, and a "## Downloads" section with clickable links to the installers. Never write those two headings yourself, never repeat the Downloads lines, and never link anywhere in the part you write.
 Rules:
 - Say nasheeds and never songs.
 - Never use an em dash. Use commas, periods, semicolons or " - " instead.
@@ -83,7 +85,11 @@ fi
     printf '%s\n\n' "$NOTES"
   fi
   printf '## Changes\n\n%s\n\n' "$CHANGES"
-  printf '## Downloads\n\n- Linux: AppImage and Debian package\n- macOS: DMG\n- Windows: EXE\n- Android: APK (arm64 + armeabi-v7a + x86 + x86_64 universal, signed)\n'
+  printf '## Downloads\n\n'
+  printf -- '- Linux: [AppImage](%s/Quran_%s_amd64.AppImage) and [Debian package](%s/Quran_%s_amd64.deb)\n' "$DL_BASE" "$VER" "$DL_BASE" "$VER"
+  printf -- '- macOS: [DMG](%s/Quran_%s_aarch64.dmg)\n' "$DL_BASE" "$VER"
+  printf -- '- Windows: [EXE](%s/Quran_%s_x64-setup.exe)\n' "$DL_BASE" "$VER"
+  printf -- '- Android: [APK](%s/app-universal-release.apk) (arm64 + armeabi-v7a + x86 + x86_64 universal, signed)\n' "$DL_BASE"
 } > "$OUT"
 echo "release notes:"
 cat "$OUT"
