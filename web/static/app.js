@@ -144,6 +144,7 @@ const I18N = {
         'pl.removed': 'Removed from {p}',
         'pl.removed_lib': 'Removed from Your Library',
         'fav.denied_quran': 'Quran cannot be liked',
+        'fav.failed': 'Could not update liked nasheeds',
         'dl.canceled': 'Download canceled',
         'dl.removed': 'Download removed',
         'dl.start_fail': 'Could not start download',
@@ -399,6 +400,7 @@ const I18N = {
         'pl.removed': '{p} இல் இருந்து நீக்கப்பட்டது',
         'pl.removed_lib': 'உங்கள் நூலகத்தில் இருந்து நீக்கப்பட்டது',
         'fav.denied_quran': 'திருக்குர்ஆனைப் பிடித்தாகச் சேமிக்க முடியாது',
+        'fav.failed': 'பிடித்தாகச் சேமிப்பைப் புதுப்பிக்க முடியவில்லை',
         'dl.canceled': 'பதிவிறக்கம் ரத்து செய்யப்பட்டது',
         'dl.removed': 'பதிவிறக்கம் நீக்கப்பட்டது',
         'dl.start_fail': 'பதிவிறக்கத்தைத் தொடங்க முடியவில்லை',
@@ -601,7 +603,14 @@ function fmt(s) {
 }
 async function getJSON(url, init) {
     const r = await fetch(url, init);
-    return r.json();
+    const body = (await r.json().catch(() => null));
+    if (!r.ok) {
+        const err = new Error(`request failed: ${r.status}`);
+        err.status = r.status;
+        err.body = body;
+        throw err;
+    }
+    return body;
 }
 function toast(msg) {
     const t = document.createElement('div');
@@ -2910,20 +2919,25 @@ async function toggleFav(song) {
         toast(t('fav.denied_quran'));
         return;
     }
-    await getJSON(`${API}/api/library/add`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(song),
-    });
-    const d = await getJSON(`${API}/api/library/fav/${encodeURIComponent(song.id)}`, { method: 'POST' });
-    $$(`.track-row[data-id="${CSS.escape(song.id)}"] .fav-act i`).forEach((i) => {
-        i.className = d.favorite ? 'fa-solid fa-heart fav-on' : 'fa-regular fa-heart';
-    });
-    if (currentSong && currentSong.id === song.id) {
-        currentSong.favorite = d.favorite;
-        $('#fav-btn i').className = d.favorite ? 'fa-solid fa-heart fav-on' : 'fa-regular fa-heart';
+    try {
+        await getJSON(`${API}/api/library/add`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(song),
+        });
+        const d = await getJSON(`${API}/api/library/fav/${encodeURIComponent(song.id)}`, { method: 'POST' });
+        $$(`.track-row[data-id="${CSS.escape(song.id)}"] .fav-act i`).forEach((i) => {
+            i.className = d.favorite ? 'fa-solid fa-heart fav-on' : 'fa-regular fa-heart';
+        });
+        if (currentSong && currentSong.id === song.id) {
+            currentSong.favorite = d.favorite;
+            $('#fav-btn i').className = d.favorite ? 'fa-solid fa-heart fav-on' : 'fa-regular fa-heart';
+        }
+        toast(d.favorite ? 'Added to Liked Nasheeds' : 'Removed from Liked Nasheeds');
     }
-    toast(d.favorite ? 'Added to Liked Nasheeds' : 'Removed from Liked Nasheeds');
+    catch {
+        toast(t('fav.failed'));
+    }
 }
 async function addToPl(song) {
     await getJSON(`${API}/api/library/add`, {
@@ -2956,12 +2970,17 @@ function seeOnYouTube(song) {
 }
 // --- PLAYLISTS ---
 async function deletePlaylist(name) {
-    const d = await getJSON(`${API}/api/playlists/delete`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name }),
-    });
-    return !!d.ok;
+    try {
+        const d = await getJSON(`${API}/api/playlists/delete`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name }),
+        });
+        return !!d.ok;
+    }
+    catch {
+        return false;
+    }
 }
 function activateLibraryNav() {
     $$('.nav-item').forEach((n) => n.classList.remove('active'));
@@ -3032,11 +3051,20 @@ $('#lib-rename').addEventListener('click', async () => {
     const newName = await promptText(t('pl.rename'), t('pl.new_ph'), t('modal.rename_ok'), oldName);
     if (!newName || newName === oldName)
         return;
-    const d = await getJSON(`${API}/api/playlists/rename`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ old: oldName, new: newName }),
-    });
+    let d;
+    try {
+        d = await getJSON(`${API}/api/playlists/rename`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ old: oldName, new: newName }),
+        });
+    }
+    catch (e) {
+        d = {
+            ok: false,
+            error: e.body?.error,
+        };
+    }
     if (!d.ok) {
         toast(d.error === 'exists' ? 'A playlist with that name already exists' : 'Could not rename playlist');
         return;
