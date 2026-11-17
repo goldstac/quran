@@ -52,32 +52,55 @@ $CHANGES
 EOF
 )
 
-NOTES=""
-if [ -n "${GROQ_API_KEY:-}" ]; then
-  MODEL="${GROQ_MODEL:-llama-3.3-70b-versatile}"
-  REQ=$(jq -n --arg model "$MODEL" --arg sys "$SYS" --arg usr "$USR" \
-    '{model: $model, messages: [{role: "system", content: $sys}, {role: "user", content: $usr}], temperature: 0.5, max_tokens: 700}')
-  CODE=$(curl -sS -m 60 -o "$TMP/groq.json" -w '%{http_code}' \
+clean_notes() {
+  local text="$1"
+  text=$(printf '%s' "$text" | sed -e '1{/^```/d}' -e '${/^```/d}')
+  text=$(printf '%s' "$text" | sed -e '1s/^"//' -e '$s/"$//')
+  text=$(printf '%s' "$text" | sed -e 's/[‐‑‒–—―−]/-/g')
+  text=$(printf '%s\n' "$text" | awk '/^##[ \t]+(Changes|Downloads)/{exit} {print}')
+  text=$(printf '%s\n' "$text" | sed -e '/./,$!d')
+  printf '%s' "$text"
+}
+
+ask_groq() {
+  local model="$1" code text
+  local req
+  req=$(jq -n --arg model "$model" --arg sys "$SYS" --arg usr "$USR" \
+    '{model: $model, messages: [{role: "system", content: $sys}, {role: "user", content: $usr}], temperature: 0.5, max_completion_tokens: 1200, reasoning_effort: "low", include_reasoning: false}')
+  code=$(curl -sS -m 60 -o "$TMP/groq.json" -w '%{http_code}' \
     -X POST https://api.groq.com/openai/v1/chat/completions \
     -H "Authorization: Bearer $GROQ_API_KEY" -H 'Content-Type: application/json' \
-    -d "$REQ" || echo 000)
-  if [ "$CODE" = "200" ]; then
-    NOTES=$(jq -r '.choices[0].message.content // empty' "$TMP/groq.json" 2>/dev/null || true)
-  else
-    echo "::warning::groq answered $CODE, falling back to the plain change list"
-    head -c 500 "$TMP/groq.json" 2>/dev/null || true
-    echo
+    -d "$req" || echo 000)
+  if [ "$code" != "200" ]; then
+    echo "::warning::groq model $model answered $code" >&2
+    head -c 500 "$TMP/groq.json" >&2 2>/dev/null || true
+    echo >&2
+    return 1
+  fi
+  text=$(jq -r '.choices[0].message.content // empty' "$TMP/groq.json" 2>/dev/null || true)
+  text=$(clean_notes "$text")
+  if [ -z "$(printf '%s' "$text" | tr -d '[:space:]')" ]; then
+    echo "::warning::groq model $model returned no usable text" >&2
+    head -c 500 "$TMP/groq.json" >&2 2>/dev/null || true
+    echo >&2
+    return 1
+  fi
+  printf '%s' "$text"
+}
+
+NOTES=""
+if [ -n "${GROQ_API_KEY:-}" ]; then
+  MODEL="${GROQ_MODEL:-openai/gpt-oss-120b}"
+  NOTES=$(ask_groq "$MODEL" || true)
+  if [ -z "$NOTES" ] && [ "$MODEL" != "openai/gpt-oss-20b" ]; then
+    echo "::notice::groq model $MODEL gave nothing, retrying with openai/gpt-oss-20b"
+    NOTES=$(ask_groq "openai/gpt-oss-20b" || true)
+  fi
+  if [ -z "$NOTES" ]; then
+    echo "::warning::groq contributed nothing, falling back to the plain change list"
   fi
 else
   echo "::notice::GROQ_API_KEY is not set, falling back to the plain change list"
-fi
-
-if [ -n "$NOTES" ]; then
-  NOTES=$(printf '%s' "$NOTES" | sed -e '1{/^```/d}' -e '${/^```/d}')
-  NOTES=$(printf '%s' "$NOTES" | sed -e '1s/^"//' -e '$s/"$//' -e 's/[‐‑‒–—―−]/-/g')
-  NOTES=$(printf '%s\n' "$NOTES" | awk '/^##[ \t]+(Changes|Downloads)/{exit} {print}')
-  NOTES=$(printf '%s' "$NOTES" | sed -e '/./,$!d')
-  if ! printf '%s' "$NOTES" | grep -q '[^[:space:]]'; then NOTES=""; fi
 fi
 
 {

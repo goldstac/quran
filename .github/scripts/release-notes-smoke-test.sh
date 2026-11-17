@@ -18,7 +18,7 @@ DL_BASE="https://github.com/goldstac/quran/releases/download/$DL_TAG"
 
 echo "== groq =="
 [ -n "${GROQ_API_KEY:-}" ] || fail "GROQ_API_KEY is not set, this run cannot prove the groq path"
-echo "model: ${GROQ_MODEL:-llama-3.3-70b-versatile}"
+echo "model: ${GROQ_MODEL:-openai/gpt-oss-120b}"
 
 echo
 echo "== 1. notes with groq =="
