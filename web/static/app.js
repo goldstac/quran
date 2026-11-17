@@ -2702,7 +2702,10 @@ setInterval(() => {
     pushBot();
 }, 250);
 // --- VOLUME ---
-const savedVol = load('ns_vol', 70);
+const savedVolRaw = load('ns_vol', 70);
+const savedVol = typeof savedVolRaw === 'number' && isFinite(savedVolRaw) ? Math.min(100, Math.max(0, savedVolRaw)) : 70;
+if (savedVol !== savedVolRaw)
+    store('ns_vol', savedVol);
 vol.setValue(savedVol);
 audio.volume = savedVol / 100;
 vol.onInput = (p) => {
