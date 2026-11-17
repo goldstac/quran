@@ -323,6 +323,67 @@ matching section and note the platform when it is not cross-platform.
 
 ## Done
 
+- [x] Second full security/bug audit round (2026-11-17), every finding fixed
+  in its own commit and pushed immediately. 43 commits on `development`,
+  first `277abe4`, last `e3688c2`. This round covered the mobile Rust
+  backend, the Flask API, the TypeScript frontend and the CI scripts:
+  - Mobile `server.rs` (17 fixes, `277abe4`...`b888536`): 1 GiB request
+    body cap with incremental reads, song id/path sanitization mirroring
+    Flask (stops path traversal), host/origin guard on every request,
+    byte-safe percent decoding (no char-boundary panic), multipart bounds
+    guards, self-healing corrupt playlist lists, socket timeouts and
+    header limits, cancel-race file cleanup, atomic JSON state writes,
+    10 MB JSON parse caps, lock-held read-modify-writes, finished-download
+    pruning, 416 on bad ranges, chapter 1..=114 validation, opus MIME,
+    and stream/quran cache caps.
+  - Flask `web/app.py` (16 fixes, `f2ec562`...`8360946`): origin guard
+    always on (LAN IP host allowed only when bound wide, named hosts
+    rejected), lock-guarded download worker with supersede detection, one
+    library lock across all read-modify-writes, update state reserved
+    before spawning, download kill on library remove, 400 on non-object
+    JSON, corrupt `library.json` recovery (quarantined to
+    `library.json.bad-<ts>`), status pruning, proxy response close,
+    bot-thread semaphore, atomic 0600 prefs writes, provided-nasheed
+    download refusal, yt-dlp probe timeouts, chapter validation, generic
+    error messages, 1 GiB body cap.
+  - Frontend `app.ts` (8 fixes, `73f08a0`...`258b194`): download status
+    polling resumes after reload, `ns_vol` clamped, `getJSON` throws on
+    failed responses (rename/delete/fav read the error body), stale
+    search results dropped via a generation token, download badges
+    reconciled on removal and library clear, player bar/MediaSession
+    thumbnails pass the `thumbSrc()` scheme check, 11 new i18n keys plus
+    hardcoded-toast translation, `refreshForLang` now refreshes sort
+    label/search rows/provided view/update card, and empty-src row
+    thumbnails became the placeholder div.
+  - CI/build (5 fixes, `6949152`...`e3688c2`): `appimagetool` pinned to
+    AppImageKit release 12 with sha256 (the `continuous` tag drifts),
+    yt-dlp sidecar pinned to 2026.10.26 with sha256, self-update refuses
+    a release whose asset digest is missing (the installer no longer
+    applies unverified bytes), the Android APK verifier pins the release
+    signing cert sha256 `06cf45b8...982b040` (extracted from the
+    published APKs, stable across releases), the android runtime test
+    fails instead of passing when `uiautomator` never produces a view
+    tree or the crash buffer is unreadable, and `write-release-notes.sh`
+    runs `set -euo pipefail`, normalizes non-ASCII dashes in the verbatim
+    change list too, while the smoke test allows 0 bullets for a
+    0-change release.
+  Verified: each mobile commit via scratch-crate `cargo check` (plus a
+  standalone rustc harness for the host/origin validator), each Flask
+  commit via `python3 -m pytest` (now 24 tests) + `python3 -m mypy
+  app.py` + clean import, each frontend commit via `npm run build` + a
+  jsdom smoke run of the real compiled `app.js`, and each CI script via
+  `bash -n` plus local execution where possible (the yt-dlp pin
+  downloaded and verified for real; the cert pin matched both published
+  release APKs; the notes writer ran locally). Judged not-a-bug this
+  round: `lib.rs` connecting to whatever answers on port 5000 is the
+  documented desktop behavior (it must connect to an existing
+  `run-web.sh` server), the frontend `warmed` prefetch set going stale is
+  harmless (playback always re-resolves through `/api/proxy`, which
+  clears its cache entry on upstream errors), and the audit's "Flask
+  stream cache is unbounded" claim was wrong, the 64-entry cap predates
+  this round. Not in a release yet: dispatch `release.yml` on
+  `development` before the next tag.
+
 - [x] Released `v1.2.1-alpha.1` (first normal-alpha tag, APK 47,150,377
   bytes, run 43747327393 all green, versionCode 102011001) carrying the Tamil
   language switch. The stage scheme changed from `pre-alpha` to `alpha`, so
