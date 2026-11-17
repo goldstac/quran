@@ -2429,8 +2429,9 @@ function updatePlayer() {
     $('#player-artist').textContent = currentSong.channel;
     const th = $('#player-thumb');
     const ph = $('#player-thumb-ph');
-    if (currentSong.thumbnail) {
-        th.src = currentSong.thumbnail;
+    const safeThumb = thumbSrc(currentSong);
+    if (safeThumb) {
+        th.src = safeThumb;
         th.style.display = 'block';
         ph.style.display = 'none';
     }
@@ -2459,7 +2460,7 @@ function updatePlayer() {
             title: currentSong.title,
             artist: currentSong.channel,
             album: currentSong.kind === 'quran' ? 'Quran' : 'Quran',
-            artwork: currentSong.thumbnail ? [{ src: currentSong.thumbnail, sizes: '512x512', type: 'image/jpeg' }] : [],
+            artwork: safeThumb ? [{ src: safeThumb, sizes: '512x512', type: 'image/jpeg' }] : [],
         });
     }
 }
