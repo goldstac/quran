@@ -1,4 +1,5 @@
 import os
+import sys
 import tempfile
 
 import app as backend
@@ -312,8 +313,25 @@ def test_load_lib_recovers_from_non_object():
     assert lib["songs"] == []
 
 
-def _fake_release(tag, digest):
-    return {"tag": tag, "asset": {"name": "installer", "url": "https://example.com/x", "size": 1, "digest": digest}}
+def _fake_asset_name():
+    if sys.platform == "win32":
+        return "quran-setup.exe"
+    if sys.platform == "darwin":
+        return "quran.dmg"
+    return "quran.AppImage"
+
+
+def _fake_release(tag, digest, name=None):
+    name = name or _fake_asset_name()
+    return {
+        "tag": tag,
+        "asset": {
+            "name": name,
+            "url": backend._update_download_url(tag, name),
+            "size": 1,
+            "digest": digest,
+        },
+    }
 
 
 def test_update_refused_without_digest(client, monkeypatch):
@@ -332,8 +350,55 @@ def test_update_accepts_digest_and_run_update_requires_it(client, monkeypatch):
     assert backend._update_state["state"] == "downloading"
     with backend._update_lock:
         backend._update_state["state"] = "idle"
-    backend._run_update("v9.9.9", "https://127.0.0.1:9/x", "installer", 1, digest="")
+    name = _fake_asset_name()
+    backend._run_update("v9.9.9", backend._update_download_url("v9.9.9", name), name, 1, digest="")
     assert backend._update_state["state"] == "error"
     assert "checksum" in backend._update_state["error"]
+    with backend._update_lock:
+        backend._update_state["state"] = "idle"
+
+
+def test_update_refuses_asset_name_with_path_traversal(client, monkeypatch):
+    escaped = "../quran-setup.exe" if sys.platform == "win32" else "../../tmp/evil.AppImage"
+    monkeypatch.setattr(
+        backend, "_releases",
+        lambda force=False: ([_fake_release("v9.9.9", "sha256:00" * 32, name=escaped)], None),
+    )
+    r = client.post("/api/update", json={"tag": "v9.9.9"})
+    assert r.status_code == 400
+    assert "Unsafe installer file name" in r.get_json()["error"]
+    with backend._update_lock:
+        assert backend._update_state["state"] != "downloading"
+
+
+def test_update_refuses_asset_name_with_wrong_extension(client, monkeypatch):
+    monkeypatch.setattr(
+        backend, "_releases",
+        lambda force=False: ([_fake_release("v9.9.9", "sha256:00" * 32, name="quran.exe" if sys.platform != "win32" else "quran.AppImage")], None),
+    )
+    r = client.post("/api/update", json={"tag": "v9.9.9"})
+    assert r.status_code == 400
+    assert "Unexpected installer file type" in r.get_json()["error"]
+
+
+def test_update_refuses_foreign_download_url(client, monkeypatch):
+    rel = _fake_release("v9.9.9", "sha256:00" * 32)
+    rel["asset"]["url"] = "https://evil.example/payload" + (
+        ".exe" if sys.platform == "win32" else ".dmg" if sys.platform == "darwin" else ".AppImage"
+    )
+    monkeypatch.setattr(backend, "_releases", lambda force=False: ([rel], None))
+    r = client.post("/api/update", json={"tag": "v9.9.9"})
+    assert r.status_code == 400
+    assert "not from this app's releases" in r.get_json()["error"]
+
+
+def test_run_update_refuses_unsafe_inputs_without_writing(client):
+    name = _fake_asset_name()
+    backend._run_update("v9.9.9", backend._update_download_url("v9.9.9", name), "../evil" + name, 1)
+    assert backend._update_state["state"] == "error"
+    assert "unsafe installer" in backend._update_state["error"]
+    backend._run_update("v9.9.9", "https://evil.example/x", name, 1)
+    assert backend._update_state["state"] == "error"
+    assert "unsafe installer" in backend._update_state["error"]
     with backend._update_lock:
         backend._update_state["state"] = "idle"

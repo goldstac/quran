@@ -323,6 +323,22 @@ matching section and note the platform when it is not cross-platform.
 
 ## Done
 
+- [x] Self-updater asset name/URL sanitization (2026-11-18): `web/app.py`
+  `_run_update()` no longer trusts the GitHub
+  manifest's asset name as a write destination. New `_update_asset_error()`
+  requires a plain basename (no path separators, no `.`/`..`) plus the
+  platform installer extension, and `_update_download_url()` re-derives the
+  download URL from the verified tag + name so a tampered
+  `browser_download_url` pointing off `github.com/goldstac/quran/releases/download/<tag>/`
+  is refused. Enforced both in `/api/update` (400 before any thread spawns)
+  and again inside `_run_update()` before the write, with `dest` using
+  `os.path.basename(name)` as a second guard. Regression tests added in
+  `web/tests/test_api.py` for traversal names, wrong extension, foreign URL,
+  and direct `_run_update` refusal; existing `_fake_release` updated to the
+  new URL format. Verified with `python3 -m pytest -q` from `web/` (28
+  passed), `python3 -m mypy app.py` (clean) and `python3 -c "from app import
+  app"` (clean). Android `server.rs` returns an empty release list, so not
+  exposed there.
 - [x] Second full security/bug audit round (2026-11-17), every finding fixed
   in its own commit and pushed immediately. 43 commits on `development`,
   first `277abe4`, last `e3688c2`. This round covered the mobile Rust

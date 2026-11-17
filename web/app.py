@@ -1708,6 +1708,7 @@ def api_report():
 
 
 _GH_RELEASES_URL = "https://api.github.com/repos/goldstac/quran/releases?per_page=60"
+_GH_RELEASE_DOWNLOAD_PREFIX = "https://github.com/goldstac/quran/releases/download/"
 UPDATE_DIR = os.path.join(DATA_DIR, "updates")
 
 _update_lock = threading.Lock()
@@ -1741,6 +1742,18 @@ def _update_asset_matches(name):
     if sys.platform == "darwin":
         return n.endswith(".dmg")
     return n.endswith(".appimage")
+
+
+def _update_asset_error(name):
+    if not isinstance(name, str) or not name or os.path.basename(name) != name or name in (".", ".."):
+        return "Unsafe installer file name"
+    if not _update_asset_matches(name):
+        return "Unexpected installer file type"
+    return None
+
+
+def _update_download_url(tag, name):
+    return f"{_GH_RELEASE_DOWNLOAD_PREFIX}{tag}/{name}"
 
 
 def _fetch_releases():
@@ -1816,22 +1829,33 @@ def api_update():
         return jsonify({"ok": False, "error": f"{tag} has no installer for this platform"}), 400
     if not str(asset.get("digest", "")).startswith("sha256:"):
         return jsonify({"ok": False, "error": f"{tag} has no checksum to verify, update refused"}), 400
+    name = asset.get("name", "")
+    err = _update_asset_error(name)
+    if err:
+        return jsonify({"ok": False, "error": f"{err}, update refused"}), 400
+    download_url = _update_download_url(tag, name)
+    if str(asset.get("url", "")) != download_url:
+        return jsonify({"ok": False, "error": "Installer URL is not from this app's releases, update refused"}), 400
     with _update_lock:
         if _update_state["state"] == "downloading":
             return jsonify({"ok": False, "error": "An update is already downloading"}), 409
         _update_state.update(
-            state="downloading", tag=tag, asset=asset["name"], downloaded=0,
+            state="downloading", tag=tag, asset=name, downloaded=0,
             total=asset.get("size", 0), path="", error="",
         )
     threading.Thread(
         target=_run_update,
-        args=(rel["tag"], asset["url"], asset["name"], asset["size"], asset.get("digest", "")),
+        args=(tag, download_url, name, asset.get("size", 0), asset.get("digest", "")),
         daemon=True,
     ).start()
-    return jsonify({"ok": True, "tag": tag, "asset": asset["name"]})
+    return jsonify({"ok": True, "tag": tag, "asset": name})
 
 
 def _run_update(tag, url, name, size, digest=""):
+    if _update_asset_error(name) or url != _update_download_url(tag, name):
+        with _update_lock:
+            _update_state.update(state="error", error="Refusing to download an unsafe installer")
+        return
     if not digest.startswith("sha256:"):
         with _update_lock:
             _update_state.update(state="error", error="The release has no checksum to verify, update refused")
@@ -1842,7 +1866,7 @@ def _run_update(tag, url, name, size, digest=""):
             total=size or 0, path="", error="",
         )
     os.makedirs(UPDATE_DIR, exist_ok=True)
-    dest = os.path.join(UPDATE_DIR, name)
+    dest = os.path.join(UPDATE_DIR, os.path.basename(name))
     tmp = dest + ".part"
     try:
         req = urllib.request.Request(url, headers={"User-Agent": "quran-app"})
