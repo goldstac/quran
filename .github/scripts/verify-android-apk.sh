@@ -19,6 +19,7 @@ for tool in aapt apksigner zipalign; do
 done
 
 APK_COUNT=0
+CERT_SHA256="06cf45b8b7f8d5bd209acb89db77632aafb39968ef5267bd626f330e5982b040"
 while IFS= read -r -d '' APK; do
   APK_COUNT=$((APK_COUNT + 1))
   BADGING="$("$BUILD_TOOLS/aapt" dump badging "$APK")"
@@ -31,7 +32,13 @@ while IFS= read -r -d '' APK; do
       ;;
   esac
   "$BUILD_TOOLS/apksigner" verify "$APK"
-  echo "APK signature verified"
+  CERTS="$("$BUILD_TOOLS/apksigner" verify --print-certs "$APK" 2>&1 || true)"
+  if ! printf '%s\n' "$CERTS" | grep -q "certificate SHA-256 digest: $CERT_SHA256"; then
+    echo "::error::APK is not signed with the pinned release key (expected SHA-256 $CERT_SHA256)"
+    printf '%s\n' "$CERTS" | grep -m1 "SHA-256 digest" || true
+    exit 1
+  fi
+  echo "APK signature verified against pinned certificate"
   "$BUILD_TOOLS/zipalign" -c -P 16 -v 4 "$APK"
   python3 - "$APK" <<'PY'
 import sys
