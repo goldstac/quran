@@ -183,6 +183,16 @@ const I18N: Record<Lang, Record<string, string>> = {
     'pl.removed_lib': 'Removed from Your Library',
     'fav.denied_quran': 'Quran cannot be liked',
     'fav.failed': 'Could not update liked nasheeds',
+    'fav.liked': 'Added to Liked Nasheeds',
+    'fav.unliked': 'Removed from Liked Nasheeds',
+    'dl.starting': 'Downloading "{t}"',
+    'local.added': 'Added to Your Nasheeds',
+    'local.added_n': 'Added {n} nasheeds to Your Nasheeds',
+    'local.add_fail': 'Could not add {f}: {e}',
+    'set.clear_history_q': 'Remove your recent searches and the nasheeds you played recently? Your library, playlists, downloads, and imported nasheeds stay.',
+    'set.clear_cache_q': 'Clear cached stream links, Quran text, and catalogs? Playback keeps working, they just reload as you use the app.',
+    'sc.restore': 'Restore',
+    'sc.restore_aria': 'Restore recent searches',
     'dl.canceled': 'Download canceled',
     'dl.removed': 'Download removed',
     'dl.start_fail': 'Could not start download',
@@ -439,6 +449,16 @@ const I18N: Record<Lang, Record<string, string>> = {
     'pl.removed_lib': 'உங்கள் நூலகத்தில் இருந்து நீக்கப்பட்டது',
     'fav.denied_quran': 'திருக்குர்ஆனைப் பிடித்தாகச் சேமிக்க முடியாது',
     'fav.failed': 'பிடித்தாகச் சேமிப்பைப் புதுப்பிக்க முடியவில்லை',
+    'fav.liked': 'பிடித்த நஷீடுகளில் சேர்க்கப்பட்டது',
+    'fav.unliked': 'பிடித்த நஷீடுகளில் இருந்து நீக்கப்பட்டது',
+    'dl.starting': '"{t}" பதிவிறக்கப்படுகிறது',
+    'local.added': 'உங்கள் நஷீடுகளில் சேர்க்கப்பட்டது',
+    'local.added_n': '{n} நஷீடுகள் உங்கள் நஷீடுகளில் சேர்க்கப்பட்டன',
+    'local.add_fail': '{f} சேர்க்க முடியவில்லை: {e}',
+    'set.clear_history_q': 'சமீபத்திய தேடல்களையும் சமீபத்தில் கேட்ட நஷீடுகளையும் நீக்கவா? நூலகம், பிளேலிஸ்டுகள், பதிவிறக்கங்கள் மற்றும் இறக்குமதி செய்த நஷீடுகள் அப்படியே இருக்கும்.',
+    'set.clear_cache_q': 'தேடல் இணைப்புகள், திருக்குர்ஆன் உரை மற்றும் பட்டியல்களை அழிக்கவா? இயங்குவதில் பாதிப்பில்லை, தேவைப்படும்போது மீண்டும் ஏற்றப்படும்.',
+    'sc.restore': 'மீட்டமை',
+    'sc.restore_aria': 'சமீபத்திய தேடல்களை மீட்டமை',
     'dl.canceled': 'பதிவிறக்கம் ரத்து செய்யப்பட்டது',
     'dl.removed': 'பதிவிறக்கம் நீக்கப்பட்டது',
     'dl.start_fail': 'பதிவிறக்கத்தைத் தொடங்க முடியவில்லை',
@@ -1801,8 +1821,8 @@ function scSyncAction() {
     scAction.textContent = t('search.clear_all');
     scAction.setAttribute('aria-label', 'Clear all recent searches');
   } else {
-    scAction.innerHTML = `${SC_RESTORE} Restore`;
-    scAction.setAttribute('aria-label', 'Restore recent searches');
+    scAction.innerHTML = `${SC_RESTORE} ${esc(t('sc.restore'))}`;
+    scAction.setAttribute('aria-label', t('sc.restore_aria'));
   }
 }
 
@@ -2330,7 +2350,7 @@ async function dlAction(song: Song) {
   }
   dlActive.add(song.id);
   refreshDl(song.id);
-  toast(`Downloading "${song.title}"`);
+  toast(t('dl.starting', { t: song.title }));
   startDlPoll();
 }
 
@@ -2910,7 +2930,7 @@ async function addLocalFiles(files: File[]) {
     } catch {
       fail = "can't reach the backend";
     }
-    toast(`Could not add ${f.name}: ${fail}`);
+    toast(t('local.add_fail', { f: f.name, e: fail }));
   }
   if (added) {
     toast(added === 1 ? 'Added to Your Nasheeds' : `Added ${added} nasheeds to Your Nasheeds`);
@@ -2965,7 +2985,7 @@ async function toggleFav(song: Song) {
       currentSong.favorite = d.favorite;
       $('#fav-btn i').className = d.favorite ? 'fa-solid fa-heart fav-on' : 'fa-regular fa-heart';
     }
-    toast(d.favorite ? 'Added to Liked Nasheeds' : 'Removed from Liked Nasheeds');
+    toast(d.favorite ? t('fav.liked') : t('fav.unliked'));
   } catch {
     toast(t('fav.failed'));
   }
@@ -3189,7 +3209,7 @@ function discToggleSong(song: Song) {
   const hidden = !discIsHidden(song.id);
   discSetHidden(song.id, hidden);
   syncDiscBtns(song.id);
-  toast(hidden ? 'Hidden from Discord' : 'Shown in Discord');
+  toast(hidden ? t('row.disc_hidden') : t('row.disc_shown'));
   if (currentSong && currentSong.id === song.id) {
     pushDiscord(true);
     reportEvent(hidden ? 'hidden' : 'resume');
@@ -3619,10 +3639,7 @@ async function loadSettings() {
 }
 
 $('#set-clear-history').addEventListener('click', async () => {
-  const ok = await confirmDialog(
-    'Clear history',
-    'Remove your recent searches and the nasheeds you played recently? Your library, playlists, downloads, and imported nasheeds stay.'
-  );
+  const ok = await confirmDialog(t('set.clear_history'), t('set.clear_history_q'));
   if (!ok) return;
   store('ns_recentq', []);
   store('ns_recent', []);
@@ -3674,10 +3691,7 @@ $('#set-clear-library').addEventListener('click', async () => {
 });
 
 $('#set-clear-cache').addEventListener('click', async () => {
-  const ok = await confirmDialog(
-    'Clear cache',
-    'Clear cached stream links, Quran text, and catalogs? Playback keeps working, they just reload as you use the app.'
-  );
+  const ok = await confirmDialog(t('set.clear_cache'), t('set.clear_cache_q'));
   if (!ok) return;
   try {
     const d = await getJSON<{ ok: boolean; entries: number }>(`${API}/api/cache/clear`, {
