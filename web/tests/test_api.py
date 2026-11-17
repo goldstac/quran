@@ -310,3 +310,30 @@ def test_load_lib_recovers_from_non_object():
     lib = backend.load_lib()
     assert isinstance(lib, dict)
     assert lib["songs"] == []
+
+
+def _fake_release(tag, digest):
+    return {"tag": tag, "asset": {"name": "installer", "url": "https://example.com/x", "size": 1, "digest": digest}}
+
+
+def test_update_refused_without_digest(client, monkeypatch):
+    monkeypatch.setattr(backend, "_releases", lambda force=False: ([_fake_release("v9.9.9", "")], None))
+    r = client.post("/api/update", json={"tag": "v9.9.9"})
+    assert r.status_code == 400
+    assert "checksum" in r.get_json()["error"]
+    with backend._update_lock:
+        assert backend._update_state["state"] != "downloading"
+
+
+def test_update_accepts_digest_and_run_update_requires_it(client, monkeypatch):
+    monkeypatch.setattr(backend, "_releases", lambda force=False: ([_fake_release("v9.9.9", "sha256:00" * 32)], None))
+    r = client.post("/api/update", json={"tag": "v9.9.9"})
+    assert r.status_code == 200
+    assert backend._update_state["state"] == "downloading"
+    with backend._update_lock:
+        backend._update_state["state"] = "idle"
+    backend._run_update("v9.9.9", "https://127.0.0.1:9/x", "installer", 1, digest="")
+    assert backend._update_state["state"] == "error"
+    assert "checksum" in backend._update_state["error"]
+    with backend._update_lock:
+        backend._update_state["state"] = "idle"

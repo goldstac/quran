@@ -1814,6 +1814,8 @@ def api_update():
     asset = rel.get("asset")
     if not asset:
         return jsonify({"ok": False, "error": f"{tag} has no installer for this platform"}), 400
+    if not str(asset.get("digest", "")).startswith("sha256:"):
+        return jsonify({"ok": False, "error": f"{tag} has no checksum to verify, update refused"}), 400
     with _update_lock:
         if _update_state["state"] == "downloading":
             return jsonify({"ok": False, "error": "An update is already downloading"}), 409
@@ -1830,6 +1832,10 @@ def api_update():
 
 
 def _run_update(tag, url, name, size, digest=""):
+    if not digest.startswith("sha256:"):
+        with _update_lock:
+            _update_state.update(state="error", error="The release has no checksum to verify, update refused")
+        return
     with _update_lock:
         _update_state.update(
             state="downloading", tag=tag, asset=name, downloaded=0,
