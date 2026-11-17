@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -uo pipefail
+set -euo pipefail
 
 fail() { echo "::error::$1"; exit 1; }
 
@@ -21,6 +21,7 @@ ALL=$(git log --no-merges --max-count=150 --pretty=format:'- %s' "$RANGE" | head
 CHANGES=$(printf '%s\n' "$ALL" | grep -E '^- (feat|fix|perf|revert|refactor)' || true)
 if [ -z "$CHANGES" ]; then CHANGES="$ALL"; fi
 if [ -z "$CHANGES" ]; then CHANGES="- nothing user facing in this one"; fi
+CHANGES=$(printf '%s\n' "$CHANGES" | sed 's/[‐‑‒–—―−]/-/g')
 
 SYS=$(cat <<'EOF'
 You write the top of the release description for Quran, an open source Islamic app: a Quran reader with recitations, translations and reading, plus a nasheeds player that searches YouTube, streams audio through a local proxy, keeps a library with favorites and playlists, downloads nasheeds for offline listening, imports local files, and offers Discord presence and bot sync. It ships as a desktop app for Linux, macOS and Windows and as an Android APK.
@@ -62,7 +63,7 @@ if [ -n "${GROQ_API_KEY:-}" ]; then
     NOTES=$(jq -r '.choices[0].message.content // empty' "$TMP/groq.json" 2>/dev/null || true)
   else
     echo "::warning::groq answered $CODE, falling back to the plain change list"
-    head -c 500 "$TMP/groq.json" 2>/dev/null
+    head -c 500 "$TMP/groq.json" 2>/dev/null || true
     echo
   fi
 else
