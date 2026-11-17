@@ -2118,7 +2118,9 @@ function makeRow(song, idx, ctx) {
         ? `<div class="track-num">${esc(String(song.chapter_id ?? idx + 1))}</div>`
         : song.local && !song.thumbnail
             ? `<div class="track-thumb track-thumb-ph"><i class="fa-solid fa-music"></i></div>`
-            : `<img class="track-thumb" src="${thumbSrc(song)}" loading="lazy" alt="">`}
+            : thumbSrc(song)
+                ? `<img class="track-thumb" src="${thumbSrc(song)}" loading="lazy" alt="">`
+                : `<div class="track-thumb track-thumb-ph"><i class="fa-solid fa-music"></i></div>`}
     <div class="track-info">
       <div class="track-name">${esc(song.title)}</div>
       <div class="track-channel">${sub}</div>
