@@ -22,7 +22,7 @@ const STYLE_CSS: &[u8] =
 const APP_LOGO: &[u8] =
     include_bytes!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../web/static/app_logo.png"));
 const PROVIDED_BASE: &str =
-    "https://raw.githubusercontent.com/goldstac/quran/development/catalog";
+    "https://raw.githubusercontent.com/goldstac/quran/main/catalog";
 const QURAN_CHAPTERS_URL: &str = "https://api.quran.com/api/v4/chapters?language=en";
 const MP3QURAN_URL: &str = "https://mp3quran.net/api/v3/reciters?language=en";
 const QURAN_TRANS_IDS: [(&str, i64); 2] = [("en", 20), ("ta", 133)];
