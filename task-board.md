@@ -316,6 +316,30 @@ matching section and note the platform when it is not cross-platform.
 
 ## Done
 
+- [x] Removed the Discord bot integration entirely (2026-11-20, uncommitted on
+  `development`). The user asked for the "Discord bot" card and all of its
+  plumbing to go; Discord *presence* and the per-nasheed hide eye stay.
+  Deleted: the `_BOT_*` / `_bot_*` helpers, `bot.json` persistence and all
+  five routes (`/api/bot` GET/POST, `/api/bot/link`, `/api/bot/unlink`,
+  `/api/bot/test`, `/api/report`) from `web/app.py`, including the local
+  `import urllib.error` (the top-level `urllib.request`/`urllib.parse` imports
+  stay, other routes use them); the whole `# --- DISCORD BOT SYNC ---` block,
+  its callsites, I18N keys (en + ta) and two `pagehide` beacons from
+  `web/ts/app.ts`; the settings card from `web/templates/index.html` and its
+  `settings-card-bot` / `set-input-code` CSS from `web/static/style.css`;
+  the `bot` state, `bot.json` load and five route arms from the Android
+  `server.rs`. Docs updated in `AGENTS.md`, `README.md`, `PRIVACY.md`.
+  The settings Discord section subtitle now says "Control your Discord
+  profile presence." in both languages and the compiled JS cache key was
+  bumped to `?v=nobot-1`. Verified: `python3 -m pytest` from `web/` -> 28
+  passed; `python3 -c "from app import app"` imports clean; `python3 -m mypy
+  web/app.py` clean; `npm run build` succeeds and regenerates
+  `web/static/app.js`; the route listing has no `bot` or `report` rules; the
+  full grep for `api/bot|bot.json|reportEvent|pushBot|set-bot|bot-url|
+  bot-code|bot.reachable|bot.linked_ok|settings-card-bot` over the app files
+  returns nothing; `grep -n bot server.rs` returns nothing; `cargo check` in
+  `tauri-app/src-tauri/` passes. The website repo has no bot copy to fix,
+  noted on its task board so the other session does not add any.
 - [x] Fixed the Groq release-notes step that held up the `v1.2.1-alpha.2` notes gate (2026-11-18). CI run 44190231658 failed with "groq notes: nothing above '## Changes'" while tests, build and all five download links passed. The log showed no non-200 warning, so Groq answered 200 with empty text. Root cause: `llama-3.3-70b-versatile` shut down on 16 Aug 2026 and Groq auto-upgrades that id to a reasoning model; with the old `max_tokens: 700` and no reasoning settings, the whole budget went to thinking and `message.content` came back null. `web/app.py` is not involved. Changes in `.github/scripts/write-release-notes.sh`: pin `reasoning_effort: low`, `include_reasoning: false` and `max_completion_tokens: 1200`, treat empty or whitespace-only content as a failure, and retry once with `openai/gpt-oss-20b` when the configured model (the `GROQ_MODEL` secret was set in October) returns nothing. The default model in both workflow env blocks is now `openai/gpt-oss-120b`, and `AGENTS.md` plus the smoke test's echoed default were updated to match. Verified locally with a mocked curl that returns empty content for the primary model and valid notes for the retry: the writer emits the TL;DR and `## What's new` and the smoke test passes; also checked the non-200 path and the both-empty path. A fresh dispatch with the real key is the final gate before tagging.
 - [x] Preparing `v1.2.1-alpha.2` (2026-11-18): version bumped in `package.json`,
   `tauri-app/src-tauri/Cargo.toml`, `Cargo.lock` and `tauri.conf.json`. The

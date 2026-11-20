@@ -940,9 +940,8 @@ body{
 #settings-view .set-input:hover{border-color:rgba(220,232,222,.22)}
 #settings-view .set-input:focus{border-color:rgba(29,185,84,.55);box-shadow:0 0 0 3px rgba(29,185,84,.12)}
 #settings-view .set-input::placeholder{color:#747e77}
-#settings-view .set-input-code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:.06em}
 #settings-view .settings-card-sound,#settings-view .settings-card-discord,
-#settings-view .settings-card-bot,#settings-view .settings-card-note{grid-column:1/-1}
+#settings-view .settings-card-note{grid-column:1/-1}
 #settings-view .settings-card-note{padding:14px 0;border:0;border-top:1px solid rgba(220,232,222,.08);border-radius:0;background:transparent;box-shadow:none}
 #settings-view .settings-card-note:hover{background:transparent;border-color:rgba(220,232,222,.08)}
 #settings-view .settings-card-note .settings-card-head{margin:0}
@@ -960,7 +959,7 @@ body{
   #settings-view .settings-section-head p{font-size:12px}
   #settings-view .settings-grid{grid-template-columns:minmax(0,1fr);gap:9px}
   #settings-view .settings-card{padding:15px}
-  #settings-view .settings-card-bot,#settings-view .settings-card-note{grid-column:auto}
+  #settings-view .settings-card-note{grid-column:auto}
   #settings-view .settings-card .settings-row{flex-direction:row;align-items:center;gap:9px;padding:8px 0}
   #settings-view .settings-card .settings-row-label{flex:1 1 auto}
   #settings-view .settings-card .settings-row-value{margin-left:auto;text-align:right}

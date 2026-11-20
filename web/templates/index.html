@@ -370,7 +370,7 @@
         <section class="settings-section">
           <div class="settings-section-head">
             <h2 data-i18n="set.section_discord">Discord</h2>
-            <p data-i18n="set.section_discord_sub">Control profile presence and connect your bot.</p>
+            <p data-i18n="set.section_discord_sub">Control your Discord profile presence.</p>
           </div>
           <div class="settings-grid">
         <div class="settings-card settings-card-discord">
@@ -390,38 +390,6 @@
               </span>
             </div>
           </div>
-        </div>
-        <div class="settings-card settings-card-bot">
-          <div class="settings-card-head">
-            <h2 class="settings-card-title"><i class="fa-solid fa-headphones"></i><span data-i18n="set.bot">Discord bot</span></h2>
-            <p class="settings-card-sub" data-i18n="set.bot_sub">Run <code>su!track link</code> in your server, then enter the code below. The bot URL points to your bot service. Use Test to check that Quran can reach it. Hidden nasheeds are not shared.</p>
-          </div>
-          <div class="settings-rows">
-            <div class="settings-row">
-              <span class="settings-row-label" data-i18n="set.send_play">Send what I play</span>
-              <span class="settings-ctl">
-                <label class="toggle">
-                  <input type="checkbox" id="set-bot">
-                  <span class="toggle-slider"></span>
-                </label>
-                <span id="set-bot-status" class="disc-status">Not linked</span>
-              </span>
-            </div>
-            <div class="settings-row">
-              <span class="settings-row-label" data-i18n="set.bot_url">Bot URL</span>
-              <input type="text" id="bot-url" class="set-input" placeholder="http://127.0.0.1:3000" spellcheck="false" autocomplete="off">
-              <button id="bot-test" class="set-btn ghost" type="button"><i class="fa-solid fa-satellite-dish"></i><span data-i18n="set.bot_test">Test</span></button>
-            </div>
-            <div class="settings-row">
-              <span class="settings-row-label" data-i18n="set.link_code">Link code</span>
-              <input type="text" id="bot-code" class="set-input set-input-code" placeholder="From su!track link" data-i18n-ph="set.link_ph" spellcheck="false" autocomplete="off">
-              <button id="bot-link" class="set-btn" type="button"><i class="fa-solid fa-link"></i><span data-i18n="set.link">Link</span></button>
-            </div>
-          </div>
-          <div class="set-btn-row">
-            <button id="bot-unlink" class="set-btn ghost" type="button" disabled><i class="fa-solid fa-plug-circle-xmark"></i><span data-i18n="set.unlink">Unlink</span></button>
-          </div>
-          <p id="bot-note" class="settings-note"></p>
         </div>
           </div>
         </section>
@@ -550,6 +518,6 @@
     </div>
 </div>
 
-<script src="/static/app.js?v=i18n-1"></script>
+<script src="/static/app.js?v=nobot-1"></script>
 </body>
 </html>

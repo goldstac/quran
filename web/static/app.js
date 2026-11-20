@@ -193,7 +193,7 @@ const I18N = {
         'set.sound_sub': 'Choose the volume used when Quran starts. You can still adjust it anytime in the player.',
         'set.default_vol': 'Default volume',
         'set.section_discord': 'Discord',
-        'set.section_discord_sub': 'Control profile presence and connect your bot.',
+        'set.section_discord_sub': 'Control your Discord profile presence.',
         'set.presence': 'Discord presence',
         'set.presence_sub': 'Show your current nasheed or Quran recitation on your Discord profile. Discord desktop needs to be open. Use the eye button on a nasheed row to hide it.',
         'set.share_play': 'Share what I play',
@@ -202,20 +202,6 @@ const I18N = {
         'set.dc_not_running': 'Discord not running',
         'set.dc_err': 'Status unavailable',
         'set.dc_off': 'Off',
-        'set.bot': 'Discord bot',
-        'set.bot_sub': 'Run `su!track link` in your server, then enter the code below. The bot URL points to your bot service. Use Test to check that Quran can reach it. Hidden nasheeds are not shared.',
-        'set.send_play': 'Send what I play',
-        'set.bot_url': 'Bot URL',
-        'set.bot_test': 'Test',
-        'set.link_code': 'Link code',
-        'set.link_ph': 'From su!track link',
-        'set.link': 'Link',
-        'set.unlink': 'Unlink',
-        'set.bot_linked': 'Linked',
-        'set.bot_linked_as': 'Linked as {name}',
-        'set.bot_paused': 'Paused',
-        'set.bot_paused_as': 'Paused as {name}',
-        'set.bot_not_linked': 'Not linked',
         'set.section_data': 'Data',
         'set.section_data_sub': 'Clear what the app remembers on this device.',
         'set.history': 'History',
@@ -259,14 +245,6 @@ const I18N = {
         'upd.starting': 'Starting update to {tag}...',
         'upd.start_fail': 'Could not start the update.',
         'upd.reach_updater': 'Could not reach the updater.',
-        'bot.testing': 'Testing...',
-        'bot.reachable': 'Bot reachable, running v{v}',
-        'bot.no_response': 'No response from the bot',
-        'bot.last_fail': 'Last sync failed: {err}',
-        'bot.unreachable': 'bot unreachable',
-        'bot.backend_fail': 'Could not reach the app backend',
-        'bot.linked_ok': 'Discord bot linked',
-        'bot.unlinked_ok': 'Discord bot unlinked',
     },
     ta: {
         'nav.search': 'தேடல்',
@@ -459,7 +437,7 @@ const I18N = {
         'set.sound_sub': 'செயலி தொடங்கும்போது பயன்படுத்தும் ஒலி அளவைத் தேர்ந்தெடுங்கள். பிளேயரில் எப்போது வேண்டுமானாலும் மாற்றலாம்.',
         'set.default_vol': 'இயல்புநிலை ஒலி அளவு',
         'set.section_discord': 'Discord',
-        'set.section_discord_sub': 'உங்கள் சுயவிவர இருப்பைக் கட்டுப்படுத்தி பாட்டை இணைக்கவும்.',
+        'set.section_discord_sub': 'உங்கள் Discord சுயவிவர இருப்பைக் கட்டுப்படுத்துங்கள்.',
         'set.presence': 'Discord இருப்பு',
         'set.presence_sub': 'நீங்கள் இப்போது கேட்கும் நஷீத் அல்லது திருக்குர்ஆன் ஓதலை உங்கள் Discord சுயவிவரத்தில் காட்டுங்கள். Discord டெஸ்க்டாப் திறந்திருக்க வேண்டும். ஒரு நஷீத்தை மறைக்க அதன் வரிசையில் உள்ள கண் பொத்தானைப் பயன்படுத்துங்கள்.',
         'set.share_play': 'நான் கேட்பதைப் பகிர்',
@@ -468,20 +446,6 @@ const I18N = {
         'set.dc_not_running': 'Discord இயங்கவில்லை',
         'set.dc_err': 'நிலை தெரியவில்லை',
         'set.dc_off': 'அணைவில்லை',
-        'set.bot': 'Discord பாட்',
-        'set.bot_sub': 'உங்கள் சர்வரில் `su!track link` என இயக்கி, கீழே குறியீட்டை உள்ளிடுங்கள். பாட் URL உங்கள் பாட் சேவையைச் சுட்டுகிறது. இணைப்பு வேலை செய்கிறதா என சோதனை பொத்தானால் பாருங்கள். மறைக்கப்பட்ட நஷீத்கள் பகிரப்படா.',
-        'set.send_play': 'நான் கேட்பதை அனுப்பு',
-        'set.bot_url': 'பாட் URL',
-        'set.bot_test': 'சோதனை',
-        'set.link_code': 'இணைப்புக் குறியீடு',
-        'set.link_ph': 'su!track link-ல் கிடைத்தது',
-        'set.link': 'இணை',
-        'set.unlink': 'இணைப்பை நீக்கு',
-        'set.bot_linked': 'இணைக்கப்பட்டது',
-        'set.bot_linked_as': '{name} ஆக இணைக்கப்பட்டது',
-        'set.bot_paused': 'இடைநிறுத்தப்பட்டது',
-        'set.bot_paused_as': '{name} ஆக இடைநிறுத்தப்பட்டது',
-        'set.bot_not_linked': 'இணைக்கவில்லை',
         'set.section_data': 'தரவு',
         'set.section_data_sub': 'செயலி இந்தச் சாதனத்தில் நினைவில் வைப்பவற்றை அழிக்கவும்.',
         'set.history': 'வரலாறு',
@@ -525,14 +489,6 @@ const I18N = {
         'upd.starting': '{tag} புதுப்பிப்பைத் தொடங்குகிறது...',
         'upd.start_fail': 'புதுப்பிப்பைத் தொடங்க முடியவில்லை.',
         'upd.reach_updater': 'புதுப்பிப்பாளரை அடைய முடியவில்லை.',
-        'bot.testing': 'சோதிக்கிறது...',
-        'bot.reachable': 'பாட் அணுகலாம், v{v} இயங்குகிறது',
-        'bot.no_response': 'பாட்டிலிருந்து பதில் இல்லை',
-        'bot.last_fail': 'கடைசி ஒத்திசைவு தோல்வி: {err}',
-        'bot.unreachable': 'பாட் அணுக முடியவில்லை',
-        'bot.backend_fail': 'செயலி பின்புலத்தை அடைய முடியவில்லை',
-        'bot.linked_ok': 'Discord பாட் இணைக்கப்பட்டது',
-        'bot.unlinked_ok': 'Discord பாட் இணைப்பு நீக்கப்பட்டது',
     },
 };
 function t(key, vars) {
@@ -576,7 +532,6 @@ function refreshForLang() {
     scRenderRows(false);
     loadLibraryCounts();
     loadCacheCount();
-    loadBot();
     if (discordEnabled)
         pollDiscordStatus();
     else
@@ -2422,8 +2377,6 @@ async function playSong(song, idx, _ctx, keepQueue = false) {
         recordRecent(song);
     updatePlayer();
     pushDiscord(true);
-    botLastRefresh = 0;
-    reportEvent(discIsHidden(song.id) ? 'hidden' : 'start', song);
     $$('.track-row').forEach((r) => r.classList.toggle('playing', r.dataset.id === song.id));
     startingId = song.id;
     setBuffering(true);
@@ -2601,8 +2554,6 @@ audio.addEventListener('play', () => {
     syncIcons();
     dcLastRefresh = 0;
     pushDiscord(true);
-    botLastRefresh = 0;
-    reportEvent('resume');
 });
 audio.addEventListener('loadedmetadata', () => {
     if (pendingAyahSeek && currentSong?.kind === 'quran' && currentSong.chapter_id === pendingAyahSeek.chapter && audio.duration) {
@@ -2620,7 +2571,6 @@ audio.addEventListener('pause', () => {
     setBuffering(false);
     if (discordEnabled)
         dcPause();
-    reportEvent('pause');
 });
 audio.addEventListener('playing', () => {
     startingId = null;
@@ -2654,7 +2604,6 @@ function resetPlayer() {
     dcLastRefresh = 0;
     if (discordEnabled)
         dcClear();
-    reportEvent('stop');
     if ('mediaSession' in navigator)
         navigator.mediaSession.metadata = null;
 }
@@ -2719,8 +2668,6 @@ seek.onChange = () => {
     progressDrag = false;
     dcLastRefresh = 0;
     pushDiscord(true);
-    botLastRefresh = 0;
-    reportEvent('progress');
 };
 const seekTip = document.createElement('div');
 seekTip.className = 'seek-tip';
@@ -2746,7 +2693,6 @@ setInterval(() => {
     $('#time-dur').textContent = fmt(audio.duration);
     highlightTransAyah(true);
     pushDiscord();
-    pushBot();
 }, 250);
 // --- VOLUME ---
 const savedVolRaw = load('ns_vol', 70);
@@ -3206,7 +3152,6 @@ function discToggleSong(song) {
     toast(hidden ? t('row.disc_hidden') : t('row.disc_shown'));
     if (currentSong && currentSong.id === song.id) {
         pushDiscord(true);
-        reportEvent(hidden ? 'hidden' : 'resume');
     }
 }
 function setDiscordStatus(state) {
@@ -3359,155 +3304,6 @@ window.addEventListener('pagehide', () => {
         return;
     const body = new Blob([JSON.stringify({ enabled: false, activity: null })], { type: 'application/json' });
     navigator.sendBeacon(`${API}/api/discord`, body);
-});
-// --- DISCORD BOT SYNC ---
-let botEnabled = false;
-let botLinked = false;
-let botLastRefresh = 0;
-function setBotStatus(text, cls = '') {
-    const el = $('#set-bot-status');
-    el.classList.remove('ok', 'warn', 'err');
-    el.textContent = text;
-    if (cls)
-        el.classList.add(cls);
-}
-function botNote(msg) {
-    $('#bot-note').textContent = msg;
-}
-function botPost(body, path = '/api/bot') {
-    return getJSON(`${API}${path}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-    });
-}
-function syncBotUI(info) {
-    botEnabled = !!info.enabled;
-    botLinked = !!info.linked;
-    $('#set-bot').checked = botEnabled;
-    if (info.url)
-        $('#bot-url').value = info.url;
-    $('#bot-unlink').disabled = !botLinked;
-    if (botLinked) {
-        const name = info.user?.name || '';
-        if (botEnabled)
-            setBotStatus(name ? t('set.bot_linked_as', { name }) : t('set.bot_linked'), 'ok');
-        else
-            setBotStatus(name ? t('set.bot_paused_as', { name }) : t('set.bot_paused'), 'warn');
-    }
-    else {
-        setBotStatus(t('set.bot_not_linked'), '');
-    }
-}
-async function loadBot() {
-    try {
-        const info = await getJSON(`${API}/api/bot`);
-        syncBotUI(info);
-        if (botLinked && botEnabled && info.last && info.last.ok === false) {
-            botNote(t('bot.last_fail', { err: info.last.error || t('bot.unreachable') }));
-        }
-    }
-    catch {
-        setBotStatus(t('set.dc_err'), 'err');
-    }
-}
-function reportEvent(event, song) {
-    if (!botEnabled || !botLinked)
-        return;
-    const target = song || currentSong;
-    const starting = event === 'start';
-    const body = {
-        event,
-        position: starting ? 0 : Math.round(audio.currentTime || 0),
-        duration: starting
-            ? (target?.duration || 0)
-            : (Number.isFinite(audio.duration) && audio.duration > 0 ? Math.round(audio.duration) : 0),
-        songId: target ? target.id : '',
-    };
-    if (starting && target) {
-        body.song = {
-            id: target.id,
-            title: target.title,
-            channel: target.channel,
-            duration: target.duration || 0,
-            duration_string: target.duration_string || '',
-            kind: target.kind === 'quran' ? 'quran' : 'nasheed',
-            local: !!target.local,
-        };
-    }
-    void botPost(body, '/api/report').catch(() => undefined);
-}
-function pushBot(force = false) {
-    const now = Date.now();
-    if (!botEnabled || !botLinked)
-        return;
-    if (now - botLastRefresh < (force ? 0 : 30000))
-        return;
-    botLastRefresh = now;
-    reportEvent(audio.paused ? 'pause' : 'progress');
-}
-$('#set-bot').addEventListener('change', (e) => {
-    botEnabled = e.target.checked;
-    void botPost({ enabled: botEnabled }).catch(() => undefined);
-    if (botEnabled && botLinked && currentSong) {
-        botLastRefresh = 0;
-        reportEvent(discIsHidden(currentSong.id) ? 'hidden' : 'start', currentSong);
-    }
-    void loadBot();
-});
-$('#bot-url').addEventListener('change', (e) => {
-    const url = e.target.value.trim();
-    void botPost({ url }).catch(() => undefined);
-});
-$('#bot-link').addEventListener('click', () => {
-    const code = $('#bot-code').value.trim();
-    const url = $('#bot-url').value.trim();
-    if (!code) {
-        botNote(t('set.bot_sub'));
-        return;
-    }
-    botNote(t('bot.testing'));
-    void botPost({ code, url }, '/api/bot/link')
-        .then((d) => {
-        if (!d.ok) {
-            botNote(String(d.error || 'That code did not work'));
-            return;
-        }
-        $('#bot-code').value = '';
-        const name = d.user?.name;
-        botNote(name ? t('set.bot_linked_as', { name }) + '. ' + t('set.send_play') : t('set.bot_linked'));
-        toast(t('bot.linked_ok'));
-        void loadBot();
-    })
-        .catch(() => botNote(t('bot.backend_fail')));
-});
-$('#bot-unlink').addEventListener('click', () => {
-    void botPost({}, '/api/bot/unlink')
-        .then(() => {
-        botNote(t('set.bot_sub'));
-        toast(t('bot.unlinked_ok'));
-        void loadBot();
-    })
-        .catch(() => botNote(t('bot.backend_fail')));
-});
-$('#bot-test').addEventListener('click', () => {
-    const url = $('#bot-url').value.trim();
-    botNote(t('bot.testing'));
-    void botPost({ url })
-        .then(() => getJSON(`${API}/api/bot/test`, { method: 'POST' }))
-        .then((d) => {
-        if (d.ok)
-            botNote(t('bot.reachable', { v: d.version || t('set.unknown_lower') }));
-        else
-            botNote(String(d.error || t('bot.no_response')));
-    })
-        .catch(() => botNote(t('bot.no_response')));
-});
-window.addEventListener('pagehide', () => {
-    if (!botEnabled || !botLinked || !navigator.sendBeacon)
-        return;
-    const body = new Blob([JSON.stringify({ event: 'stop' })], { type: 'application/json' });
-    navigator.sendBeacon(`${API}/api/report`, body);
 });
 // --- SETTINGS ---
 let appVersion = '';
@@ -3939,5 +3735,4 @@ void initDownloads();
 void loadQuranReciters();
 syncSettingsVol();
 void initDiscord();
-void loadBot();
 void loadSidebarVersion();

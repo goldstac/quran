@@ -64,7 +64,6 @@ pub struct State {
     provided: Mutex<Option<ProvidedCatalog>>,
     downloads: Mutex<HashMap<String, DownloadState>>,
     discord: Mutex<Value>,
-    bot: Mutex<Value>,
 }
 
 pub fn start(data_dir: PathBuf, port: u16) -> std::io::Result<()> {
@@ -88,7 +87,6 @@ fn init_state(data_dir: PathBuf) -> State {
         provided: Mutex::new(None),
         downloads: Mutex::new(HashMap::new()),
         discord: Mutex::new(load_json_file(&data_dir.join("discord.json"))),
-        bot: Mutex::new(load_json_file(&data_dir.join("bot.json"))),
         data_dir,
     }
 }
@@ -783,46 +781,6 @@ fn handle(mut stream: TcpStream, state: &Arc<State>) -> std::io::Result<()> {
                 discord["enabled"] = json!(enabled);
                 save_json_file(&state.data_dir.join("discord.json"), &discord);
             }
-            send_json(&mut stream, "200 OK", &json!({"ok": true}), send_body)
-        }
-        ["api", "bot"] if method_get => {
-            let bot = state.bot.lock().unwrap().clone();
-            send_json(
-                &mut stream,
-                "200 OK",
-                &json!({
-                    "enabled": bot.get("enabled").and_then(|v| v.as_bool()).unwrap_or(false),
-                    "url": bot.get("url").and_then(|v| v.as_str()).unwrap_or("http://127.0.0.1:3000"),
-                    "linked": false,
-                    "user": Value::Null,
-                    "last": {"at": 0, "ok": null, "error": ""},
-                }),
-                send_body,
-            )
-        }
-        ["api", "bot"] if method_post => {
-            let data = parse_body(&body).unwrap_or_else(|_| json!({}));
-            let mut bot = state.bot.lock().unwrap();
-            if let Some(enabled) = data.get("enabled").and_then(|v| v.as_bool()) {
-                bot["enabled"] = json!(enabled);
-            }
-            if let Some(url) = data.get("url").and_then(|v| v.as_str()) {
-                bot["url"] = json!(url.trim().trim_end_matches('/'));
-            }
-            save_json_file(&state.data_dir.join("bot.json"), &bot);
-            send_json(&mut stream, "200 OK", &json!({"ok": true}), send_body)
-        }
-        ["api", "bot", "link"] | ["api", "bot", "test"] | ["api", "bot", "unlink"]
-            if method_post =>
-        {
-            send_json(
-                &mut stream,
-                "200 OK",
-                &json!({"ok": false, "error": "The Discord bot is not available on this device"}),
-                send_body,
-            )
-        }
-        ["api", "report"] if method_post => {
             send_json(&mut stream, "200 OK", &json!({"ok": true}), send_body)
         }
         ["api", "open"] if method_post => send_json(
