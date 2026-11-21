@@ -316,6 +316,7 @@ matching section and note the platform when it is not cross-platform.
 
 ## Done
 
+- [x] Released the new beta: `v1.2.1-beta` (2026-11-21). Versions bumped to 1.2.1-beta in `package.json`, `tauri.conf.json`, `Cargo.toml` and `Cargo.lock`; the bump is committed as `cde266e` and pushed to `development`. Pre-tag notes smoke test passed (run 44852160740, dispatch on `development`). Tag `v1.2.1-beta` pushed to `origin`; the Release workflow is running on the tag (https://github.com/goldstac/quran/actions/runs/44852711409) and its release job creates the GitHub release when the pipeline completes.
 - [x] Removed the Discord bot integration entirely (2026-11-20, uncommitted on
   `development`). The user asked for the "Discord bot" card and all of its
   plumbing to go; Discord *presence* and the per-nasheed hide eye stay.
