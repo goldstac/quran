@@ -316,7 +316,7 @@ matching section and note the platform when it is not cross-platform.
 
 ## Done
 
-- [x] Released the new beta: `v1.2.1-beta` (2026-11-21). Versions bumped to 1.2.1-beta in `package.json`, `tauri.conf.json`, `Cargo.toml` and `Cargo.lock`; the bump is committed as `cde266e` and pushed to `development`. Pre-tag notes smoke test passed (run 44852160740, dispatch on `development`). Tag `v1.2.1-beta` pushed to `origin`; the Release workflow is running on the tag (https://github.com/goldstac/quran/actions/runs/44852711409) and its release job creates the GitHub release when the pipeline completes.
+- [x] Released the new beta: `v1.2.1-beta.1` (2026-11-21). Versions bumped to 1.2.1-beta.1 in `package.json`, `tauri.conf.json`, `Cargo.toml` and `Cargo.lock`; the bump is committed as `289a97e` and pushed to `development`. Pre-tag notes smoke test passed (run 44852160740, dispatch on `development`). The first cut of the tag, `v1.2.1-beta`, failed the Android build in the `Build android` job: `.github/scripts/stamp-android-version.py` rejects a bare `-beta` without a number (`ValueError: unsupported Android version: 1.2.1-beta`), so the tag was retargeted to `v1.2.1-beta.1` (the script accepts a numbered beta: stage offset 2000 + 1, versionCode 102012001). Tag `v1.2.1-beta.1` pushed to `origin`; the Release workflow is running on the tag (https://github.com/goldstac/quran/actions/runs/44853172918) and its release job creates the GitHub release when the pipeline completes.
 - [x] Removed the Discord bot integration entirely (2026-11-20, uncommitted on
   `development`). The user asked for the "Discord bot" card and all of its
   plumbing to go; Discord *presence* and the per-nasheed hide eye stay.
